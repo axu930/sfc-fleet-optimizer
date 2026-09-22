@@ -31,6 +31,10 @@
     return M.formatCount(value, displayFormat);
   }
 
+  function debrisPair(ore, crystal) {
+    return `${formatCount(ore)} ore · ${formatCount(crystal)} crystal`;
+  }
+
   function tech(prefix) {
     return {
       weapons:+$(prefix + 'w').value || 0,
@@ -243,7 +247,7 @@
     const first = datasets[0].sweep.points[0];
     const cards = [
       ['Max DSP', formatCount(first.initialDSP)],
-      ['Max Debris', formatCount(first.initialDebrisPotential)],
+      ['Max Debris', debrisPair(first.initialDebrisOrePotential, first.initialDebrisCrystalPotential)],
       ['Expected Dionysus needed at max', formatCount(datasets[0].sweep.points[datasets[0].sweep.points.length - 1].dionysusRecyclersNeeded)],
       ['Defense RSP', formatCount(first.initialDefenseRSP)]
     ];
@@ -262,9 +266,9 @@
         <div><span>${formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
         <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
         <div><span>${formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
-        <div><span>${formatCount(point.npcDebrisGenerated)}</span><small>NPC debris generated</small></div>
-        <div><span>${formatCount(point.zeusDebrisGenerated)}</span><small>Own Zeus debris</small></div>
-        <div><span>${formatCount(point.debrisGenerated)}</span><small>Total debris generated</small></div>
+        <div><span>${debrisPair(point.npcDebrisOreGenerated, point.npcDebrisCrystalGenerated)}</span><small>NPC debris generated</small></div>
+        <div><span>${debrisPair(point.zeusDebrisOreGenerated, point.zeusDebrisCrystalGenerated)}</span><small>Own Zeus debris</small></div>
+        <div><span>${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)}</span><small>Total debris generated</small></div>
         <div><span>${formatCount(point.dionysusRecyclersNeeded)}</span><small>Dionysus recyclers needed</small></div>
         <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
@@ -307,10 +311,10 @@
         <td data-label="${scenarioName} Zeus">${copyControl(result, `${scenarioName} Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
         <td data-label="Survival">${result ? pct(result.zeusSurvival, 5) : '—'}</td>
         <td data-label="DSP destroyed">${result ? pct(result.dspDestroyedFraction) : '—'}</td>
-        <td data-label="Debris">${result ? formatCount(result.debrisGenerated) : '—'}</td>
+        <td data-label="Debris (ore / crystal)">${result ? debrisPair(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
         <td data-label="Dionysus recyclers">${result ? formatCount(result.dionysusRecyclersNeeded) : '—'}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>${scenarioName} Zeus<br><small>copy-ready</small></th><th>Survival</th><th>DSP destroyed</th><th>Debris</th><th>Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>${scenarioName} Zeus<br><small>copy-ready</small></th><th>Survival</th><th>DSP destroyed</th><th>Debris<br><small>ore / crystal</small></th><th>Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function refreshDisplayFormat() {
@@ -327,7 +331,7 @@
 
   function tooltipMarkup(point, scenario) {
     const zeusLosses = Math.max(0, point.zeusLosses);
-    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} total debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
+    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
   }
 
   function renderChart(containerId, datasets, yKey, yLabel, mode) {
@@ -360,7 +364,7 @@
     const curves = datasets.map(dataset => {
       const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
       const dots = dataset.sweep.points.map((point, index) => {
-        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} total debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
+        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
         return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
       }).join('');
       return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
@@ -416,7 +420,7 @@
 
   function exportCSV() {
     if (!lastScenarios) return;
-    const header = ['scenario','rf_sigma','zeus_count','zeus_survival','zeus_losses','dsp_destroyed','dsp_destroyed_fraction','npc_debris_generated','zeus_debris_generated','debris_generated','dionysus_recyclers_needed','threat_destroyed_fraction'];
+    const header = ['scenario','rf_sigma','zeus_count','zeus_survival','zeus_losses','dsp_destroyed','dsp_destroyed_fraction','npc_debris_generated','npc_debris_ore_generated','npc_debris_crystal_generated','zeus_debris_generated','zeus_debris_ore_generated','zeus_debris_crystal_generated','debris_generated','debris_ore_generated','debris_crystal_generated','dionysus_recyclers_needed','threat_destroyed_fraction'];
     const lines = [header.join(',')];
     for (const dataset of lastScenarios) {
       for (const point of dataset.sweep.points) {
@@ -429,8 +433,14 @@
           point.destroyedDSP,
           point.dspDestroyedFraction,
           point.npcDebrisGenerated,
+          point.npcDebrisOreGenerated,
+          point.npcDebrisCrystalGenerated,
           point.zeusDebrisGenerated,
+          point.zeusDebrisOreGenerated,
+          point.zeusDebrisCrystalGenerated,
           point.debrisGenerated,
+          point.debrisOreGenerated,
+          point.debrisCrystalGenerated,
           point.dionysusRecyclersNeeded,
           point.threatDestroyedFraction
         ].join(','));

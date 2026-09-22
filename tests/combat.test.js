@@ -88,9 +88,15 @@ const debris = combat.simulate({
   defenderTech:{weapons:0, shield:0, armor:0}
 });
 near(debris.initialDebrisPotential, 1200);
+near(debris.initialDebrisOrePotential, 900);
+near(debris.initialDebrisCrystalPotential, 300);
 near(debris.npcDebrisGenerated, 1200);
+near(debris.npcDebrisOreGenerated, 900);
+near(debris.npcDebrisCrystalGenerated, 300);
 near(debris.zeusDebrisGenerated, 0);
 near(debris.debrisGenerated, 1200);
+near(debris.debrisOreGenerated, 900);
+near(debris.debrisCrystalGenerated, 300);
 assert.strictEqual(debris.dionysusRecyclersNeeded, 1);
 near(debris.destroyedDSP, 4);
 
@@ -102,8 +108,12 @@ const ownFleetLoss = combat.simulate({
 });
 near(ownFleetLoss.zeusLosses, 1);
 near(ownFleetLoss.initialZeusDebrisPotential, 2.7e6);
+near(ownFleetLoss.initialZeusDebrisOrePotential, 1.5e6);
+near(ownFleetLoss.initialZeusDebrisCrystalPotential, 1.2e6);
 near(ownFleetLoss.initialTotalDebrisPotential, ownFleetLoss.initialDebrisPotential + ownFleetLoss.initialZeusDebrisPotential);
 near(ownFleetLoss.zeusDebrisGenerated, 2.7e6);
+near(ownFleetLoss.zeusDebrisOreGenerated, 1.5e6);
+near(ownFleetLoss.zeusDebrisCrystalGenerated, 1.2e6);
 near(ownFleetLoss.debrisGenerated, ownFleetLoss.npcDebrisGenerated + ownFleetLoss.zeusDebrisGenerated);
 assert.strictEqual(ownFleetLoss.dionysusRecyclersNeeded, Math.ceil(ownFleetLoss.debrisGenerated / 20_000));
 assert.strictEqual(combat.dionysusRecyclersNeeded(20_000), 1);

@@ -41,10 +41,11 @@ DSP and danger are not always the same thing. The app therefore also tracks an a
 
 The result summary and chart inspection panel show absolute modeled DSP
 destroyed alongside the percentage. Total debris includes 30% of destroyed
-NPC ships' and committed Zeus ships' Ore-plus-Crystal build value; Hydrogen
-and defenses create no debris. Dionysus recycler needs are estimated by
-dividing total debris by the 20,000 cargo capacity of one recycler. The
-recommendation table includes one-click copy buttons for each Zeus count.
+NPC ships' and committed Zeus ships' Ore and Crystal build costs; Hydrogen
+and defenses create no debris. The UI reports Ore and Crystal separately and
+uses their combined total for Dionysus recycler needs, estimated by dividing
+it by the 20,000 cargo capacity of one recycler. The recommendation table
+includes one-click copy buttons for each Zeus count.
 
 ### CSV export
 
