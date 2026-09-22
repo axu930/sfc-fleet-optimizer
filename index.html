@@ -127,7 +127,7 @@
       <article class="panel notes">
         <h2>Model notes</h2>
         <p>This is an expected-value approximation for very large fleets. Combat is simultaneous within each round and capped at six rounds; shields reset while hull damage persists. The expected curve uses mean Zeus rapid fire, while the conservative curve reduces expected RF shots by 4% using the existing 2σ stress case.</p>
-        <p><strong>DSP</strong> is the modeled ship build value destroyed divided by 1,000. <strong>Debris</strong> is 30% of the destroyed ships’ ore and crystal build costs; hydrogen and defenses contribute no debris. The UI reports ore and crystal separately, while Dionysus counts divide their combined total by the 20,000 cargo capacity of one recycler. <strong>Net points</strong> is DSP plus generated ore/crystal debris divided by 1,000, minus lost Zeus ore/crystal cost divided by 1,000; hydrogen is intentionally omitted for now. Threat removed remains a diagnostic based on defender fire that passes the Zeus 1% shield rule.</p>
+        <p><strong>DSP</strong> is the modeled ship build value destroyed divided by 1,000. <strong>Debris</strong> is 30% of the destroyed ships’ ore and crystal build costs; hydrogen and defenses contribute no debris. The UI reports ore and crystal separately, while Dionysus counts divide their combined total by the 20,000 cargo capacity of one recycler. <strong>Net points</strong> is DSP plus generated ore/crystal debris divided by 1,000, minus the full lost Zeus build cost divided by 1,000, including hydrogen. Threat removed remains a diagnostic based on defender fire that passes the Zeus 1% shield rule.</p>
       </article>
     </section>
 
@@ -135,7 +135,7 @@
   </main>
   <script src="js/units.js?v=recommendation-layout-1"></script>
   <script src="js/battle-report-parser.js?v=recommendation-layout-1"></script>
-  <script src="js/combat.js?v=net-points-1"></script>
+  <script src="js/combat.js?v=net-points-2"></script>
   <script src="js/optimizer.js?v=recommendation-layout-1"></script>
   <script src="js/app.js?v=recommendation-tables-1"></script>
 </body>

@@ -26,7 +26,7 @@ near(representative.initialDefenseRSP, 1_000_000_000);
 near(representative.remainingTargets, 8558739.271676973, 1e-6);
 assert.strictEqual(representative.roundDetails.length, combat.MAX_ROUNDS);
 near(combat.netPoints(representative), representative.destroyedDSP +
-  (representative.debrisGenerated - representative.zeusLosses * (units.UNITS.Zeus.ore + units.UNITS.Zeus.crystal)) / 1000);
+  (representative.debrisGenerated - representative.zeusLosses * units.ZEUS_COST) / 1000);
 
 const sweep = optimizer.sweep({...config, points:24});
 assert.strictEqual(sweep.points.length, 24);
