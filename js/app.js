@@ -301,8 +301,8 @@
     const targets = [0.90, 0.95, 0.99];
     const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
     const scenarioName = useConservativeRecommendations ? 'Conservative' : 'Expected';
-    const debrisLabel = useCrystalOnlyDebris ? `${scenarioName} crystal debris` : `${scenarioName} debris`;
-    const dionysusLabel = useCrystalOnlyDebris ? `${scenarioName} Dionysus for crystal` : `${scenarioName} Dionysus needed`;
+    const debrisLabel = useCrystalOnlyDebris ? 'Crystal debris' : `${scenarioName} debris`;
+    const dionysusLabel = useCrystalOnlyDebris ? 'Dionysus needed for crystal' : `${scenarioName} Dionysus needed`;
     const copyControl = (result, label, className='') => {
       if (!Number.isFinite(result)) return '—';
       const value = copyCount(result);
