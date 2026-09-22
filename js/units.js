@@ -94,11 +94,16 @@
   ];
 
   function decimal(value, useGrouping) {
-    return value.toLocaleString('en-US', {useGrouping, maximumFractionDigits:3});
+    // Preserve already-integral raw/count values; round displayed decimals to
+    // two significant figures so large abbreviated values stay readable.
+    if (Number.isInteger(value) && Math.abs(value) >= 1) {
+      return value.toLocaleString('en-US', {useGrouping});
+    }
+    return value.toLocaleString('en-US', {useGrouping, maximumSignificantDigits:2});
   }
 
   function scientific(value) {
-    return value.toExponential(2).replace(/(\.\d*?[1-9])0+e/, '$1e').replace(/\.0+e/, 'e');
+    return value.toExponential(1).replace(/(\.\d*?[1-9])0+e/, '$1e').replace(/\.0+e/, 'e');
   }
 
   function formatCount(value, format='abbrev') {

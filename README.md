@@ -132,8 +132,9 @@ Supported suffixes include `K`, `M`, `B`, `T`, `Qa`/`Q` (quadrillion), `Qi` (qui
 The **Number display** selector changes rendered result counts without changing
 the underlying model: raw numbers, comma-grouped numbers, scientific notation,
 full magnitude words, or abbreviations (`k`, `m`, `b`, `t`, `q`, `Q`, `s`, `S`,
-`o`, `n`). Copy-ready Zeus recommendations remain plain integers without
-commas in every display mode.
+`o`, `n`). Displayed decimal quantities are rounded to two significant
+figures, while copy-ready Zeus recommendations remain exact plain integers
+without commas in every display mode.
 
 ## Model
 

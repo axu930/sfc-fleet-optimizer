@@ -6,9 +6,11 @@ const units = require('../js/units.js');
 const value = 9.45e15;
 assert.strictEqual(units.formatCount(value, 'raw'), '9450000000000000');
 assert.strictEqual(units.formatCount(value, 'commas'), '9,450,000,000,000,000');
-assert.strictEqual(units.formatCount(value, 'scientific'), '9.45e+15');
-assert.strictEqual(units.formatCount(value, 'words'), '9.45 quadrillion');
-assert.strictEqual(units.formatCount(value, 'abbrev'), '9.45q');
+assert.strictEqual(units.formatCount(value, 'scientific'), '9.5e+15');
+assert.strictEqual(units.formatCount(value, 'words'), '9.5 quadrillion');
+assert.strictEqual(units.formatCount(value, 'abbrev'), '9.5q');
+assert.strictEqual(units.formatCount(123.456, 'raw'), '120');
+assert.strictEqual(units.formatCount(0.01234, 'raw'), '0.012');
 
 const abbreviations = [
   [1e3, '1k'], [1e6, '1m'], [1e9, '1b'], [1e12, '1t'], [1e15, '1q'],
