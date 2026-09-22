@@ -36,6 +36,10 @@
     return `${formatCount(ore)} ore · ${formatCount(crystal)} crystal`;
   }
 
+  function debrisPairMarkup(ore, crystal) {
+    return `<span class="debris-pair"><span>${formatCount(ore)} ore</span><span>${formatCount(crystal)} crystal</span></span>`;
+  }
+
   function tech(prefix) {
     return {
       weapons:+$(prefix + 'w').value || 0,
@@ -248,7 +252,7 @@
     const first = datasets[0].sweep.points[0];
     const cards = [
       ['Max DSP', formatCount(first.initialDSP)],
-      ['Max Debris', debrisPair(first.initialDebrisOrePotential, first.initialDebrisCrystalPotential)],
+      ['Max Debris', debrisPairMarkup(first.initialDebrisOrePotential, first.initialDebrisCrystalPotential)],
       ['Expected Dionysus needed at max', formatCount(datasets[0].sweep.points[datasets[0].sweep.points.length - 1].dionysusRecyclersNeeded)],
       ['Defense RSP', formatCount(first.initialDefenseRSP)]
     ];
@@ -267,9 +271,9 @@
         <div><span>${formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
         <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
         <div><span>${formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
-        <div><span>${debrisPair(point.npcDebrisOreGenerated, point.npcDebrisCrystalGenerated)}</span><small>NPC debris generated</small></div>
-        <div><span>${debrisPair(point.zeusDebrisOreGenerated, point.zeusDebrisCrystalGenerated)}</span><small>Own Zeus debris</small></div>
-        <div><span>${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)}</span><small>Total debris generated</small></div>
+        <div>${debrisPairMarkup(point.npcDebrisOreGenerated, point.npcDebrisCrystalGenerated)}<small>NPC debris generated</small></div>
+        <div>${debrisPairMarkup(point.zeusDebrisOreGenerated, point.zeusDebrisCrystalGenerated)}<small>Own Zeus debris</small></div>
+        <div>${debrisPairMarkup(point.debrisOreGenerated, point.debrisCrystalGenerated)}<small>Total debris generated</small></div>
         <div><span>${formatCount(point.dionysusRecyclersNeeded)}</span><small>Dionysus recyclers needed</small></div>
         <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
@@ -316,7 +320,7 @@
       return `<tr><th scope="row">${pct(target, 0)}</th>
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
         <td data-label="Expected Zeus lost">${result ? formatCount(Math.max(0, result.zeusLosses)) : '—'}</td>
-        <td data-label="${debrisLabel}">${result ? debrisPair(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
+        <td data-label="${debrisLabel}">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
         <td data-label="${dionysusLabel}">${copyControl(dionysusNeeded, `${dionysusLabel} for ${pct(target, 0)} DSP`)}</td></tr>`;
     }).join('');
     $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -336,7 +340,7 @@
 
   function tooltipMarkup(point, scenario) {
     const zeusLosses = Math.max(0, point.zeusLosses);
-    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
+    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${debrisPairMarkup(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
   }
 
   function renderChart(containerId, datasets, yKey, yLabel, mode) {
