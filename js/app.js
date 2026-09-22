@@ -353,8 +353,8 @@
 
     return targets.map(target => {
       const result = integerSurvivalRecommendation(config, scenario, target, range);
-      return `<tr><th scope="row">${pct(target, 1)}</th>
-        <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 1)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
+      return `<tr><th scope="row">${pct(target, 3)}</th>
+        <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 3)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
         <td data-label="Expected Zeus lost">${zeusLossMarkup(result)}</td>
         <td data-label="Expected DSP">${dspMarkup(result)}</td>
         <td data-label="Expected debris">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
@@ -365,7 +365,7 @@
 
   function renderRecommendations(config, range) {
     const dspTargets = [0.90, 0.95, 0.99];
-    const survivalTargets = [0.99, 0.995, 0.999];
+    const survivalTargets = [0.99, 0.999, 0.99999];
     const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
     const dspRows = recommendationTableRows(config, scenario, dspTargets, range, 'dsp');
     const survivalRows = recommendationTableRows(config, scenario, survivalTargets, range, 'survival');

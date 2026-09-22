@@ -51,7 +51,7 @@ RF and crystal-harvesting toggles, with one-click copy buttons for Zeus and
 Dionysus counts. The crystal-harvesting toggle changes only the Dionysus
 count; the debris column continues to show the full ore/crystal debris pair.
 Fleet Recommendations also includes a DSP-target table without survival
-filtering and a separate Zeus-survival table for 99%, 99.5%, and 99.9%
+filtering and a separate Zeus-survival table for 99%, 99.9%, and 99.999%
 thresholds; the latter reports expected DSP as both percent of maximum and
 absolute DSP.
 
