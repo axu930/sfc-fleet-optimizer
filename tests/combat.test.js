@@ -117,6 +117,8 @@ near(ownFleetLoss.zeusDebrisCrystalGenerated, 1.2e6);
 near(ownFleetLoss.debrisGenerated, ownFleetLoss.npcDebrisGenerated + ownFleetLoss.zeusDebrisGenerated);
 assert.strictEqual(ownFleetLoss.dionysusRecyclersNeeded, Math.ceil(ownFleetLoss.debrisGenerated / 20_000));
 assert.strictEqual(combat.dionysusRecyclersNeeded(20_000), 1);
+assert.strictEqual(combat.dionysusRecyclersNeededForCrystal(1, 20_000), 2);
+assert.strictEqual(combat.dionysusRecyclersNeededForCrystal(0, 20_000), 1);
 
 const hugeFleet = combat.simulate({
   composition:{Hades:1e18, 'Gauss Cannon':2e18},

@@ -226,6 +226,15 @@
     return debris > 0 ? Math.ceil(debris / cargo) : 0;
   }
 
+  function dionysusRecyclersNeededForCrystal(ore, crystal) {
+    const cargo = UNITS.Dionysus.cargo || 20_000;
+    if (!(crystal > 0)) return 0;
+    // Debris is collected in balanced ore/crystal loads while ore remains,
+    // so each recycler contributes 10,000 crystal toward a crystal-only goal.
+    const crystalCapacity = ore > 0 ? cargo / 2 : cargo;
+    return Math.ceil(crystal / crystalCapacity);
+  }
+
   function initialZeusShotFactor(composition) {
     const total = Object.values(composition).reduce((sum, count) => sum + count, 0);
     if (!(total > 0)) return 1;
@@ -397,5 +406,5 @@
     };
   }
 
-  return {simulate, threatValue, debrisValue, debrisBreakdown, dionysusRecyclersNeeded, initialZeusShotFactor, MAX_ROUNDS};
+  return {simulate, threatValue, debrisValue, debrisBreakdown, dionysusRecyclersNeeded, dionysusRecyclersNeededForCrystal, initialZeusShotFactor, MAX_ROUNDS};
 });
