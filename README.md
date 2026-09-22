@@ -66,6 +66,9 @@ under the unit table, then press **Parse report**. The importer immediately
 fills the unit table, preferring the
 defender block, then the attacker block, then a single detected fleet. It:
 
+Parsing immediately computes the curves while leaving the populated inputs in
+view so the detected counts and tech values can be verified before use.
+
 - reads the first attacker and defender snapshots rather than adding later-round repeats;
 - accepts row-style copies such as `Athena Class Battleship 50,000`;
 - accepts copied-table layouts where class names and counts land on separate rows/lines;

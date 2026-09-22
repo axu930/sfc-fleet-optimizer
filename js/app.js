@@ -215,9 +215,15 @@
     }
     const selected = available.find(([, key]) => key === 'defender') || available.find(([, key]) => key === 'attacker') || available[0];
     applyReportSide(selected[1]);
-    $('reportStatus').textContent = `Filled the NPC table from ${selected[0].toLowerCase()} (${Object.keys(selected[2].composition).length} classes).`;
-    $('reportStatus').className = 'status success';
     renderReportPreview(available);
+    run({scrollResults:false});
+    if ($('inputStatus').className === 'status success') {
+      $('reportStatus').textContent = `Parsed ${selected[0].toLowerCase()} and calculated curves. Verify the populated NPC counts and tech values before using the results.`;
+      $('reportStatus').className = 'status success';
+    } else {
+      $('reportStatus').textContent = `Parsed ${selected[0].toLowerCase()}, but calculation needs attention: ${$('inputStatus').textContent}`;
+      $('reportStatus').className = 'status error';
+    }
   }
 
   function applyReportSide(key) {
@@ -520,7 +526,8 @@
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function run() {
+  function run(options={}) {
+    const scrollResults = options.scrollResults !== false;
     const parsed = updateInputSummary();
     if (parsed.invalid.length) {
       $('inputStatus').textContent = `Fix the highlighted count${parsed.invalid.length === 1 ? '' : 's'} before calculating.`;
@@ -557,7 +564,7 @@
       $('results').classList.remove('hidden');
       $('inputStatus').textContent = `Calculated ${POINT_COUNT} shared commitment points for both RF scenarios.`;
       $('inputStatus').className = 'status success';
-      $('results').scrollIntoView({behavior:'smooth', block:'start'});
+      if (scrollResults) $('results').scrollIntoView({behavior:'smooth', block:'start'});
     } catch (error) {
       $('inputStatus').textContent = error.message || String(error);
       $('inputStatus').className = 'status error';
