@@ -28,9 +28,11 @@ h2 { font-size: 1.05rem; margin: 0 0 .55rem; }
 h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; letter-spacing: .08em; }
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; color: var(--accent); font-size: .75rem; font-weight: 700; margin: 0; }
 .lede { max-width: 760px; color: #bed0dc; font-size: 1.08rem; margin: 0; }
+.intro-guide { max-width: 780px; color: var(--muted); font-size: .88rem; margin: .8rem 0 0; }
 .badge { white-space: nowrap; border: 1px solid var(--border); background: #0b1720; padding: 8px 11px; border-radius: 999px; color: var(--muted); font-size: .8rem; }
 .header-tools { display: grid; gap: 10px; justify-items: end; min-width: 310px; }
 .format-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
+.format-control > span { color: var(--text); font-weight: 750; }
 .format-control select { max-width: 310px; min-height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #0b1822; color: var(--text); padding: 0 9px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr); gap: 16px; align-items: start; }
