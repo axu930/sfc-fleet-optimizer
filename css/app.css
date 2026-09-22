@@ -116,7 +116,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: .78rem; }
 .line-key { width: 22px; height: 3px; display: inline-block; border-radius: 3px; background: var(--expected); }
 .line-key.conservative { background: repeating-linear-gradient(90deg, var(--conservative) 0 6px, transparent 6px 10px); }
-.chart-tooltip { position: absolute; z-index: 5; display: grid; gap: 2px; pointer-events: none; transform: translate(-50%, -100%); min-width: 190px; padding: 9px 11px; border: 1px solid #496174; border-radius: 9px; background: rgba(5, 13, 20, .96); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); color: #dbe8ef; font-size: .76rem; white-space: nowrap; }
+.chart-tooltip { position: absolute; z-index: 5; display: grid; gap: 2px; pointer-events: none; min-width: 190px; padding: 9px 11px; border: 1px solid #496174; border-radius: 9px; background: rgba(5, 13, 20, .96); box-shadow: 0 8px 24px rgba(0, 0, 0, .35); color: #dbe8ef; font-size: .76rem; white-space: nowrap; }
 .chart-tooltip strong { color: var(--text); }
 .chart-tooltip span { display: block; }
 
