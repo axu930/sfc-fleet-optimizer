@@ -329,17 +329,24 @@
       const value = copyCount(result);
       return `<div class="recommendation-copy"><input class="recommendation-count ${className}" readonly value="${value}" aria-label="${label}"><button class="copy-count-button" type="button" data-copy-count="${value}" aria-label="Copy ${label}" title="Copy ${label}"><span aria-hidden="true">⧉</span></button></div>`;
     };
+    const zeusLossMarkup = result => result
+      ? `<span class="recommendation-pair"><span>${formatCount(Math.max(0, result.zeusLosses))} Zeus</span><span>${pct(Math.max(0, result.zeusLossFraction), 3)} of fleet</span></span>`
+      : '—';
+    const dionysusNeeded = result => {
+      if (!result) return NaN;
+      const crystalRecyclers = M.dionysusRecyclersNeededForCrystal(result.debrisOreGenerated, result.debrisCrystalGenerated);
+      return useCrystalHarvestingOnly ? crystalRecyclers : result.dionysusRecyclersNeeded;
+    };
+    const dspMarkup = result => result
+      ? `<span class="recommendation-pair"><span>${pct(result.dspDestroyedFraction, 3)} of max</span><span>${formatCount(result.destroyedDSP)} DSP</span></span>`
+      : '—';
     const dspRows = targets.map(target => {
       const result = integerDspRecommendation(config, scenario, target, range);
-      const crystalRecyclers = result
-        ? M.dionysusRecyclersNeededForCrystal(result.debrisOreGenerated, result.debrisCrystalGenerated)
-        : NaN;
-      const dionysusNeeded = useCrystalHarvestingOnly ? crystalRecyclers : result && result.dionysusRecyclersNeeded;
       return `<tr><th scope="row">${pct(target, 0)}</th>
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
-        <td data-label="Expected Zeus lost">${result ? pct(Math.max(0, result.zeusLossFraction), 3) : '—'}</td>
+        <td data-label="Expected Zeus lost">${zeusLossMarkup(result)}</td>
         <td data-label="Expected debris">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
-        <td data-label="Expected Dionysus needed">${copyControl(dionysusNeeded, `Expected Dionysus needed for ${pct(target, 0)} DSP`)}</td>
+        <td data-label="Expected Dionysus needed">${copyControl(dionysusNeeded(result), `Expected Dionysus needed for ${pct(target, 0)} DSP`)}</td>
         <td data-label="Net points">${result ? formatCount(M.netPoints(result)) : '—'}</td></tr>`;
     }).join('');
     if (mode === 'dsp') return dspRows;
@@ -348,8 +355,11 @@
       const result = integerSurvivalRecommendation(config, scenario, target, range);
       return `<tr><th scope="row">${pct(target, 1)}</th>
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 1)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
-        <td data-label="Expected Zeus lost">${result ? pct(Math.max(0, result.zeusLossFraction), 3) : '—'}</td>
-        <td data-label="Expected DSP"><span class="recommendation-pair"><span>${result ? pct(result.dspDestroyedFraction, 3) : '—'} of max</span><span>${result ? `${formatCount(result.destroyedDSP)} DSP` : '—'}</span></span></td></tr>`;
+        <td data-label="Expected Zeus lost">${zeusLossMarkup(result)}</td>
+        <td data-label="Expected DSP">${dspMarkup(result)}</td>
+        <td data-label="Expected debris">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
+        <td data-label="Expected Dionysus needed">${copyControl(dionysusNeeded(result), `Expected Dionysus needed for ${pct(target, 1)} survival`)}</td>
+        <td data-label="Net points">${result ? formatCount(M.netPoints(result)) : '—'}</td></tr>`;
     }).join('');
   }
 
@@ -362,11 +372,11 @@
     $('recommendations').innerHTML = `
       <section class="recommendation-table-section">
         <h3>DSP target</h3>
-        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${dspRows}</tbody></table></div>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>count and %</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${dspRows}</tbody></table></div>
       </section>
       <section class="recommendation-table-section">
         <h3>Zeus survival rate</h3>
-        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>Expected DSP<br><small>% of max and absolute</small></th></tr></thead><tbody>${survivalRows}</tbody></table></div>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>count and %</small></th><th>Expected DSP<br><small>% of max and absolute</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${survivalRows}</tbody></table></div>
       </section>`;
   }
 
