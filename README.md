@@ -73,6 +73,21 @@ Then open `http://localhost:8000`.
 
 Opening `index.html` directly also works in most browsers.
 
+## Architecture
+
+The app stays dependency-free and uses ordered classic scripts so it works from
+GitHub Pages and when `index.html` is opened directly:
+
+- `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
+- `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
+- `js/combat.js` owns the deterministic six-round combat simulation and threat metric.
+- `js/optimizer.js` owns range selection, sweeps, breakpoints, the matrix, and knee detection.
+- `js/app.js` owns DOM events, rendering, chart generation, importing, and CSV export.
+- `css/app.css` owns all presentation styles.
+
+The four model modules expose browser globals and CommonJS exports. The browser
+loads them in dependency order; Node tests import the same production files.
+
 ## GitHub Pages
 
 1. Create a GitHub repository.
@@ -131,13 +146,18 @@ Important limitations:
 
 ## Tests
 
-The model has a small zero-dependency Node test suite:
+The model has a zero-dependency Node test suite:
 
 ```bash
-node tests/model.test.js
+node tests/parser.test.js
+node tests/combat.test.js
 ```
 
-The tests cover count parsing, manual roster parsing, row-style and copied-table battle-report parsing, first-snapshot handling, bounded outputs, monotonicity on a representative fixture, breakpoint feasibility, knee feasibility, and a no-weapon defender case.
+The tests cover count parsing, manual roster parsing, row-style and copied-table
+battle-report parsing, first-snapshot handling, pre-refactor combat output,
+six-round capping, the 1% shield cutoff, defense-only DSP behavior, very large
+fleet counts, bounded and monotone sweep outputs, breakpoint feasibility, and
+knee feasibility.
 
 ## Good next validation step
 

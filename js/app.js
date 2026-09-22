@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const M=window.SFCModel;
+  const M=Object.assign({},window.SFCUnits,window.SFCBattleReportParser,window.SFCCombat,window.SFCOptimizer);
   const $=id=>document.getElementById(id);
   const sample=`# Sample NPC\nHades: 100M\nAthena: 50M\nPrometheus: 10M\nGauss Cannon: 200M\nPlasma Cannon: 20M\nLarge Decoy: 1`;
   const DEFAULT_DESTRUCTION_LEVELS=[.25,.5,.75,.9,.95,.99];
