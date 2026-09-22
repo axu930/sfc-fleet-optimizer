@@ -34,7 +34,6 @@
         <div class="panel-head">
           <div><h2>NPC fleet</h2><p class="hint">These unit counts are the ground truth used by the optimizer.</p></div>
           <div class="head-actions">
-            <button id="reportToggleBtn" class="ghost" type="button">Paste report</button>
             <button id="sampleBtn" class="ghost" type="button">Load sample</button>
             <button id="clearBtn" class="ghost" type="button">Clear</button>
           </div>
@@ -52,10 +51,9 @@
           </section>
         </div>
 
-        <div id="reportImporter" class="report-importer hidden">
+        <div id="reportImporter" class="report-importer">
           <div class="import-head">
-            <div><h3>Report importer</h3><p class="hint">Paste a battle or espionage report. Review the detected fleet, then fill the unit table.</p></div>
-            <button id="reportCloseBtn" class="ghost compact-button" type="button">Close</button>
+            <div><h3>Paste report (optional)</h3><p class="hint">Paste a battle or espionage report, then press Parse report to fill the NPC table automatically.</p></div>
           </div>
           <textarea id="reportText" class="report-text" spellcheck="false" aria-label="Battle or espionage report text" placeholder="Paste report here…"></textarea>
           <div class="import-toolbar">
@@ -131,10 +129,10 @@
 
     <footer>Static HTML + JavaScript. No server required.</footer>
   </main>
-  <script src="js/units.js?v=number-format-1"></script>
-  <script src="js/battle-report-parser.js?v=number-format-1"></script>
-  <script src="js/combat.js?v=number-format-1"></script>
-  <script src="js/optimizer.js?v=number-format-1"></script>
-  <script src="js/app.js?v=number-format-1"></script>
+  <script src="js/units.js?v=report-inline-1"></script>
+  <script src="js/battle-report-parser.js?v=report-inline-1"></script>
+  <script src="js/combat.js?v=report-inline-1"></script>
+  <script src="js/optimizer.js?v=report-inline-1"></script>
+  <script src="js/app.js?v=report-inline-1"></script>
 </body>
 </html>

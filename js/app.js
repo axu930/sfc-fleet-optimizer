@@ -453,11 +453,6 @@
   $('sampleBtn').addEventListener('click', () => setComposition(SAMPLE));
   $('clearBtn').addEventListener('click', () => setComposition({}));
   $('displayFormat').addEventListener('change', refreshDisplayFormat);
-  $('reportToggleBtn').addEventListener('click', () => {
-    $('reportImporter').classList.toggle('hidden');
-    if (!$('reportImporter').classList.contains('hidden')) $('reportText').focus();
-  });
-  $('reportCloseBtn').addEventListener('click', () => $('reportImporter').classList.add('hidden'));
   $('parseReportBtn').addEventListener('click', parseReport);
   $('reportPreview').addEventListener('click', event => {
     const button = event.target.closest('[data-report-side]');

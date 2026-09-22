@@ -49,8 +49,9 @@ The complete sampled frontier can be downloaded as CSV for further analysis.
 
 ### Battle report import
 
-Click **Paste report**, paste a copied combat or espionage report, and press
-**Parse report**. The importer immediately fills the unit table, preferring the
+Paste a copied combat or espionage report into the always-visible report box
+under the unit table, then press **Parse report**. The importer immediately
+fills the unit table, preferring the
 defender block, then the attacker block, then a single detected fleet. It:
 
 - reads the first attacker and defender snapshots rather than adding later-round repeats;
