@@ -392,8 +392,7 @@
     renderReportPreview();
     if (!lastScenarios) return;
     renderMetrics(lastScenarios);
-    renderChart('survivalChart', lastScenarios, 'zeusSurvival', 'Zeus survival', 'survival');
-    renderChart('commitmentChart', lastScenarios, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
+    renderScenarioCharts(lastScenarios);
     renderRecommendations(lastRunConfig, lastRange);
     renderPointDetails(lastPoint, lastPointScenario);
   }
@@ -403,21 +402,25 @@
     return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${debrisPairMarkup(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
   }
 
-  function renderChart(containerId, datasets, yKey, yLabel, mode) {
+  function renderScenarioCharts(datasets) {
+    if (!datasets || datasets.length < 2) return;
+    renderChart('expectedChart', datasets[0]);
+    renderChart('conservativeChart', datasets[1]);
+  }
+
+  function renderChart(containerId, dataset) {
     const width = 960;
     const height = 420;
-    const margin = {l:72, r:24, t:24, b:58};
-    const allPoints = datasets.flatMap(dataset => dataset.sweep.points);
-    const logs = allPoints.map(point => Math.log10(Math.max(1, point.zeusCount)));
-    const values = allPoints.map(point => point[yKey]);
+    const margin = {l:72, r:72, t:24, b:58};
+    const points = dataset.sweep.points;
+    const logs = points.map(point => Math.log10(Math.max(1, point.zeusCount)));
     const xMin = Math.min(...logs);
     const xMax = Math.max(...logs);
-    const valueMin = Math.min(...values);
-    const valueMax = Math.max(...values);
-    const yMin = mode === 'survival' ? Math.max(0, valueMin > 0.9 ? valueMin - Math.max(0.0001, (1 - valueMin) * 0.08) : 0) : 0;
-    const yMax = mode === 'survival' ? 1 : Math.min(1, Math.max(0.1, valueMax * 1.03));
+    const survivalMin = Math.min(...points.map(point => point.zeusSurvival));
+    const survivalYMin = Math.max(0, survivalMin - Math.max(0.0005, (1 - survivalMin) * 0.12));
     const x = value => margin.l + (width - margin.l - margin.r) * (value - xMin) / (xMax - xMin || 1);
-    const y = value => height - margin.b - (height - margin.t - margin.b) * (value - yMin) / (yMax - yMin || 1);
+    const yDsp = value => height - margin.b - (height - margin.t - margin.b) * value;
+    const ySurvival = value => height - margin.b - (height - margin.t - margin.b) * (value - survivalYMin) / (1 - survivalYMin || 1);
 
     let grid = '';
     for (let index = 0; index <= 5; index++) {
@@ -425,23 +428,29 @@
       grid += `<line x1="${x(logValue)}" y1="${margin.t}" x2="${x(logValue)}" y2="${height - margin.b}" class="gridline"/><text x="${x(logValue)}" y="${height - margin.b + 23}" text-anchor="middle" class="axis">${formatCount(Math.pow(10, logValue))}</text>`;
     }
     for (let index = 0; index <= 5; index++) {
-      const value = yMin + (yMax - yMin) * index / 5;
-      const digits = mode === 'survival' && value > 0.999 ? 3 : mode === 'survival' ? 1 : 0;
-      grid += `<line x1="${margin.l}" y1="${y(value)}" x2="${width - margin.r}" y2="${y(value)}" class="gridline"/><text x="${margin.l - 10}" y="${y(value) + 4}" text-anchor="end" class="axis">${(100 * value).toFixed(digits)}%</text>`;
+      const fraction = index / 5;
+      const dspValue = fraction;
+      const survivalValue = survivalYMin + (1 - survivalYMin) * fraction;
+      const yPosition = yDsp(dspValue);
+      const survivalDigits = survivalValue > 0.999 ? 3 : survivalValue > 0.99 ? 2 : 1;
+      grid += `<line x1="${margin.l}" y1="${yPosition}" x2="${width - margin.r}" y2="${yPosition}" class="gridline"/><text x="${margin.l - 10}" y="${yPosition + 4}" text-anchor="end" class="axis">${(100 * dspValue).toFixed(0)}%</text><text x="${width - margin.r + 10}" y="${yPosition + 4}" text-anchor="start" class="axis">${(100 * survivalValue).toFixed(survivalDigits)}%</text>`;
     }
 
-    const curves = datasets.map(dataset => {
-      const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
-      const dots = dataset.sweep.points.map((point, index) => {
-        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
-        return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
-      }).join('');
-      return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
+    const survivalPath = points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${ySurvival(point.zeusSurvival).toFixed(2)}`).join(' ');
+    const dspPath = points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${yDsp(point.dspDestroyedFraction).toFixed(2)}`).join(' ');
+    const dots = points.map((point, index) => {
+      const baseLabel = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
+      const survivalLabel = `${baseLabel}, Zeus survival ${pct(point.zeusSurvival, 5)}`;
+      const dspLabel = `${baseLabel}, NPC DSP destroyed ${pct(point.dspDestroyedFraction, 5)}`;
+      const cx = x(Math.log10(Math.max(1, point.zeusCount)));
+      return `<circle cx="${cx}" cy="${ySurvival(point.zeusSurvival)}" r="4.5" class="chart-dot survival" tabindex="0" role="button" aria-label="${survivalLabel}" data-scenario="${dataset.key}" data-point="${index}" data-metric="survival"><title>${survivalLabel}</title></circle><circle cx="${cx}" cy="${yDsp(point.dspDestroyedFraction)}" r="4.5" class="chart-dot dsp" tabindex="0" role="button" aria-label="${dspLabel}" data-scenario="${dataset.key}" data-point="${index}" data-metric="dsp"><title>${dspLabel}</title></circle>`;
     }).join('');
+    const curves = `<path d="${survivalPath}" class="curve survival"/><path d="${dspPath}" class="curve dsp"/>${dots}`;
 
     const container = $(containerId);
-    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${grid}${curves}<text x="${(margin.l + width - margin.r) / 2}" y="${height - 10}" text-anchor="middle" class="label">Zeus committed (log scale)</text><text x="18" y="${(margin.t + height - margin.b) / 2}" text-anchor="middle" transform="rotate(-90 18 ${(margin.t + height - margin.b) / 2})" class="label">${yLabel}</text></svg><div class="chart-tooltip hidden" role="status"></div>`;
-    bindChartInteractions(container, datasets);
+    const centerY = (margin.t + height - margin.b) / 2;
+    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${grid}${curves}<text x="${(margin.l + width - margin.r) / 2}" y="${height - 10}" text-anchor="middle" class="label">Zeus committed (log scale)</text><text x="18" y="${centerY}" text-anchor="middle" transform="rotate(-90 18 ${centerY})" class="label">NPC DSP destroyed (%)</text><text x="${width - 18}" y="${centerY}" text-anchor="middle" transform="rotate(90 ${width - 18} ${centerY})" class="label">Zeus survival (%)</text></svg><div class="chart-tooltip hidden" role="status"></div>`;
+    bindChartInteractions(container, [dataset]);
   }
 
   function bindChartInteractions(container, datasets) {
@@ -556,8 +565,7 @@
       lastRunConfig = config;
       lastRange = range;
       renderMetrics(datasets);
-      renderChart('survivalChart', datasets, 'zeusSurvival', 'Zeus survival', 'survival');
-      renderChart('commitmentChart', datasets, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
+      renderScenarioCharts(datasets);
       renderRecommendations(config, range);
       const initialPoint = datasets[0].sweep.points[Math.floor(datasets[0].sweep.points.length * 0.75)];
       renderPointDetails(initialPoint, datasets[0]);

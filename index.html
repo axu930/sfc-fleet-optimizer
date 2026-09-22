@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Deterministic Zeus commitment, survival, NPC DSP, and debris calculator for Starfleet Commander.">
   <title>SFC Zeus Frontier</title>
-  <link rel="stylesheet" href="css/app.css?v=debris-stack-1">
+  <link rel="stylesheet" href="css/app.css?v=scenario-charts-1">
 </head>
 <body>
   <main class="wrap">
@@ -110,18 +110,18 @@
 
       <article class="panel chart-panel">
         <div class="panel-head">
-          <div><h2>Zeus survival by commitment</h2><p class="hint">Zeus committed uses the same logarithmic scale as the DSP chart below. Hover or focus any dot for exact values.</p></div>
-          <div class="legend"><span class="line-key expected"></span> Expected RF <span class="line-key conservative"></span> Conservative RF</div>
+          <div><h2>Expected RF estimates</h2><p class="hint">See Zeus survival and NPC ship DSP destroyed together as Zeus commitment increases. Hover or focus any dot for exact values.</p></div>
+          <div class="legend"><span class="line-key survival"></span> Zeus survival <span class="line-key dsp"></span> NPC DSP destroyed</div>
         </div>
-        <div id="survivalChart" class="chart interactive-chart" role="img" aria-label="Zeus survival versus Zeus committed"></div>
+        <div id="expectedChart" class="chart interactive-chart" role="img" aria-label="Expected Zeus survival and NPC ship DSP destroyed versus Zeus committed"></div>
       </article>
 
       <article class="panel chart-panel">
         <div class="panel-head">
-          <div><h2>NPC ship DSP destroyed by commitment</h2><p class="hint">Percent destruction and absolute DSP use ships only. Defenses still absorb shots but award no DSP or debris.</p></div>
-          <div class="legend"><span class="line-key expected"></span> Expected RF <span class="line-key conservative"></span> Conservative RF</div>
+          <div><h2>Conservative RF estimates</h2><p class="hint">The same Zeus survival and NPC ship DSP measures under the conservative 2σ RF stress case.</p></div>
+          <div class="legend"><span class="line-key survival"></span> Zeus survival <span class="line-key dsp"></span> NPC DSP destroyed</div>
         </div>
-        <div id="commitmentChart" class="chart interactive-chart" role="img" aria-label="NPC ship DSP destroyed versus Zeus committed"></div>
+        <div id="conservativeChart" class="chart interactive-chart" role="img" aria-label="Conservative Zeus survival and NPC ship DSP destroyed versus Zeus committed"></div>
       </article>
 
       <article class="panel notes">
@@ -137,6 +137,6 @@
   <script src="js/battle-report-parser.js?v=recommendation-layout-1"></script>
   <script src="js/combat.js?v=net-points-2"></script>
   <script src="js/optimizer.js?v=recommendation-layout-1"></script>
-  <script src="js/app.js?v=parse-and-calculate-1"></script>
+  <script src="js/app.js?v=scenario-charts-1"></script>
 </body>
 </html>
