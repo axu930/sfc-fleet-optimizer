@@ -30,7 +30,7 @@ h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; le
 .lede { max-width: 760px; color: #bed0dc; font-size: 1.08rem; margin: 0; }
 .badge { white-space: nowrap; border: 1px solid var(--border); background: #0b1720; padding: 8px 11px; border-radius: 999px; color: var(--muted); font-size: .8rem; }
 
-.grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(290px, .55fr); gap: 16px; align-items: start; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr); gap: 16px; align-items: start; }
 .panel { background: linear-gradient(180deg, rgba(20, 33, 45, .96), rgba(13, 23, 32, .96)); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
 .panel-head, .results-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .hint { color: var(--muted); margin: .15rem 0 .8rem; font-size: .86rem; }
@@ -54,9 +54,9 @@ button:focus, input:focus, textarea:focus { border-color: var(--accent); box-sha
 .unit-input input, .tech-grid input { width: 100%; min-width: 0; background: #071019; color: var(--text); border: 1px solid #304455; border-radius: 8px; padding: 7px 8px; font-variant-numeric: tabular-nums; }
 .unit-input input.invalid { border-color: var(--bad); background: #211216; }
 
-fieldset { border: 1px solid var(--border); border-radius: 12px; margin: 0; padding: 10px 12px 12px; }
+fieldset { min-width: 0; border: 1px solid var(--border); border-radius: 12px; margin: 0; padding: 10px 12px 12px; }
 legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
-.tech-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tech-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tech-grid label { display: grid; grid-template-columns: 1fr 72px; align-items: center; gap: 8px; margin: 7px 0; color: var(--muted); }
 .scenario-note { display: grid; grid-template-columns: 18px 1fr; gap: 9px 7px; align-items: center; margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #0a141d; color: var(--muted); font-size: .79rem; }
 .scenario-note strong { color: var(--text); }
