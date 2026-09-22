@@ -123,13 +123,18 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .chart-tooltip strong { color: var(--text); }
 .chart-tooltip span { display: block; }
 
-.recommendation-table th, .recommendation-table td { text-align: right; padding: 10px 9px; border-bottom: 1px solid #223241; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.recommendation-table th, .recommendation-table td { text-align: right; padding: 10px 9px; border-bottom: 1px solid #223241; white-space: nowrap; vertical-align: middle; }
 .recommendation-table th:first-child, .recommendation-table td:first-child { text-align: left; }
 .recommendation-table th { color: var(--muted); font-size: .73rem; text-transform: uppercase; letter-spacing: .05em; }
 .recommendation-table th small { display: block; color: var(--accent); font-size: .65rem; text-transform: none; letter-spacing: 0; }
 .recommendation-table td { font-size: .86rem; }
+.recommendation-copy { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
 .recommendation-count { width: 150px; min-width: 150px; padding: 7px 8px; border: 1px solid #304455; border-radius: 7px; background: #071019; color: var(--text); font: 700 .82rem ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
 .recommendation-count.conservative-count { border-color: #80683b; color: var(--conservative); }
+.copy-count-button { display: inline-grid; place-items: center; width: 31px; min-width: 31px; height: 31px; padding: 0; border: 1px solid #304455; border-radius: 7px; background: #0b1822; color: var(--muted); cursor: pointer; }
+.copy-count-button:hover, .copy-count-button:focus { border-color: var(--accent); color: var(--accent); }
+.copy-count-button.copied { border-color: var(--expected); color: var(--expected); }
 
 .notes p { color: #b5c6d1; max-width: 1020px; }
 .notes p:last-child { margin-bottom: 0; }

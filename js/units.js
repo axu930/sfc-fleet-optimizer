@@ -17,7 +17,7 @@
     'Zagreus': {kind:'ship', hull:800, shield:5, weapon:1, cost:9_000, zeusRF:500},
     'Charon': {kind:'ship', hull:800, shield:25, weapon:1, cost:9_000, zeusRF:1250},
     'Hercules': {kind:'ship', hull:1200, shield:25, weapon:5, cost:12_000, zeusRF:250},
-    'Dionysus': {kind:'ship', hull:1600, shield:10, weapon:1, cost:18_000, zeusRF:250},
+    'Dionysus': {kind:'ship', hull:1600, shield:10, weapon:1, cost:18_000, cargo:20_000, zeusRF:250},
     'Gaia': {kind:'ship', hull:3000, shield:100, weapon:50, cost:40_000, zeusRF:250},
     'Carmanor': {kind:'ship', hull:3600, shield:100, weapon:10, cost:36_000, zeusRF:125},
     'Poseidon': {kind:'ship', hull:2700, shield:50, weapon:400, cost:29_000, zeusRF:33},

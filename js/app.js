@@ -56,6 +56,41 @@
       : '';
   }
 
+  async function copyZeusCount(button) {
+    const value = button.dataset.copyCount;
+    let copied = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        copied = true;
+      }
+    } catch (error) { /* Fall through to the legacy copy path. */ }
+    if (!copied) {
+      try {
+        const fallback = document.createElement('textarea');
+        fallback.value = value;
+        fallback.setAttribute('readonly', '');
+        fallback.style.position = 'fixed';
+        fallback.style.opacity = '0';
+        document.body.appendChild(fallback);
+        fallback.select();
+        copied = document.execCommand('copy');
+        fallback.remove();
+      } catch (error) {
+        copied = false;
+      }
+    }
+    const original = button.innerHTML;
+    button.innerHTML = copied ? '<span aria-hidden="true">✓</span>' : '<span aria-hidden="true">!</span>';
+    button.classList.toggle('copied', copied);
+    button.title = copied ? 'Copied Zeus count' : 'Copy failed';
+    setTimeout(() => {
+      button.innerHTML = original;
+      button.classList.remove('copied');
+      button.title = button.getAttribute('aria-label') || 'Copy Zeus count';
+    }, 1400);
+  }
+
   function unitInputId(name) {
     return 'unit-' + M.normalize(name);
   }
@@ -212,7 +247,9 @@
       ['Potential NPC debris', formatCount(first.initialDebrisPotential)],
       ['Expected DSP at max', `${formatCount(expectedLast.destroyedDSP)} · ${pct(expectedLast.dspDestroyedFraction)}`],
       ['Conservative DSP at max', `${formatCount(conservativeLast.destroyedDSP)} · ${pct(conservativeLast.dspDestroyedFraction)}`],
-      ['Expected debris at max', formatCount(expectedLast.debrisGenerated)],
+      ['Expected total debris at max', formatCount(expectedLast.debrisGenerated)],
+      ['Conservative total debris at max', formatCount(conservativeLast.debrisGenerated)],
+      ['Expected Dionysus needed at max', formatCount(expectedLast.dionysusRecyclersNeeded)],
       ['Initial Zeus RF factor', number(M.initialZeusShotFactor(readComposition().composition), 2) + '×']
     ];
     $('metrics').innerHTML = cards.map(([label, value]) => `<div class="metric"><span class="k">${label}</span><span class="v">${value}</span></div>`).join('');
@@ -230,7 +267,10 @@
         <div><span>${formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
         <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
         <div><span>${formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
-        <div><span>${formatCount(point.debrisGenerated)}</span><small>NPC debris generated</small></div>
+        <div><span>${formatCount(point.npcDebrisGenerated)}</span><small>NPC debris generated</small></div>
+        <div><span>${formatCount(point.zeusDebrisGenerated)}</span><small>Own Zeus debris</small></div>
+        <div><span>${formatCount(point.debrisGenerated)}</span><small>Total debris generated</small></div>
+        <div><span>${formatCount(point.dionysusRecyclersNeeded)}</span><small>Dionysus recyclers needed</small></div>
         <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
   }
@@ -259,16 +299,25 @@
 
   function renderRecommendations(config, range) {
     const targets = [0.90, 0.95, 0.99];
+    const copyControl = (result, label, className='') => {
+      if (!result) return '—';
+      const value = copyCount(result.zeusCount);
+      return `<div class="recommendation-copy"><input class="recommendation-count ${className}" readonly value="${value}" aria-label="${label}"><button class="copy-count-button" type="button" data-copy-count="${value}" aria-label="Copy ${label}" title="Copy ${label}"><span aria-hidden="true">⧉</span></button></div>`;
+    };
     const rows = targets.map(target => {
       const expected = integerRecommendation(config, SCENARIOS[0], target, range);
       const conservative = integerRecommendation(config, SCENARIOS[1], target, range);
       return `<tr><th scope="row">${pct(target, 0)}</th>
-        <td>${expected ? `<input class="recommendation-count" readonly value="${copyCount(expected.zeusCount)}" aria-label="Expected RF Zeus count for ${pct(target, 0)} DSP">` : '—'}</td>
-        <td>${conservative ? `<input class="recommendation-count conservative-count" readonly value="${copyCount(conservative.zeusCount)}" aria-label="Conservative RF Zeus count for ${pct(target, 0)} DSP">` : '—'}</td>
+        <td>${copyControl(expected, `Expected RF Zeus count for ${pct(target, 0)} DSP`)}</td>
+        <td>${copyControl(conservative, `Conservative RF Zeus count for ${pct(target, 0)} DSP`, 'conservative-count')}</td>
+        <td>${expected ? formatCount(expected.debrisGenerated) : '—'}</td>
+        <td>${expected ? formatCount(expected.dionysusRecyclersNeeded) : '—'}</td>
         <td>${conservative ? pct(conservative.zeusSurvival, 5) : '—'}</td>
-        <td>${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td></tr>`;
+        <td>${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td>
+        <td>${conservative ? formatCount(conservative.debrisGenerated) : '—'}</td>
+        <td>${conservative ? formatCount(conservative.dionysusRecyclersNeeded) : '—'}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Conservative survival</th><th>Conservative DSP</th></tr></thead><tbody>${rows}</tbody></table>`;
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Expected debris</th><th>Expected Dionysus<br><small>recyclers</small></th><th>Conservative survival</th><th>Conservative DSP</th><th>Conservative debris</th><th>Conservative Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function refreshDisplayFormat() {
@@ -284,7 +333,7 @@
   }
 
   function tooltipMarkup(point, scenario) {
-    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} debris</span>`;
+    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} total debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
   }
 
   function renderChart(containerId, datasets, yKey, yLabel, mode) {
@@ -317,7 +366,7 @@
     const curves = datasets.map(dataset => {
       const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
       const dots = dataset.sweep.points.map((point, index) => {
-        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} debris`;
+        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} total debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
         return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
       }).join('');
       return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
@@ -373,7 +422,7 @@
 
   function exportCSV() {
     if (!lastScenarios) return;
-    const header = ['scenario','rf_sigma','zeus_count','zeus_survival','zeus_losses','dsp_destroyed','dsp_destroyed_fraction','debris_generated','threat_destroyed_fraction'];
+    const header = ['scenario','rf_sigma','zeus_count','zeus_survival','zeus_losses','dsp_destroyed','dsp_destroyed_fraction','npc_debris_generated','zeus_debris_generated','debris_generated','dionysus_recyclers_needed','threat_destroyed_fraction'];
     const lines = [header.join(',')];
     for (const dataset of lastScenarios) {
       for (const point of dataset.sweep.points) {
@@ -385,7 +434,10 @@
           Math.max(0, point.zeusLosses),
           point.destroyedDSP,
           point.dspDestroyedFraction,
+          point.npcDebrisGenerated,
+          point.zeusDebrisGenerated,
           point.debrisGenerated,
+          point.dionysusRecyclersNeeded,
           point.threatDestroyedFraction
         ].join(','));
       }
@@ -460,6 +512,10 @@
   });
   $('runBtn').addEventListener('click', run);
   $('exportBtn').addEventListener('click', exportCSV);
+  $('recommendations').addEventListener('click', event => {
+    const button = event.target.closest('[data-copy-count]');
+    if (button) copyZeusCount(button);
+  });
   $('shipInputs').addEventListener('input', updateInputSummary);
   $('defenseInputs').addEventListener('input', updateInputSummary);
 })();

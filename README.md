@@ -8,7 +8,7 @@ The goal is not “how many Zeus fully wipe the NPC?” The app estimates the tr
 - Zeus survival / expected loss fraction
 - defender **ship DSP** destroyed
 - defender **Zeus-damaging threat** removed
-- NPC ship debris generated
+- total debris generated and Dionysus recycler needs
 
 The UI compares expected and conservative rapid-fire scenarios over the same
 Zeus commitment range. A report importer can fill the canonical unit table
@@ -40,8 +40,11 @@ DSP and danger are not always the same thing. The app therefore also tracks an a
 ### DSP and debris
 
 The result summary and chart inspection panel show absolute modeled DSP
-destroyed alongside the percentage. NPC debris is 30% of destroyed ships'
-Ore-plus-Crystal build value; Hydrogen and defenses create no debris.
+destroyed alongside the percentage. Total debris includes 30% of destroyed
+NPC ships' and committed Zeus ships' Ore-plus-Crystal build value; Hydrogen
+and defenses create no debris. Dionysus recycler needs are estimated by
+dividing total debris by the 20,000 cargo capacity of one recycler. The
+recommendation table includes one-click copy buttons for each Zeus count.
 
 ### CSV export
 
@@ -61,7 +64,7 @@ defender block, then the attacker block, then a single detected fleet. It:
 - imports Weapons / Shield / Armor tech levels when they are present in the pasted text;
 - supports `... SHIPS:` plus `TECHS:` espionage-report sections;
 - preserves raw report count text when filling very large table values;
-- shows a parsed preview before changing the unit table.
+- shows a parsed preview after filling the unit table.
 
 If only one fleet block is pasted and no Attacker/Defender heading is present, it is offered as a single **Detected fleet**. Only unit classes currently supported by the model are imported.
 

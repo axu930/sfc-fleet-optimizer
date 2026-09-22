@@ -194,6 +194,11 @@
     return total;
   }
 
+  function dionysusRecyclersNeeded(debris) {
+    const cargo = UNITS.Dionysus.cargo || 20_000;
+    return debris > 0 ? Math.ceil(debris / cargo) : 0;
+  }
+
   function initialZeusShotFactor(composition) {
     const total = Object.values(composition).reduce((sum, count) => sum + count, 0);
     if (!(total > 0)) return 1;
@@ -241,6 +246,8 @@
     const initialTargets = Object.values(defenders).reduce((sum, count) => sum + count, 0);
     const initialThreat = threatValue(defenders, defenderTech, attackerTech);
     const initialDebrisPotential = debrisValue(defenders);
+    const initialZeusDebrisPotential = debrisValue({Zeus:initialZeus});
+    const initialTotalDebrisPotential = initialDebrisPotential + initialZeusDebrisPotential;
     const roundDetails = [];
 
     for (let round = 1; round <= MAX_ROUNDS; round++) {
@@ -295,7 +302,9 @@
       }, 0);
       const aliveAfter = stateCount(zeusState);
       const remainingThreat = threatValue(defenders, defenderTech, attackerTech);
-      const debrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
+      const npcDebrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
+      const zeusDebrisGenerated = debrisValue({Zeus:Math.max(0, initialZeus - aliveAfter)});
+      const debrisGenerated = npcDebrisGenerated + zeusDebrisGenerated;
       roundDetails.push({
         round,
         aliveZeus:aliveAfter,
@@ -305,7 +314,10 @@
         dspDestroyedFraction:initialDSP > 0 ? (initialDSP - shipDSPRemaining) / initialDSP : 0,
         threatRemaining:remainingThreat,
         threatDestroyedFraction:initialThreat > 0 ? 1 - remainingThreat / initialThreat : 1,
-        debrisGenerated
+        npcDebrisGenerated,
+        zeusDebrisGenerated,
+        debrisGenerated,
+        dionysusRecyclersNeeded:dionysusRecyclersNeeded(debrisGenerated)
       });
     }
 
@@ -316,7 +328,9 @@
     }, 0);
     const remainingTargets = Object.values(defenders).reduce((sum, count) => sum + count, 0);
     const destroyedDSP = Math.max(0, initialDSP - remainingDSP);
-    const debrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
+    const npcDebrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
+    const zeusDebrisGenerated = debrisValue({Zeus:Math.max(0, initialZeus - aliveZeus)});
+    const debrisGenerated = npcDebrisGenerated + zeusDebrisGenerated;
     const survival = Math.max(0, Math.min(1, aliveZeus / initialZeus));
     return {
       zeusCount:initialZeus,
@@ -329,7 +343,12 @@
       dspDestroyedFraction:initialDSP > 0 ? destroyedDSP / initialDSP : 0,
       initialShipValue,
       initialDebrisPotential,
+      initialZeusDebrisPotential,
+      initialTotalDebrisPotential,
+      npcDebrisGenerated,
+      zeusDebrisGenerated,
       debrisGenerated,
+      dionysusRecyclersNeeded:dionysusRecyclersNeeded(debrisGenerated),
       remainingTargets,
       targetDestroyedFraction:initialTargets > 0 ? 1 - remainingTargets / initialTargets : 0,
       initialThreat,
@@ -342,5 +361,5 @@
     };
   }
 
-  return {simulate, threatValue, debrisValue, initialZeusShotFactor, MAX_ROUNDS};
+  return {simulate, threatValue, debrisValue, dionysusRecyclersNeeded, initialZeusShotFactor, MAX_ROUNDS};
 });

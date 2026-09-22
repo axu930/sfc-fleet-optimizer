@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Deterministic Zeus commitment, survival, NPC DSP, and debris calculator for Starfleet Commander.">
   <title>SFC Zeus Frontier</title>
-  <link rel="stylesheet" href="css/app.css?v=layout-tech-1">
+  <link rel="stylesheet" href="css/app.css?v=debris-recycler-1">
 </head>
 <body>
   <main class="wrap">
@@ -123,16 +123,16 @@
       <article class="panel notes">
         <h2>Model notes</h2>
         <p>This is an expected-value approximation for very large fleets. Combat is simultaneous within each round and capped at six rounds; shields reset while hull damage persists. The expected curve uses mean Zeus rapid fire, while the conservative curve reduces expected RF shots by 4% using the existing 2σ stress case.</p>
-        <p><strong>DSP</strong> is the modeled ship build value destroyed divided by 1,000. <strong>Debris</strong> is 30% of the destroyed NPC ships’ ore-plus-crystal build cost; hydrogen and defenses contribute no debris. Threat removed remains a diagnostic based on defender fire that passes the Zeus 1% shield rule.</p>
+        <p><strong>DSP</strong> is the modeled ship build value destroyed divided by 1,000. <strong>Debris</strong> includes 30% of destroyed NPC ships’ and Zeus ships’ ore-plus-crystal build value; hydrogen and defenses contribute no debris. Dionysus counts divide total debris by the 20,000 cargo capacity of one recycler. Threat removed remains a diagnostic based on defender fire that passes the Zeus 1% shield rule.</p>
       </article>
     </section>
 
     <footer>Static HTML + JavaScript. No server required.</footer>
   </main>
-  <script src="js/units.js?v=report-inline-1"></script>
-  <script src="js/battle-report-parser.js?v=report-inline-1"></script>
-  <script src="js/combat.js?v=report-inline-1"></script>
-  <script src="js/optimizer.js?v=report-inline-1"></script>
-  <script src="js/app.js?v=report-inline-1"></script>
+  <script src="js/units.js?v=debris-recycler-1"></script>
+  <script src="js/battle-report-parser.js?v=debris-recycler-1"></script>
+  <script src="js/combat.js?v=debris-recycler-1"></script>
+  <script src="js/optimizer.js?v=debris-recycler-1"></script>
+  <script src="js/app.js?v=debris-recycler-1"></script>
 </body>
 </html>
