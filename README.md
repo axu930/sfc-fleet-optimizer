@@ -49,8 +49,9 @@ The complete sampled frontier can be downloaded as CSV for further analysis.
 
 ### Battle report import
 
-Click **Paste report**, paste a copied combat or espionage report, and choose a
-detected fleet to fill the unit table. The importer:
+Click **Paste report**, paste a copied combat or espionage report, and press
+**Parse report**. The importer immediately fills the unit table, preferring the
+defender block, then the attacker block, then a single detected fleet. It:
 
 - reads the first attacker and defender snapshots rather than adding later-round repeats;
 - accepts row-style copies such as `Athena Class Battleship 50,000`;

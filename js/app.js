@@ -41,6 +41,12 @@
     return Number.isFinite(value) ? value.toLocaleString(undefined, {maximumFractionDigits:digits}) : '—';
   }
 
+  function copyCount(value) {
+    return Number.isFinite(value)
+      ? Math.max(0, Math.ceil(value)).toLocaleString('en-US', {useGrouping:false, maximumFractionDigits:0})
+      : '';
+  }
+
   function unitInputId(name) {
     return 'unit-' + M.normalize(name);
   }
@@ -116,7 +122,6 @@
     return `<article class="report-side-card">
       <div class="report-side-head"><div><span class="side-label">${label}</span><strong>${entries.length} types · ${M.formatCount(total)} units</strong></div><span class="tech-pill">${techBits.length ? techBits.join(' · ') : 'AWS not detected'}</span></div>
       <ul>${list}${more}</ul>
-      <button class="ghost import-side-btn" type="button" data-report-side="${key}">Fill table from ${label.toLowerCase()}</button>
     </article>`;
   }
 
@@ -140,8 +145,10 @@
       $('reportPreview').classList.add('hidden');
       return;
     }
-    $('reportStatus').textContent = `Found ${available.map(([label,, data]) => `${label.toLowerCase()}: ${Object.keys(data.composition).length} classes`).join(' · ')}.`;
-    $('reportStatus').className = 'status';
+    const selected = available.find(([, key]) => key === 'defender') || available.find(([, key]) => key === 'attacker') || available[0];
+    applyReportSide(selected[1]);
+    $('reportStatus').textContent = `Filled the NPC table from ${selected[0].toLowerCase()} (${Object.keys(selected[2].composition).length} classes).`;
+    $('reportStatus').className = 'status success';
     $('reportPreview').innerHTML = available.map(([label, key, data]) => reportSideCard(label, key, data)).join('');
     $('reportPreview').classList.remove('hidden');
   }
@@ -202,6 +209,42 @@
         <div><span>${M.formatCount(point.debrisGenerated)}</span><small>NPC debris generated</small></div>
         <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
+  }
+
+  function integerRecommendation(config, scenario, destructionTarget, range) {
+    const candidate = M.findBreakpoint(
+      {...config, rfSigma:scenario.rfSigma},
+      destructionTarget,
+      0.999,
+      range.lo,
+      range.hi
+    );
+    if (!candidate) return null;
+    let count = Math.max(1, Math.ceil(candidate.zeusCount));
+    let result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
+    let guard = 0;
+    while ((result.zeusSurvival < 0.999 || result.dspDestroyedFraction < destructionTarget) && guard < 1000) {
+      const nextCount = Math.max(count + 1, Math.ceil(count * 1.000001));
+      if (nextCount === count) break;
+      count = nextCount;
+      result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
+      guard++;
+    }
+    return result.zeusSurvival >= 0.999 && result.dspDestroyedFraction >= destructionTarget ? result : null;
+  }
+
+  function renderRecommendations(config, range) {
+    const targets = [0.90, 0.95, 0.99];
+    const rows = targets.map(target => {
+      const expected = integerRecommendation(config, SCENARIOS[0], target, range);
+      const conservative = integerRecommendation(config, SCENARIOS[1], target, range);
+      return `<tr><th scope="row">${pct(target, 0)}</th>
+        <td>${expected ? `<input class="recommendation-count" readonly value="${copyCount(expected.zeusCount)}" aria-label="Expected RF Zeus count for ${pct(target, 0)} DSP">` : '—'}</td>
+        <td>${conservative ? `<input class="recommendation-count conservative-count" readonly value="${copyCount(conservative.zeusCount)}" aria-label="Conservative RF Zeus count for ${pct(target, 0)} DSP">` : '—'}</td>
+        <td>${conservative ? pct(conservative.zeusSurvival, 5) : '—'}</td>
+        <td>${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td></tr>`;
+    }).join('');
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Conservative survival</th><th>Conservative DSP</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function tooltipMarkup(point, scenario) {
@@ -334,6 +377,7 @@
       renderMetrics(datasets);
       renderChart('survivalChart', datasets, 'zeusSurvival', 'Zeus survival', 'survival');
       renderChart('commitmentChart', datasets, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
+      renderRecommendations(config, range);
       const initialPoint = datasets[0].sweep.points[Math.floor(datasets[0].sweep.points.length * 0.75)];
       renderPointDetails(initialPoint, datasets[0]);
       $('results').classList.remove('hidden');

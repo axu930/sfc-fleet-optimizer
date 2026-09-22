@@ -43,6 +43,15 @@ assert(breakpoint, '50% breakpoint should be reachable');
 assert(breakpoint.dspDestroyedFraction >= .5 - 1e-7);
 assert(breakpoint.zeusSurvival >= .999 - 1e-7);
 
+for (const target of [.90, .95, .99]) {
+  const candidate = optimizer.findBreakpoint({...config, rfSigma:2}, target, .999, sweep.range.lo, sweep.range.hi);
+  assert(candidate, `${target} recommendation should be reachable`);
+  const integerCount = Math.ceil(candidate.zeusCount);
+  const checked = combat.simulate({...config, rfSigma:2, zeusCount:integerCount});
+  assert(checked.zeusSurvival >= .999, `${target} recommendation should preserve 99.9% survival`);
+  assert(checked.dspDestroyedFraction >= target, `${target} recommendation should meet DSP target`);
+}
+
 const knee = optimizer.findKnee(sweep.points, .999);
 assert(knee, 'knee should exist');
 assert(knee.zeusSurvival >= .999 - 1e-10);

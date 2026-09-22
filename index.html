@@ -104,6 +104,13 @@
         <div id="commitmentChart" class="chart interactive-chart" role="img" aria-label="NPC ship DSP destroyed versus Zeus committed"></div>
       </article>
 
+      <article class="panel recommendations-panel">
+        <div class="panel-head">
+          <div><h2>99.9% survival recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Conservative values include the 2σ RF stress case.</p></div>
+        </div>
+        <div id="recommendations" class="table-wrap"></div>
+      </article>
+
       <article class="panel notes">
         <h2>Model notes</h2>
         <p>This is an expected-value approximation for very large fleets. Combat is simultaneous within each round and capped at six rounds; shields reset while hull damage persists. The expected curve uses mean Zeus rapid fire, while the conservative curve reduces expected RF shots by 4% using the existing 2σ stress case.</p>
