@@ -303,14 +303,14 @@
       const expected = integerRecommendation(config, SCENARIOS[0], target, range);
       const conservative = integerRecommendation(config, SCENARIOS[1], target, range);
       return `<tr><th scope="row">${pct(target, 0)}</th>
-        <td>${copyControl(expected, `Expected RF Zeus count for ${pct(target, 0)} DSP`)}</td>
-        <td>${copyControl(conservative, `Conservative RF Zeus count for ${pct(target, 0)} DSP`, 'conservative-count')}</td>
-        <td>${expected ? formatCount(expected.debrisGenerated) : '—'}</td>
-        <td>${expected ? formatCount(expected.dionysusRecyclersNeeded) : '—'}</td>
-        <td>${conservative ? pct(conservative.zeusSurvival, 5) : '—'}</td>
-        <td>${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td>
-        <td>${conservative ? formatCount(conservative.debrisGenerated) : '—'}</td>
-        <td>${conservative ? formatCount(conservative.dionysusRecyclersNeeded) : '—'}</td></tr>`;
+        <td data-label="Expected RF Zeus">${copyControl(expected, `Expected RF Zeus count for ${pct(target, 0)} DSP`)}</td>
+        <td data-label="Conservative RF Zeus">${copyControl(conservative, `Conservative RF Zeus count for ${pct(target, 0)} DSP`, 'conservative-count')}</td>
+        <td data-label="Expected debris">${expected ? formatCount(expected.debrisGenerated) : '—'}</td>
+        <td data-label="Expected Dionysus recyclers">${expected ? formatCount(expected.dionysusRecyclersNeeded) : '—'}</td>
+        <td data-label="Conservative survival">${conservative ? pct(conservative.zeusSurvival, 5) : '—'}</td>
+        <td data-label="Conservative DSP">${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td>
+        <td data-label="Conservative debris">${conservative ? formatCount(conservative.debrisGenerated) : '—'}</td>
+        <td data-label="Conservative Dionysus recyclers">${conservative ? formatCount(conservative.dionysusRecyclersNeeded) : '—'}</td></tr>`;
     }).join('');
     $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Expected debris</th><th>Expected Dionysus<br><small>recyclers</small></th><th>Conservative survival</th><th>Conservative DSP</th><th>Conservative debris</th><th>Conservative Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
   }

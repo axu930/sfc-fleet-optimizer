@@ -34,6 +34,7 @@ h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; le
 .format-control select { max-width: 310px; min-height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #0b1822; color: var(--text); padding: 0 9px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr); gap: 16px; align-items: start; }
+.panel, .results > *, .panel-head > *, .results-head > * { min-width: 0; }
 .panel { background: linear-gradient(180deg, rgba(20, 33, 45, .96), rgba(13, 23, 32, .96)); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
 .panel-head, .results-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .hint { color: var(--muted); margin: .15rem 0 .8rem; font-size: .86rem; }
@@ -104,7 +105,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .point-facts span { display: block; font-size: 1.02rem; font-weight: 750; white-space: nowrap; }
 .point-facts small { display: block; color: var(--muted); font-size: .72rem; line-height: 1.3; margin-top: 3px; }
 
-.chart { position: relative; width: 100%; overflow-x: auto; }
+.chart { position: relative; width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 .chart svg { display: block; width: 100%; min-width: 700px; height: auto; }
 .axis { fill: #94a8b7; font: 12px system-ui; }
 .gridline { stroke: #243746; stroke-width: 1; }
@@ -152,11 +153,41 @@ footer { text-align: center; color: #647a89; font-size: .8rem; margin-top: 24px;
   .wrap { padding: 24px 12px 48px; }
   .panel { padding: 15px; }
   .panel-head, .results-head, .point-heading, .import-head { display: block; }
+  .header-tools { width: 100%; min-width: 0; justify-items: stretch; }
+  .badge { white-space: normal; }
+  .format-control { display: grid; gap: 5px; justify-items: stretch; }
+  .format-control select { width: 100%; max-width: none; }
   .head-actions { justify-content: flex-start; margin-top: 10px; }
   .unit-input-grid, .tech-grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .metric { padding: 11px; }
+  .metric .k, .point-facts small { overflow-wrap: anywhere; }
+  .metric .v { font-size: 1.08rem; overflow-wrap: anywhere; }
   .point-facts { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
+  .point-facts span { white-space: normal; overflow-wrap: anywhere; }
   .point-hint, .legend { display: block; margin-top: 8px; }
   .results-head .ghost, .import-head .compact-button { margin-top: 10px; }
   .report-side-head { display: block; }
   .tech-pill { display: inline-block; margin-top: 7px; }
+  .chart svg { min-width: 560px; }
+  .chart-tooltip { max-width: min(280px, calc(100vw - 32px)); white-space: normal; }
+
+  .recommendation-table,
+  .recommendation-table tbody,
+  .recommendation-table tr,
+  .recommendation-table th,
+  .recommendation-table td { display: block; width: 100%; }
+  .recommendation-table thead { display: none; }
+  .recommendation-table tr { padding: 11px 0; border-bottom: 1px solid #223241; }
+  .recommendation-table tr:first-child { padding-top: 0; }
+  .recommendation-table tr:last-child { border-bottom: 0; padding-bottom: 0; }
+  .recommendation-table th,
+  .recommendation-table td { border: 0; padding: 6px 0; text-align: left; white-space: normal; }
+  .recommendation-table tbody th { color: var(--accent); font-size: .86rem; }
+  .recommendation-table tbody th::before { content: 'DSP target: '; color: var(--muted); font-weight: 400; }
+  .recommendation-table td { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .recommendation-table td::before { content: attr(data-label); flex: 1 1 auto; min-width: 0; color: var(--muted); font-size: .75rem; }
+  .recommendation-table td > :not(.recommendation-copy) { margin-left: auto; text-align: right; }
+  .recommendation-copy { flex: 0 1 auto; min-width: 0; }
+  .recommendation-count { width: clamp(110px, 42vw, 150px); min-width: 0; }
 }
