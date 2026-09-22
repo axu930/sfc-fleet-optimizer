@@ -90,9 +90,16 @@
 
     <section id="results" class="results hidden" aria-live="polite">
       <div class="results-head">
-        <div><p class="eyebrow">Modeled outcome</p><h2>Commitment comparison</h2></div>
+        <div><p class="eyebrow">Detailed analysis</p><h2>Commitment comparison</h2></div>
         <button id="exportBtn" class="ghost" type="button">Export curves CSV</button>
       </div>
+
+      <article class="panel recommendations-panel">
+        <div class="panel-head">
+          <div><h2>Fleet recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Conservative values include the 2σ RF stress case.</p></div>
+        </div>
+        <div id="recommendations" class="table-wrap"></div>
+      </article>
 
       <div class="metrics" id="metrics"></div>
       <article class="panel point-panel" id="pointDetails" aria-live="polite"></article>
@@ -111,13 +118,6 @@
           <div class="legend"><span class="line-key expected"></span> Expected RF <span class="line-key conservative"></span> Conservative RF</div>
         </div>
         <div id="commitmentChart" class="chart interactive-chart" role="img" aria-label="NPC ship DSP destroyed versus Zeus committed"></div>
-      </article>
-
-      <article class="panel recommendations-panel">
-        <div class="panel-head">
-          <div><h2>99.9% survival recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Conservative values include the 2σ RF stress case.</p></div>
-        </div>
-        <div id="recommendations" class="table-wrap"></div>
       </article>
 
       <article class="panel notes">
