@@ -321,9 +321,10 @@
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
         <td data-label="Expected Zeus lost">${result ? formatCount(Math.max(0, result.zeusLosses)) : '—'}</td>
         <td data-label="${debrisLabel}">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
-        <td data-label="${dionysusLabel}">${copyControl(dionysusNeeded, `${dionysusLabel} for ${pct(target, 0)} DSP`)}</td></tr>`;
+        <td data-label="${dionysusLabel}">${copyControl(dionysusNeeded, `${dionysusLabel} for ${pct(target, 0)} DSP`)}</td>
+        <td data-label="Net points">${result ? formatCount(M.netPoints(result)) : '—'}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th></tr></thead><tbody>${rows}</tbody></table>`;
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function refreshDisplayFormat() {

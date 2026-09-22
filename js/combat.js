@@ -235,6 +235,16 @@
     return Math.ceil(crystal / crystalCapacity);
   }
 
+  function netPoints(result) {
+    if (!result || !Number.isFinite(result.destroyedDSP)) return NaN;
+    // Net points currently ignore hydrogen: only ore and crystal costs are
+    // deducted from the generated debris value.
+    const zeusOreCrystalCost = (UNITS.Zeus.ore || 0) + (UNITS.Zeus.crystal || 0);
+    const harvestedResources = Number(result.debrisGenerated) || 0;
+    const zeusResourcesLost = (Number(result.zeusLosses) || 0) * zeusOreCrystalCost;
+    return result.destroyedDSP + (harvestedResources - zeusResourcesLost) / 1000;
+  }
+
   function initialZeusShotFactor(composition) {
     const total = Object.values(composition).reduce((sum, count) => sum + count, 0);
     if (!(total > 0)) return 1;
@@ -406,5 +416,5 @@
     };
   }
 
-  return {simulate, threatValue, debrisValue, debrisBreakdown, dionysusRecyclersNeeded, dionysusRecyclersNeededForCrystal, initialZeusShotFactor, MAX_ROUNDS};
+  return {simulate, threatValue, debrisValue, debrisBreakdown, dionysusRecyclersNeeded, dionysusRecyclersNeededForCrystal, netPoints, initialZeusShotFactor, MAX_ROUNDS};
 });
