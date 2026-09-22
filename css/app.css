@@ -153,6 +153,8 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .notes p { color: #b5c6d1; max-width: 1020px; }
 .notes p:last-child { margin-bottom: 0; }
 footer { text-align: center; color: #647a89; font-size: .8rem; margin-top: 24px; }
+footer a { color: inherit; }
+footer a:hover { color: var(--accent); }
 
 @media (max-width: 930px) {
   header { display: block; }
