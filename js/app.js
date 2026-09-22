@@ -330,7 +330,7 @@
       return `<div class="recommendation-copy"><input class="recommendation-count ${className}" readonly value="${value}" aria-label="${label}"><button class="copy-count-button" type="button" data-copy-count="${value}" aria-label="Copy ${label}" title="Copy ${label}"><span aria-hidden="true">⧉</span></button></div>`;
     };
     const zeusLossMarkup = result => result
-      ? `<span class="recommendation-pair"><span>${formatCount(Math.max(0, result.zeusLosses))} Zeus</span><span>${pct(Math.max(0, result.zeusLossFraction), 3)} of fleet</span></span>`
+      ? `<span class="recommendation-pair"><span>Absolute: ${formatCount(Math.max(0, result.zeusLosses))} Zeus</span><span>Percent: ${pct(Math.max(0, result.zeusLossFraction), 3)} of fleet</span></span>`
       : '—';
     const dionysusNeeded = result => {
       if (!result) return NaN;
@@ -372,11 +372,11 @@
     $('recommendations').innerHTML = `
       <section class="recommendation-table-section">
         <h3>DSP target</h3>
-        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>count and %</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${dspRows}</tbody></table></div>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>absolute and %</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${dspRows}</tbody></table></div>
       </section>
       <section class="recommendation-table-section">
         <h3>Zeus survival rate</h3>
-        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>count and %</small></th><th>Expected DSP<br><small>% of max and absolute</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${survivalRows}</tbody></table></div>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost<br><small>absolute and %</small></th><th>Expected DSP<br><small>% of max and absolute</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${survivalRows}</tbody></table></div>
       </section>`;
   }
 
