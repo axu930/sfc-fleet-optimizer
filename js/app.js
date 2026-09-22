@@ -243,7 +243,6 @@
     const cards = [
       ['Max DSP', formatCount(first.initialDSP)],
       ['Max Debris', formatCount(first.initialDebrisPotential)],
-      ['Conservative total debris at max', formatCount(datasets[1].sweep.points[datasets[1].sweep.points.length - 1].debrisGenerated)],
       ['Expected Dionysus needed at max', formatCount(datasets[0].sweep.points[datasets[0].sweep.points.length - 1].dionysusRecyclersNeeded)],
       ['Defense RSP', formatCount(first.initialDefenseRSP)]
     ];
