@@ -240,17 +240,12 @@
 
   function renderMetrics(datasets) {
     const first = datasets[0].sweep.points[0];
-    const expectedLast = datasets[0].sweep.points[datasets[0].sweep.points.length - 1];
-    const conservativeLast = datasets[1].sweep.points[datasets[1].sweep.points.length - 1];
     const cards = [
-      ['NPC ship DSP', formatCount(first.initialDSP)],
-      ['Potential NPC debris', formatCount(first.initialDebrisPotential)],
-      ['Expected DSP at max', `${formatCount(expectedLast.destroyedDSP)} · ${pct(expectedLast.dspDestroyedFraction)}`],
-      ['Conservative DSP at max', `${formatCount(conservativeLast.destroyedDSP)} · ${pct(conservativeLast.dspDestroyedFraction)}`],
-      ['Expected total debris at max', formatCount(expectedLast.debrisGenerated)],
-      ['Conservative total debris at max', formatCount(conservativeLast.debrisGenerated)],
-      ['Expected Dionysus needed at max', formatCount(expectedLast.dionysusRecyclersNeeded)],
-      ['Initial Zeus RF factor', number(M.initialZeusShotFactor(readComposition().composition), 2) + '×']
+      ['Max DSP', formatCount(first.initialDSP)],
+      ['Max Debris', formatCount(first.initialDebrisPotential)],
+      ['Conservative total debris at max', formatCount(datasets[1].sweep.points[datasets[1].sweep.points.length - 1].debrisGenerated)],
+      ['Expected Dionysus needed at max', formatCount(datasets[0].sweep.points[datasets[0].sweep.points.length - 1].dionysusRecyclersNeeded)],
+      ['Defense RSP', formatCount(first.initialDefenseRSP)]
     ];
     $('metrics').innerHTML = cards.map(([label, value]) => `<div class="metric"><span class="k">${label}</span><span class="v">${value}</span></div>`).join('');
   }

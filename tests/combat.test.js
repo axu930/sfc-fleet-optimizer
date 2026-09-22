@@ -21,6 +21,7 @@ const representative = combat.simulate({...config, zeusCount:5e5});
 near(representative.zeusSurvival, 0.9999999986994975, 1e-12);
 near(representative.dspDestroyedFraction, 0.7747700191663955, 1e-12);
 near(representative.threatDestroyedFraction, 0.7747700191663954, 1e-12);
+near(representative.initialDefenseRSP, 1_000_000_000);
 near(representative.remainingTargets, 8558739.271676973, 1e-6);
 assert.strictEqual(representative.roundDetails.length, combat.MAX_ROUNDS);
 

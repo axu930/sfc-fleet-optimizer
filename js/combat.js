@@ -242,6 +242,10 @@
       const unit = UNITS[name];
       return sum + (unit.kind === 'ship' ? count * unit.cost / 1000 : 0);
     }, 0);
+    const initialDefenseRSP = Object.entries(defenders).reduce((sum, [name, count]) => {
+      const unit = UNITS[name];
+      return sum + (unit.kind === 'defense' ? count * unit.cost / 1000 : 0);
+    }, 0);
     const initialShipValue = initialDSP * 1000;
     const initialTargets = Object.values(defenders).reduce((sum, count) => sum + count, 0);
     const initialThreat = threatValue(defenders, defenderTech, attackerTech);
@@ -339,6 +343,7 @@
       zeusLosses:initialZeus - aliveZeus,
       zeusResourcesLost:(initialZeus - aliveZeus) * ZEUS_COST,
       initialDSP,
+      initialDefenseRSP,
       destroyedDSP,
       dspDestroyedFraction:initialDSP > 0 ? destroyedDSP / initialDSP : 0,
       initialShipValue,
