@@ -56,6 +56,8 @@ const harmless = combat.simulate({
 near(harmless.zeusSurvival, 1);
 near(harmless.initialDSP, 0);
 near(harmless.destroyedDSP, 0);
+near(harmless.initialDebrisPotential, 0);
+near(harmless.debrisGenerated, 0);
 near(harmless.initialThreat, 0);
 near(harmless.threatDestroyedFraction, 1);
 
@@ -68,6 +70,16 @@ const ineffectiveFire = combat.simulate({
 });
 near(ineffectiveFire.zeusSurvival, 1);
 near(ineffectiveFire.initialThreat, 0);
+
+const debris = combat.simulate({
+  composition:{Artemis:1},
+  zeusCount:1,
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0}
+});
+near(debris.initialDebrisPotential, 1200);
+near(debris.debrisGenerated, 1200);
+near(debris.destroyedDSP, 4);
 
 const hugeFleet = combat.simulate({
   composition:{Hades:1e18, 'Gauss Cannon':2e18},

@@ -147,7 +147,7 @@
   function extractTech(line, tech) {
     const source = String(line || '');
     const definitions = [
-      ['weapons',/(?:weapons?|weapon\s+tech(?:nology)?)\s*[:=]?\s*(\d{1,3})/i],
+      ['weapons',/(?:weapons?|weapons?\s+tech(?:nology)?)\s*[:=]?\s*(\d{1,3})/i],
       ['shield',/(?:shields?|shield\s+tech(?:nology)?)\s*[:=]?\s*(\d{1,3})/i],
       ['armor',/(?:armor|armour|armor\s+tech(?:nology)?|armour\s+tech(?:nology)?)\s*[:=]?\s*(\d{1,3})/i]
     ];
@@ -169,13 +169,18 @@
 
   function parseReportSection(lines) {
     const composition = {};
+    const rawCounts = {};
     const tech = {};
     const pending = [];
     let pendingTech = false;
     let stoppedAtRound = false;
+    let inTechSection = false;
 
-    const setFirst = (key, count) => {
-      if (key && Number.isFinite(count) && count >= 0 && composition[key] === undefined) composition[key] = count;
+    const setFirst = (key, count, raw) => {
+      if (key && Number.isFinite(count) && count >= 0 && composition[key] === undefined) {
+        composition[key] = count;
+        if (raw) rawCounts[key] = raw;
+      }
     };
     const queue = keys => {
       for (const key of keys) {
@@ -184,13 +189,24 @@
     };
     const consumePending = numbers => {
       let used = 0;
-      while (pending.length && used < numbers.length) setFirst(pending.shift(), numbers[used++].value);
+      while (pending.length && used < numbers.length) {
+        const number = numbers[used++];
+        setFirst(pending.shift(), number.value, number.raw);
+      }
       return used;
     };
 
     for (let index = 0; index < lines.length; index++) {
       const line = String(lines[index] || '').replace(/\u00a0/g, ' ').trim();
       if (!line) continue;
+      if (/^(?:[-•]\s*)?techs?\s*:?$/i.test(line)) {
+        inTechSection = true;
+        continue;
+      }
+      if (/^(?:[-•]\s*)?.+?\s+ships\s*:?$/i.test(line)) {
+        inTechSection = false;
+        continue;
+      }
       if (/^round\s+\d+\b/i.test(line) && Object.keys(composition).length) {
         stoppedAtRound = true;
         break;
@@ -198,6 +214,7 @@
 
       const numbers = reportNumberTokens(line);
       const hadTech = extractTech(line, tech);
+      if (inTechSection) continue;
       if (pendingTech && numbers.length >= 3 && !reportUnitMatches(line).length) {
         tech.weapons = numbers[0].value;
         tech.shield = numbers[1].value;
@@ -224,7 +241,7 @@
           const prefix = line.slice(0, unit.index).trim();
           const prefixCount = /^[\d.,eE+\-]+\s*(?:quadrillion|quintillion|sextillion|septillion|Qi|Qa|Sx|Sp|[KMBTQ])?\s*(?:x|×)?$/i.test(prefix);
           const chosen = prefixCount && before.length ? before[before.length - 1] : (after[0] || before[before.length - 1]);
-          if (chosen) setFirst(unit.key, chosen.value);
+          if (chosen) setFirst(unit.key, chosen.value, chosen.raw);
           else queue([unit.key]);
         } else {
           queue([unit.key]);
@@ -241,7 +258,7 @@
         const end = unitIndex + 1 < matchedUnits.length ? matchedUnits[unitIndex + 1].index : Infinity;
         const number = numbers.find(item => item.index >= start && item.index < end);
         if (number) {
-          setFirst(matchedUnits[unitIndex].key, number.value);
+          setFirst(matchedUnits[unitIndex].key, number.value, number.raw);
           assigned++;
         }
       }
@@ -249,7 +266,7 @@
         queue(matchedUnits.filter(unit => composition[unit.key] === undefined).map(unit => unit.key));
       }
     }
-    return {composition, tech, stoppedAtRound};
+    return {composition, rawCounts, tech, stoppedAtRound};
   }
 
   function parseBattleReport(text) {

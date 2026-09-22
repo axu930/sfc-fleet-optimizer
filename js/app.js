@@ -1,214 +1,370 @@
-(function(){
+(function () {
   'use strict';
-  const M=Object.assign({},window.SFCUnits,window.SFCBattleReportParser,window.SFCCombat,window.SFCOptimizer);
-  const $=id=>document.getElementById(id);
-  const sample=`# Sample NPC\nHades: 100M\nAthena: 50M\nPrometheus: 10M\nGauss Cannon: 200M\nPlasma Cannon: 20M\nLarge Decoy: 1`;
-  const DEFAULT_DESTRUCTION_LEVELS=[.25,.5,.75,.9,.95,.99];
-  const DEFAULT_SURVIVAL_LEVELS=[.99,.999,.9999,.99999];
-  let lastSweep=null,lastCfg=null,lastKnee=null,lastReportParse=null;
 
-  function tech(prefix){return {weapons:+$(prefix+'w').value||0,shield:+$(prefix+'s').value||0,armor:+$(prefix+'a').value||0};}
-  function pct(x,d=4){return Number.isFinite(x)?(100*x).toLocaleString(undefined,{minimumFractionDigits:Math.min(2,d),maximumFractionDigits:d})+'%':'—';}
-  function pp(x,d=2){return Number.isFinite(x)?(100*x).toLocaleString(undefined,{maximumFractionDigits:d})+' pp':'—';}
-  function num(x,d=2){return Number.isFinite(x)?x.toLocaleString(undefined,{maximumFractionDigits:d}):'—';}
+  const M = Object.assign({}, window.SFCUnits, window.SFCBattleReportParser, window.SFCCombat, window.SFCOptimizer);
+  const $ = id => document.getElementById(id);
+  const SAMPLE = {
+    Hades:1e8,
+    Athena:5e7,
+    Prometheus:1e7,
+    'Gauss Cannon':2e8,
+    'Plasma Cannon':2e7,
+    'Large Decoy':1
+  };
+  const SCENARIOS = [
+    {key:'expected', label:'Expected RF', rfSigma:0},
+    {key:'conservative', label:'Conservative RF (2σ)', rfSigma:2}
+  ];
+  const POINT_COUNT = 64;
+  const RANGE_SURVIVAL_TARGET = 0.9999;
 
-  function parse(){
-    const p=M.parseRoster($('roster').value);
-    const n=Object.keys(p.composition).length;
-    if(!n){$('parseStatus').textContent='No recognized units yet.';$('parseStatus').className='status error';return null;}
-    const total=Object.values(p.composition).reduce((a,b)=>a+b,0);
-    $('parseStatus').textContent=`${n} unit types · ${M.formatCount(total)} total targets`+(p.unknown.length?` · ${p.unknown.length} unparsed line(s)`:'');
-    $('parseStatus').className=p.unknown.length?'status error':'status';
-    return p;
+  let lastScenarios = null;
+  let lastReportParse = null;
+
+  function tech(prefix) {
+    return {
+      weapons:+$(prefix + 'w').value || 0,
+      shield:+$(prefix + 's').value || 0,
+      armor:+$(prefix + 'a').value || 0
+    };
   }
 
-  function config(comp){return {composition:comp,attackerTech:tech('a'),defenderTech:tech('d'),survivalTarget:+$('survival').value,rfSigma:+$('rfSigma').value};}
-
-
-  function compositionToRoster(comp){
-    return Object.entries(comp||{}).filter(([,c])=>Number.isFinite(c)&&c>=0).map(([name,count])=>`${name}: ${String(count)}`).join('\n');
+  function pct(value, digits=3) {
+    if (!Number.isFinite(value)) return '—';
+    return (100 * value).toLocaleString(undefined, {
+      minimumFractionDigits:Math.min(2, digits),
+      maximumFractionDigits:digits
+    }) + '%';
   }
 
-  function reportSideCard(label,key,data){
-    if(!data||!Object.keys(data.composition||{}).length)return '';
-    const entries=Object.entries(data.composition);
-    const total=entries.reduce((s,[,c])=>s+c,0);
-    const techs=data.tech||{};
-    const techBits=[['W',techs.weapons],['S',techs.shield],['A',techs.armor]].filter(([,v])=>Number.isFinite(v)).map(([k,v])=>`${k}${v}`);
-    const list=entries.slice(0,7).map(([name,count])=>`<li><span>${name}</span><strong>${M.formatCount(count)}</strong></li>`).join('');
-    const more=entries.length>7?`<li class="more"><span>+ ${entries.length-7} more classes</span></li>`:'';
-    return `<article class="report-side-card"><div class="report-side-head"><div><span class="side-label">${label}</span><strong>${entries.length} types · ${M.formatCount(total)} units</strong></div><span class="tech-pill">${techBits.length?techBits.join(' · '):'AWS not detected'}</span></div><ul>${list}${more}</ul><button class="ghost import-side-btn" type="button" data-report-side="${key}">Use ${label.toLowerCase()} as NPC fleet</button></article>`;
+  function number(value, digits=2) {
+    return Number.isFinite(value) ? value.toLocaleString(undefined, {maximumFractionDigits:digits}) : '—';
   }
 
-  function parseBattleReportUI(){
-    const text=$('reportText').value.trim();
-    if(!text){$('reportStatus').textContent='Paste a report first.';$('reportStatus').className='status error';$('reportPreview').classList.add('hidden');return;}
-    const parsed=M.parseBattleReport(text);lastReportParse=parsed;
-    const available=[];
-    if(parsed.attacker&&Object.keys(parsed.attacker.composition).length)available.push(['Attacker','attacker',parsed.attacker]);
-    if(parsed.defender&&Object.keys(parsed.defender.composition).length)available.push(['Defender','defender',parsed.defender]);
-    if(parsed.unassigned&&Object.keys(parsed.unassigned.composition).length)available.push(['Detected fleet','unassigned',parsed.unassigned]);
-    if(!available.length){
-      $('reportStatus').textContent='No currently supported ship/defense classes were recognized. Try copying the fleet table together with its Attacker/Defender heading.';
-      $('reportStatus').className='status error';$('reportPreview').classList.add('hidden');return;
+  function unitInputId(name) {
+    return 'unit-' + M.normalize(name);
+  }
+
+  function renderUnitInputs() {
+    const groups = {ship:[], defense:[]};
+    for (const [name, unit] of Object.entries(M.UNITS)) groups[unit.kind].push(name);
+    for (const [kind, targetId] of [['ship','shipInputs'], ['defense','defenseInputs']]) {
+      $(targetId).innerHTML = groups[kind].map(name => `
+        <label class="unit-input" for="${unitInputId(name)}">
+          <span>${name}</span>
+          <input id="${unitInputId(name)}" data-unit="${name}" type="text" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="${name} count">
+        </label>`).join('');
     }
-    $('reportStatus').textContent=`Found ${available.map(([label,,d])=>`${label.toLowerCase()}: ${Object.keys(d.composition).length} class${Object.keys(d.composition).length===1?'':'es'}`).join(' · ')}.`;
-    $('reportStatus').className='status';
-    $('reportPreview').innerHTML=available.map(([label,key,data])=>reportSideCard(label,key,data)).join('');
+  }
+
+  function readComposition() {
+    const composition = {};
+    const invalid = [];
+    for (const input of document.querySelectorAll('[data-unit]')) {
+      const raw = input.value.trim();
+      input.classList.remove('invalid');
+      if (!raw) continue;
+      const count = M.parseCount(raw);
+      if (!Number.isFinite(count)) {
+        input.classList.add('invalid');
+        invalid.push(input.dataset.unit);
+      } else if (count > 0) {
+        composition[input.dataset.unit] = count;
+      }
+    }
+    return {composition, invalid};
+  }
+
+  function setComposition(composition, rawCounts={}) {
+    for (const input of document.querySelectorAll('[data-unit]')) {
+      const name = input.dataset.unit;
+      const count = composition && composition[name];
+      input.value = count > 0 ? (rawCounts[name] || String(count)) : '';
+      input.classList.remove('invalid');
+    }
+    updateInputSummary();
+  }
+
+  function updateInputSummary() {
+    const {composition, invalid} = readComposition();
+    const entries = Object.entries(composition);
+    const total = entries.reduce((sum, [, count]) => sum + count, 0);
+    const shipDSP = entries.reduce((sum, [name, count]) => {
+      const unit = M.UNITS[name];
+      return sum + (unit.kind === 'ship' ? count * unit.cost / 1000 : 0);
+    }, 0);
+    const summary = invalid.length
+      ? `${invalid.length} invalid unit count${invalid.length === 1 ? '' : 's'}`
+      : `${entries.length} populated classes · ${M.formatCount(total)} total units · ${M.formatCount(shipDSP)} modeled ship DSP`;
+    $('inputSummary').textContent = summary;
+    $('inputSummary').className = invalid.length ? 'fleet-summary error' : 'fleet-summary';
+    return {composition, invalid};
+  }
+
+  function reportSideCard(label, key, data) {
+    if (!data || !Object.keys(data.composition || {}).length) return '';
+    const entries = Object.entries(data.composition);
+    const total = entries.reduce((sum, [, count]) => sum + count, 0);
+    const techs = data.tech || {};
+    const techBits = [['W',techs.weapons], ['S',techs.shield], ['A',techs.armor]]
+      .filter(([, value]) => Number.isFinite(value))
+      .map(([name, value]) => `${name}${value}`);
+    const list = entries.slice(0, 7)
+      .map(([name, count]) => `<li><span>${name}</span><strong>${M.formatCount(count)}</strong></li>`)
+      .join('');
+    const more = entries.length > 7 ? `<li class="more"><span>+ ${entries.length - 7} more classes</span></li>` : '';
+    return `<article class="report-side-card">
+      <div class="report-side-head"><div><span class="side-label">${label}</span><strong>${entries.length} types · ${M.formatCount(total)} units</strong></div><span class="tech-pill">${techBits.length ? techBits.join(' · ') : 'AWS not detected'}</span></div>
+      <ul>${list}${more}</ul>
+      <button class="ghost import-side-btn" type="button" data-report-side="${key}">Fill table from ${label.toLowerCase()}</button>
+    </article>`;
+  }
+
+  function parseReport() {
+    const text = $('reportText').value.trim();
+    if (!text) {
+      $('reportStatus').textContent = 'Paste a report first.';
+      $('reportStatus').className = 'status error';
+      $('reportPreview').classList.add('hidden');
+      return;
+    }
+    const parsed = M.parseBattleReport(text);
+    lastReportParse = parsed;
+    const available = [];
+    if (parsed.attacker && Object.keys(parsed.attacker.composition).length) available.push(['Attacker','attacker',parsed.attacker]);
+    if (parsed.defender && Object.keys(parsed.defender.composition).length) available.push(['Defender','defender',parsed.defender]);
+    if (parsed.unassigned && Object.keys(parsed.unassigned.composition).length) available.push(['Detected fleet','unassigned',parsed.unassigned]);
+    if (!available.length) {
+      $('reportStatus').textContent = 'No supported ship or defense classes were recognized.';
+      $('reportStatus').className = 'status error';
+      $('reportPreview').classList.add('hidden');
+      return;
+    }
+    $('reportStatus').textContent = `Found ${available.map(([label,, data]) => `${label.toLowerCase()}: ${Object.keys(data.composition).length} classes`).join(' · ')}.`;
+    $('reportStatus').className = 'status';
+    $('reportPreview').innerHTML = available.map(([label, key, data]) => reportSideCard(label, key, data)).join('');
     $('reportPreview').classList.remove('hidden');
   }
 
-  function applyReportSide(key){
-    const data=lastReportParse&&lastReportParse[key];
-    if(!data||!Object.keys(data.composition||{}).length)return;
-    $('roster').value=compositionToRoster(data.composition);
-    const t=data.tech||{};
-    if(Number.isFinite(t.weapons))$('dw').value=t.weapons;
-    if(Number.isFinite(t.shield))$('ds').value=t.shield;
-    if(Number.isFinite(t.armor))$('da').value=t.armor;
-    parse();
-    const foundTech=['weapons','shield','armor'].filter(k=>Number.isFinite(t[k])).length;
-    $('reportStatus').textContent=`Imported ${Object.keys(data.composition).length} unit classes into the NPC fleet${foundTech===3?' and loaded NPC AWS tech levels':foundTech?' and loaded the detected NPC tech levels':' (AWS was not present, so existing NPC tech settings were kept)'}.`;
-    $('reportStatus').className='status success';
-    $('roster').scrollIntoView({behavior:'smooth',block:'center'});
+  function applyReportSide(key) {
+    const data = lastReportParse && lastReportParse[key];
+    if (!data || !Object.keys(data.composition || {}).length) return;
+    setComposition(data.composition, data.rawCounts || {});
+    const detectedTech = data.tech || {};
+    if (Number.isFinite(detectedTech.weapons)) $('dw').value = detectedTech.weapons;
+    if (Number.isFinite(detectedTech.shield)) $('ds').value = detectedTech.shield;
+    if (Number.isFinite(detectedTech.armor)) $('da').value = detectedTech.armor;
+    const foundTech = ['weapons','shield','armor'].filter(name => Number.isFinite(detectedTech[name])).length;
+    $('reportStatus').textContent = `Filled ${Object.keys(data.composition).length} unit classes${foundTech === 3 ? ' and NPC AWS tech' : foundTech ? ' and detected NPC tech' : ''}.`;
+    $('reportStatus').className = 'status success';
+    $('inputSummary').scrollIntoView({behavior:'smooth', block:'center'});
   }
 
-  function readLevels(id,defaults){
-    const raw=$(id).value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean);
-    const vals=[];
-    for(const token of raw){
-      let v=Number(token.replace('%',''));
-      if(!Number.isFinite(v))continue;
-      if(v>1)v/=100;
-      if(v>0&&v<=1)vals.push(v);
-    }
-    const unique=[...new Set(vals.map(v=>+v.toFixed(9)))].sort((a,b)=>a-b).slice(0,10);
-    return unique.length?unique:defaults.slice();
+  function sharedRange(config) {
+    const ranges = SCENARIOS.map(scenario => M.autoRange(
+      config.composition,
+      config.attackerTech,
+      config.defenderTech,
+      RANGE_SURVIVAL_TARGET,
+      scenario.rfSigma
+    ));
+    return {
+      lo:Math.min(...ranges.map(range => range.lo)),
+      hi:Math.max(...ranges.map(range => range.hi))
+    };
   }
 
-  function renderMetrics(sweep,bps,target,knee,cfg){
-    const feasible=sweep.points.filter(p=>p.zeusSurvival>=target);
-    const best=feasible.reduce((a,b)=>!a||b.dspDestroyedFraction>a.dspDestroyedFraction?b:a,null);
-    const first=bps.find(x=>x.result);
-    const cards=[
-      ['Survival constraint',pct(target,5)],
-      ['Efficiency-knee Zeus',knee?M.formatCount(knee.zeusCount):'—'],
-      ['Knee DSP destroyed',knee?pct(knee.dspDestroyedFraction,3):'—'],
-      ['Knee threat removed',knee?pct(knee.threatDestroyedFraction,3):'—'],
-      ['Max DSP in sweep',best?pct(best.dspDestroyedFraction,3):'—'],
-      ['Initial Zeus RF shots / Zeus',num(M.initialZeusShotFactor(cfg.composition),2)+'×'],
-      ['First configured breakpoint',first?M.formatCount(first.result.zeusCount):'—']
+  function renderMetrics(datasets) {
+    const first = datasets[0].sweep.points[0];
+    const expectedLast = datasets[0].sweep.points[datasets[0].sweep.points.length - 1];
+    const conservativeLast = datasets[1].sweep.points[datasets[1].sweep.points.length - 1];
+    const cards = [
+      ['NPC ship DSP', M.formatCount(first.initialDSP)],
+      ['Potential NPC debris', M.formatCount(first.initialDebrisPotential)],
+      ['Expected DSP at max', `${M.formatCount(expectedLast.destroyedDSP)} · ${pct(expectedLast.dspDestroyedFraction)}`],
+      ['Conservative DSP at max', `${M.formatCount(conservativeLast.destroyedDSP)} · ${pct(conservativeLast.dspDestroyedFraction)}`],
+      ['Expected debris at max', M.formatCount(expectedLast.debrisGenerated)],
+      ['Initial Zeus RF factor', number(M.initialZeusShotFactor(readComposition().composition), 2) + '×']
     ];
-    $('metrics').innerHTML=cards.map(([k,v])=>`<div class="metric"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    $('metrics').innerHTML = cards.map(([label, value]) => `<div class="metric"><span class="k">${label}</span><span class="v">${value}</span></div>`).join('');
   }
 
-  function renderKnee(knee){
-    if(!knee){$('kneeSummary').innerHTML='<p class="hint">No feasible knee point was found in the current sweep.</p>';return;}
-    $('kneeSummary').innerHTML=`
-      <div class="knee-main"><span class="knee-count">${M.formatCount(knee.zeusCount)}</span><span class="knee-label">Zeus committed</span></div>
-      <div class="knee-facts">
-        <div><span>${pct(knee.zeusSurvival,5)}</span><small>Zeus survival</small></div>
-        <div><span>${pct(knee.dspDestroyedFraction,3)}</span><small>Ship DSP destroyed</small></div>
-        <div><span>${pct(knee.threatDestroyedFraction,3)}</span><small>Threat removed</small></div>
-        <div><span>${M.formatCount(knee.zeusLosses)}</span><small>Expected Zeus lost</small></div>
-        <div><span>${pp(knee.gainPer10PctZeus,2)}</span><small>Approx. DSP gain for +10% Zeus here</small></div>
+  function renderPointDetails(point, scenario) {
+    if (!point) return;
+    const zeusLosses = Math.max(0, point.zeusLosses);
+    $('pointDetails').innerHTML = `
+      <div class="point-heading"><div><span class="side-label">${scenario.label}</span><strong>${M.formatCount(point.zeusCount)} Zeus committed</strong></div><span class="point-hint">Hover either chart to inspect another point</span></div>
+      <div class="point-facts">
+        <div><span>${pct(point.zeusSurvival, 5)}</span><small>Zeus survival</small></div>
+        <div><span>${M.formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
+        <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
+        <div><span>${M.formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
+        <div><span>${M.formatCount(point.debrisGenerated)}</span><small>NPC debris generated</small></div>
+        <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
   }
 
-  function renderTable(rows){
-    $('breakpoints').innerHTML=rows.map(({fraction,result:r})=>{
-      if(!r)return `<tr><td>${pct(fraction,1)}</td><td colspan="5">Not reached in search range</td></tr>`;
-      return `<tr><td>${pct(fraction,1)}</td><td>${M.formatCount(r.zeusCount)}</td><td>${pct(r.zeusSurvival,5)}</td><td>${M.formatCount(r.zeusLosses)}</td><td>${pct(r.threatDestroyedFraction,3)}</td><td>${num(r.efficiencyPerCommittedZeus,3)}</td></tr>`;
-    }).join('');
+  function tooltipMarkup(point, scenario) {
+    return `<strong>${scenario.label}</strong><span>${M.formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${M.formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${M.formatCount(point.debrisGenerated)} debris</span>`;
   }
 
-  function renderMatrix(matrix,destructionLevels){
-    $('matrixHead').innerHTML='<tr><th>DSP destroyed</th>'+matrix.map(col=>`<th>${pct(col.survivalTarget,4)} survival</th>`).join('')+'</tr>';
-    $('matrixBody').innerHTML=destructionLevels.map((fraction,rowIndex)=>{
-      const cells=matrix.map(col=>{
-        const r=col.rows[rowIndex]&&col.rows[rowIndex].result;
-        return `<td>${r?M.formatCount(r.zeusCount):'—'}</td>`;
+  function renderChart(containerId, datasets, yKey, yLabel, mode) {
+    const width = 960;
+    const height = 420;
+    const margin = {l:72, r:24, t:24, b:58};
+    const allPoints = datasets.flatMap(dataset => dataset.sweep.points);
+    const logs = allPoints.map(point => Math.log10(Math.max(1, point.zeusCount)));
+    const values = allPoints.map(point => point[yKey]);
+    const xMin = Math.min(...logs);
+    const xMax = Math.max(...logs);
+    const valueMin = Math.min(...values);
+    const valueMax = Math.max(...values);
+    const yMin = mode === 'survival' ? Math.max(0, valueMin > 0.9 ? valueMin - Math.max(0.0001, (1 - valueMin) * 0.08) : 0) : 0;
+    const yMax = mode === 'survival' ? 1 : Math.min(1, Math.max(0.1, valueMax * 1.03));
+    const x = value => margin.l + (width - margin.l - margin.r) * (value - xMin) / (xMax - xMin || 1);
+    const y = value => height - margin.b - (height - margin.t - margin.b) * (value - yMin) / (yMax - yMin || 1);
+
+    let grid = '';
+    for (let index = 0; index <= 5; index++) {
+      const logValue = xMin + (xMax - xMin) * index / 5;
+      grid += `<line x1="${x(logValue)}" y1="${margin.t}" x2="${x(logValue)}" y2="${height - margin.b}" class="gridline"/><text x="${x(logValue)}" y="${height - margin.b + 23}" text-anchor="middle" class="axis">${M.formatCount(Math.pow(10, logValue))}</text>`;
+    }
+    for (let index = 0; index <= 5; index++) {
+      const value = yMin + (yMax - yMin) * index / 5;
+      const digits = mode === 'survival' && value > 0.999 ? 3 : mode === 'survival' ? 1 : 0;
+      grid += `<line x1="${margin.l}" y1="${y(value)}" x2="${width - margin.r}" y2="${y(value)}" class="gridline"/><text x="${margin.l - 10}" y="${y(value) + 4}" text-anchor="end" class="axis">${(100 * value).toFixed(digits)}%</text>`;
+    }
+
+    const curves = datasets.map(dataset => {
+      const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
+      const dots = dataset.sweep.points.map((point, index) => {
+        const label = `${dataset.label}: ${M.formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${M.formatCount(point.destroyedDSP)} DSP destroyed, ${M.formatCount(point.debrisGenerated)} debris`;
+        return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
       }).join('');
-      return `<tr><td>${pct(fraction,1)}</td>${cells}</tr>`;
+      return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
     }).join('');
+
+    const container = $(containerId);
+    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${grid}${curves}<text x="${(margin.l + width - margin.r) / 2}" y="${height - 10}" text-anchor="middle" class="label">Zeus committed (log scale)</text><text x="18" y="${(margin.t + height - margin.b) / 2}" text-anchor="middle" transform="rotate(-90 18 ${(margin.t + height - margin.b) / 2})" class="label">${yLabel}</text></svg><div class="chart-tooltip hidden" role="status"></div>`;
+    bindChartInteractions(container, datasets);
   }
 
-  function renderRoundTable(knee){
-    if(!knee||!knee.roundDetails.length){$('roundTable').innerHTML='<tr><td colspan="5">No combat rounds simulated.</td></tr>';return;}
-    $('roundTable').innerHTML=knee.roundDetails.map(r=>`<tr><td>${r.round}</td><td>${pct(r.zeusSurvival,5)}</td><td>${pct(r.dspDestroyedFraction,3)}</td><td>${pct(r.threatDestroyedFraction,3)}</td><td>${M.formatCount(r.totalDefenders)}</td></tr>`).join('');
+  function bindChartInteractions(container, datasets) {
+    const tooltip = container.querySelector('.chart-tooltip');
+    const byKey = Object.fromEntries(datasets.map(dataset => [dataset.key, dataset]));
+    const show = (dot, event) => {
+      const dataset = byKey[dot.dataset.scenario];
+      const point = dataset.sweep.points[Number(dot.dataset.point)];
+      tooltip.innerHTML = tooltipMarkup(point, dataset);
+      tooltip.classList.remove('hidden');
+      const containerRect = container.getBoundingClientRect();
+      const dotRect = dot.getBoundingClientRect();
+      const clientX = event && Number.isFinite(event.clientX) ? event.clientX : dotRect.left + dotRect.width / 2;
+      const clientY = event && Number.isFinite(event.clientY) ? event.clientY : dotRect.top;
+      tooltip.style.left = `${clientX - containerRect.left + container.scrollLeft}px`;
+      tooltip.style.top = `${clientY - containerRect.top + container.scrollTop - 12}px`;
+      renderPointDetails(point, dataset);
+    };
+    const hide = () => tooltip.classList.add('hidden');
+    for (const dot of container.querySelectorAll('.chart-dot')) {
+      dot.addEventListener('pointerenter', event => show(dot, event));
+      dot.addEventListener('pointermove', event => show(dot, event));
+      dot.addEventListener('pointerleave', hide);
+      dot.addEventListener('focus', event => show(dot, event));
+      dot.addEventListener('blur', hide);
+    }
   }
 
-  function samePoint(a,b){return !!a&&!!b&&Math.abs(Math.log(a.zeusCount/b.zeusCount))<1e-10;}
-
-  function renderChart(points,target,knee){
-    const W=960,H=440,m={l:68,r:24,t:24,b:54};
-    const surv=points.map(p=>p.zeusSurvival), dsp=points.map(p=>p.dspDestroyedFraction);
-    const xmin=Math.max(0.9,Math.min(...surv)-0.002), xmax=1;
-    const ymin=0,ymax=Math.min(1,Math.max(.1,Math.max(...dsp)*1.03));
-    const x=v=>m.l+(W-m.l-m.r)*(v-xmin)/(xmax-xmin||1), y=v=>H-m.b-(H-m.t-m.b)*(v-ymin)/(ymax-ymin||1);
-    let path='';points.forEach((p,i)=>{path+=(i?'L':'M')+x(p.zeusSurvival).toFixed(2)+','+y(p.dspDestroyedFraction).toFixed(2)+' ';});
-    const xticks=5,yticks=5;let grid='';
-    for(let i=0;i<=xticks;i++){const v=xmin+(xmax-xmin)*i/xticks;grid+=`<line x1="${x(v)}" y1="${m.t}" x2="${x(v)}" y2="${H-m.b}" class="gridline"/><text x="${x(v)}" y="${H-m.b+23}" text-anchor="middle" class="axis">${(100*v).toFixed(v>0.999?3:1)}%</text>`;}
-    for(let i=0;i<=yticks;i++){const v=ymin+(ymax-ymin)*i/yticks;grid+=`<line x1="${m.l}" y1="${y(v)}" x2="${W-m.r}" y2="${y(v)}" class="gridline"/><text x="${m.l-10}" y="${y(v)+4}" text-anchor="end" class="axis">${(100*v).toFixed(0)}%</text>`;}
-    const tx=x(target);
-    const circles=points.map(p=>{
-      const isK=samePoint(p,knee), good=p.zeusSurvival>=target;
-      return `<circle cx="${x(p.zeusSurvival)}" cy="${y(p.dspDestroyedFraction)}" r="${isK?7:(good?4.8:3.3)}" class="${isK?'pt-knee':(good?'pt-good':'pt-muted')}"><title>${M.formatCount(p.zeusCount)} Zeus\nSurvival ${(100*p.zeusSurvival).toFixed(5)}%\nDSP destroyed ${(100*p.dspDestroyedFraction).toFixed(3)}%\nThreat removed ${(100*p.threatDestroyedFraction).toFixed(3)}%</title></circle>`;
-    }).join('');
-    $('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><style>.axis{fill:#94a8b7;font:12px system-ui}.gridline{stroke:#243746;stroke-width:1}.curve{fill:none;stroke:#87a7ba;stroke-width:2}.target{stroke:#73e0ad;stroke-dasharray:6 5;stroke-width:1.4}.pt-good{fill:#73e0ad;stroke:#071019;stroke-width:1.5}.pt-muted{fill:#62798b;stroke:#071019;stroke-width:1}.pt-knee{fill:#ffd07a;stroke:#071019;stroke-width:2}.label{fill:#c8d7df;font:13px system-ui;font-weight:600}</style>${grid}<line x1="${tx}" y1="${m.t}" x2="${tx}" y2="${H-m.b}" class="target"/><path d="${path}" class="curve"/>${circles}<text x="${(m.l+W-m.r)/2}" y="${H-10}" text-anchor="middle" class="label">Zeus survival</text><text x="18" y="${(m.t+H-m.b)/2}" text-anchor="middle" transform="rotate(-90 18 ${(m.t+H-m.b)/2})" class="label">Defender ship DSP destroyed</text></svg>`;
+  function exportCSV() {
+    if (!lastScenarios) return;
+    const header = ['scenario','rf_sigma','zeus_count','zeus_survival','zeus_losses','dsp_destroyed','dsp_destroyed_fraction','debris_generated','threat_destroyed_fraction'];
+    const lines = [header.join(',')];
+    for (const dataset of lastScenarios) {
+      for (const point of dataset.sweep.points) {
+        lines.push([
+          dataset.key,
+          dataset.rfSigma,
+          point.zeusCount,
+          point.zeusSurvival,
+          Math.max(0, point.zeusLosses),
+          point.destroyedDSP,
+          point.dspDestroyedFraction,
+          point.debrisGenerated,
+          point.threatDestroyedFraction
+        ].join(','));
+      }
+    }
+    const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'sfc-zeus-commitment-curves.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function renderCommitmentChart(points,target,knee){
-    const W=960,H=420,m={l:68,r:24,t:24,b:58};
-    const logs=points.map(p=>Math.log10(Math.max(1,p.zeusCount))), ys=points.map(p=>p.dspDestroyedFraction);
-    const xmin=Math.min(...logs),xmax=Math.max(...logs),ymax=Math.min(1,Math.max(.1,Math.max(...ys)*1.03));
-    const xlog=v=>m.l+(W-m.l-m.r)*(v-xmin)/(xmax-xmin||1), y=v=>H-m.b-(H-m.t-m.b)*v/(ymax||1);
-    let grid='';
-    for(let i=0;i<=5;i++){const lv=xmin+(xmax-xmin)*i/5;const count=Math.pow(10,lv);grid+=`<line x1="${xlog(lv)}" y1="${m.t}" x2="${xlog(lv)}" y2="${H-m.b}" class="gridline"/><text x="${xlog(lv)}" y="${H-m.b+23}" text-anchor="middle" class="axis">${M.formatCount(count)}</text>`;}
-    for(let i=0;i<=5;i++){const v=ymax*i/5;grid+=`<line x1="${m.l}" y1="${y(v)}" x2="${W-m.r}" y2="${y(v)}" class="gridline"/><text x="${m.l-10}" y="${y(v)+4}" text-anchor="end" class="axis">${(100*v).toFixed(0)}%</text>`;}
-    let path='';points.forEach((p,i)=>{path+=(i?'L':'M')+xlog(Math.log10(Math.max(1,p.zeusCount))).toFixed(2)+','+y(p.dspDestroyedFraction).toFixed(2)+' ';});
-    const circles=points.map(p=>{const isK=samePoint(p,knee),good=p.zeusSurvival>=target;return `<circle cx="${xlog(Math.log10(Math.max(1,p.zeusCount)))}" cy="${y(p.dspDestroyedFraction)}" r="${isK?7:(good?4.5:3.2)}" class="${isK?'pt-knee':(good?'pt-good':'pt-muted')}"><title>${M.formatCount(p.zeusCount)} Zeus\nSurvival ${(100*p.zeusSurvival).toFixed(5)}%\nDSP ${(100*p.dspDestroyedFraction).toFixed(3)}%</title></circle>`;}).join('');
-    const kneeLine=knee?`<line x1="${xlog(Math.log10(knee.zeusCount))}" y1="${m.t}" x2="${xlog(Math.log10(knee.zeusCount))}" y2="${H-m.b}" class="kneeline"/>`:'';
-    $('commitmentChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><style>.axis{fill:#94a8b7;font:12px system-ui}.gridline{stroke:#243746;stroke-width:1}.curve{fill:none;stroke:#87a7ba;stroke-width:2}.kneeline{stroke:#ffd07a;stroke-dasharray:5 5;stroke-width:1.3}.pt-good{fill:#73e0ad;stroke:#071019;stroke-width:1.5}.pt-muted{fill:#62798b;stroke:#071019;stroke-width:1}.pt-knee{fill:#ffd07a;stroke:#071019;stroke-width:2}.label{fill:#c8d7df;font:13px system-ui;font-weight:600}</style>${grid}${kneeLine}<path d="${path}" class="curve"/>${circles}<text x="${(m.l+W-m.r)/2}" y="${H-10}" text-anchor="middle" class="label">Zeus committed (log scale)</text><text x="18" y="${(m.t+H-m.b)/2}" text-anchor="middle" transform="rotate(-90 18 ${(m.t+H-m.b)/2})" class="label">Defender ship DSP destroyed</text></svg>`;
+  function run() {
+    const parsed = updateInputSummary();
+    if (parsed.invalid.length) {
+      $('inputStatus').textContent = `Fix the highlighted count${parsed.invalid.length === 1 ? '' : 's'} before calculating.`;
+      $('inputStatus').className = 'status error';
+      return;
+    }
+    if (!Object.keys(parsed.composition).length) {
+      $('inputStatus').textContent = 'Enter at least one NPC unit count.';
+      $('inputStatus').className = 'status error';
+      return;
+    }
+    const config = {
+      composition:parsed.composition,
+      attackerTech:tech('a'),
+      defenderTech:tech('d')
+    };
+    $('runBtn').disabled = true;
+    $('runBtn').textContent = 'Calculating…';
+    try {
+      const range = sharedRange(config);
+      const datasets = SCENARIOS.map(scenario => ({
+        ...scenario,
+        sweep:M.sweep({...config, rfSigma:scenario.rfSigma, points:POINT_COUNT, range})
+      }));
+      lastScenarios = datasets;
+      renderMetrics(datasets);
+      renderChart('survivalChart', datasets, 'zeusSurvival', 'Zeus survival', 'survival');
+      renderChart('commitmentChart', datasets, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
+      const initialPoint = datasets[0].sweep.points[Math.floor(datasets[0].sweep.points.length * 0.75)];
+      renderPointDetails(initialPoint, datasets[0]);
+      $('results').classList.remove('hidden');
+      $('inputStatus').textContent = `Calculated ${POINT_COUNT} shared commitment points for both RF scenarios.`;
+      $('inputStatus').className = 'status success';
+      $('results').scrollIntoView({behavior:'smooth', block:'start'});
+    } catch (error) {
+      $('inputStatus').textContent = error.message || String(error);
+      $('inputStatus').className = 'status error';
+    } finally {
+      $('runBtn').disabled = false;
+      $('runBtn').textContent = 'Calculate curves';
+    }
   }
 
-  function exportCSV(){
-    if(!lastSweep)return;
-    const header=['zeus_count','zeus_survival','zeus_losses','dsp_destroyed_fraction','threat_destroyed_fraction','dsp_per_committed_zeus','knee_candidate'];
-    const lines=[header.join(',')];
-    for(const p of lastSweep.points){lines.push([p.zeusCount,p.zeusSurvival,p.zeusLosses,p.dspDestroyedFraction,p.threatDestroyedFraction,p.efficiencyPerCommittedZeus,samePoint(p,lastKnee)?1:0].join(','));}
-    const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    a.href=url;a.download='sfc-zeus-frontier.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);
-  }
-
-  function run(){
-    const parsed=parse();if(!parsed)return;
-    const cfg=config(parsed.composition);
-    $('runBtn').disabled=true;$('runBtn').textContent='Calculating…';
-    try{
-      const destructionLevels=readLevels('dspLevels',DEFAULT_DESTRUCTION_LEVELS);
-      const survivalLevels=readLevels('survivalLevels',DEFAULT_SURVIVAL_LEVELS);
-      const sw=M.sweep({...cfg,points:72});
-      const bps=M.breakpointTable(cfg,destructionLevels,cfg.survivalTarget,sw.range);
-      const matrix=M.frontierMatrix(cfg,destructionLevels,survivalLevels,sw.range);
-      const knee=M.findKnee(sw.points,cfg.survivalTarget);
-      lastSweep=sw;lastCfg=cfg;lastKnee=knee;
-      renderChart(sw.points,cfg.survivalTarget,knee);
-      renderCommitmentChart(sw.points,cfg.survivalTarget,knee);
-      renderTable(bps);renderMatrix(matrix,destructionLevels);renderKnee(knee);renderRoundTable(knee);renderMetrics(sw,bps,cfg.survivalTarget,knee,cfg);
-      $('results').classList.remove('hidden');$('results').scrollIntoView({behavior:'smooth',block:'start'});
-    }catch(e){$('parseStatus').textContent=e.message||String(e);$('parseStatus').className='status error';}
-    finally{$('runBtn').disabled=false;$('runBtn').textContent='Calculate frontier';}
-  }
-
-  $('sampleBtn').addEventListener('click',()=>{$('roster').value=sample;parse();});
-  $('reportToggleBtn').addEventListener('click',()=>{$('reportImporter').classList.toggle('hidden');if(!$('reportImporter').classList.contains('hidden'))$('reportText').focus();});
-  $('reportCloseBtn').addEventListener('click',()=>{$('reportImporter').classList.add('hidden');});
-  $('parseReportBtn').addEventListener('click',parseBattleReportUI);
-  $('reportPreview').addEventListener('click',e=>{const btn=e.target.closest('[data-report-side]');if(btn)applyReportSide(btn.dataset.reportSide);});
-  $('runBtn').addEventListener('click',run);
-  $('exportBtn').addEventListener('click',exportCSV);
-  $('roster').addEventListener('input',parse);
-  $('roster').value=sample;parse();
+  renderUnitInputs();
+  setComposition(SAMPLE);
+  $('sampleBtn').addEventListener('click', () => setComposition(SAMPLE));
+  $('clearBtn').addEventListener('click', () => setComposition({}));
+  $('reportToggleBtn').addEventListener('click', () => {
+    $('reportImporter').classList.toggle('hidden');
+    if (!$('reportImporter').classList.contains('hidden')) $('reportText').focus();
+  });
+  $('reportCloseBtn').addEventListener('click', () => $('reportImporter').classList.add('hidden'));
+  $('parseReportBtn').addEventListener('click', parseReport);
+  $('reportPreview').addEventListener('click', event => {
+    const button = event.target.closest('[data-report-side]');
+    if (button) applyReportSide(button.dataset.reportSide);
+  });
+  $('runBtn').addEventListener('click', run);
+  $('exportBtn').addEventListener('click', exportCSV);
+  $('shipInputs').addEventListener('input', updateInputSummary);
+  $('defenseInputs').addEventListener('input', updateInputSummary);
 })();

@@ -8,41 +8,40 @@ The goal is not “how many Zeus fully wipe the NPC?” The app estimates the tr
 - Zeus survival / expected loss fraction
 - defender **ship DSP** destroyed
 - defender **Zeus-damaging threat** removed
-- marginal DSP gained from adding more Zeus
+- NPC ship debris generated
 
-It then surfaces an efficiency-knee candidate and calculates configurable DSP-destruction × survival breakpoints. The UI also includes a battle-report importer so an NPC fleet can be loaded directly from copied combat-report text.
+The UI compares expected and conservative rapid-fire scenarios over the same
+Zeus commitment range. A report importer can fill the canonical unit table
+directly from copied combat or espionage text.
 
 ## What the UI provides
 
-### Survival frontier
+### Zeus survival curve
 
-Plots Zeus survival against defender ship DSP destroyed. The chosen survival threshold is highlighted and the heuristic efficiency knee is marked.
+Plots Zeus committed on a logarithmic x-axis against Zeus survival. Expected
+and conservative RF scenarios use the same sampled commitment points.
 
 ### Commitment curve
 
-Plots Zeus committed (log scale) against DSP destroyed. This makes diminishing returns visible directly.
+Plots Zeus committed on the identical logarithmic x-axis against NPC ship DSP
+destroyed. Hoverable, keyboard-focusable points show survival, absolute and
+percentage DSP destruction, debris, and threat removed.
 
-### Configurable breakpoints
+### Unit input table
 
-The defaults are:
-
-- DSP destroyed: `25, 50, 75, 90, 95, 99%`
-- Zeus survival: `99, 99.9, 99.99, 99.999%`
-
-Both lists can be edited in the UI. The frontier matrix reports the approximate minimum Zeus count for every combination.
+Every supported ship and defense has its own count input. This table is the
+single source of truth for calculations. Inputs accept commas, scientific
+notation, and the same large-number suffixes supported by report import.
 
 ### Threat removed
 
 DSP and danger are not always the same thing. The app therefore also tracks an auxiliary **threat** metric: defender weapon output from units whose individual shots pass the Zeus 1% shield-effectiveness threshold. It is a diagnostic metric, not an in-game score.
 
-### Efficiency knee
+### DSP and debris
 
-Among sweep points satisfying the selected survival constraint, the app normalizes:
-
-- `x = log(Zeus committed)`
-- `y = ship DSP destroyed`
-
-and marks the point with the largest bend above the endpoint chord. It also estimates the local DSP-percentage-point gain from adding 10% more Zeus. This is intentionally a heuristic candidate rather than a claim that one fleet size is uniquely optimal.
+The result summary and chart inspection panel show absolute modeled DSP
+destroyed alongside the percentage. NPC debris is 30% of destroyed ships'
+Ore-plus-Crystal build value; Hydrogen and defenses create no debris.
 
 ### CSV export
 
@@ -50,14 +49,17 @@ The complete sampled frontier can be downloaded as CSV for further analysis.
 
 ### Battle report import
 
-Click **Paste battle report**, paste the copied combat report, and choose either the detected attacker or defender as the incoming NPC fleet. The importer:
+Click **Paste report**, paste a copied combat or espionage report, and choose a
+detected fleet to fill the unit table. The importer:
 
 - reads the first attacker and defender snapshots rather than adding later-round repeats;
 - accepts row-style copies such as `Athena Class Battleship 50,000`;
 - accepts copied-table layouts where class names and counts land on separate rows/lines;
 - recognizes the same large-number suffixes as the manual roster;
 - imports Weapons / Shield / Armor tech levels when they are present in the pasted text;
-- shows a parsed preview before changing the optimizer roster.
+- supports `... SHIPS:` plus `TECHS:` espionage-report sections;
+- preserves raw report count text when filling very large table values;
+- shows a parsed preview before changing the unit table.
 
 If only one fleet block is pasted and no Attacker/Defender heading is present, it is offered as a single **Detected fleet**. Only unit classes currently supported by the model are imported.
 
@@ -80,7 +82,7 @@ GitHub Pages and when `index.html` is opened directly:
 
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
-- `js/combat.js` owns the deterministic six-round combat simulation and threat metric.
+- `js/combat.js` owns the deterministic six-round combat simulation, DSP, debris, and threat metrics.
 - `js/optimizer.js` owns range selection, sweeps, breakpoints, the matrix, and knee detection.
 - `js/app.js` owns DOM events, rendering, chart generation, importing, and CSV export.
 - `css/app.css` owns all presentation styles.
@@ -97,23 +99,15 @@ loads them in dependency order; Node tests import the same production files.
 
 The included `.nojekyll` file keeps GitHub Pages from applying Jekyll processing.
 
-## Input format
+## Count format
 
-One NPC unit per line. Examples:
-
-```text
-Athena: 50M
-2.5e12 Hades
-Prometheus = 10Qi
-Gauss Cannon: 200M
-Large Decoy: 1
-```
-
-Common class-name variants are accepted, including lines such as:
+Each unit-table field and imported report count accepts values such as:
 
 ```text
-Athena Class Battleship 50M
-10M Hades
+50M
+2.5e12
+10Qi
+9,223,372,036,854,775,807
 ```
 
 Supported suffixes include `K`, `M`, `B`, `T`, `Qa`/`Q` (quadrillion), `Qi` (quintillion), `Sx`, and `Sp`. Scientific notation is also supported.
@@ -131,7 +125,8 @@ This is deliberately a **deterministic large-fleet approximation**:
 - units below 70% hull use the explosion rule in expected-value form;
 - Zeus and other non-one-hit targets are handled with hull/shield buckets rather than individual ships.
 
-The RF sensitivity selector provides a simple deterministic stress case by reducing attacker RF shot totals by 2% per selected sigma.
+The UI always shows the expected RF curve and a conservative 2σ sensitivity
+curve, which reduces expected attacker RF shots by 4%.
 
 ## Current scope
 
@@ -142,7 +137,9 @@ Important limitations:
 - It is not yet validated against a large corpus of real battle reports.
 - Special Nova / Hired Guns mechanics such as mines, piercing, kamikaze, and unusual multifire need dedicated modeling before relying on results for those units.
 - The threat metric is diagnostic only.
-- The knee detector is heuristic and depends on the modeled sweep range.
+- JavaScript numbers approximate integer counts above `2^53`; the relative
+  error is negligible for the expected-value model, while imported raw text is
+  preserved in the input table.
 
 ## Tests
 
@@ -154,10 +151,11 @@ node tests/combat.test.js
 ```
 
 The tests cover count parsing, manual roster parsing, row-style and copied-table
-battle-report parsing, first-snapshot handling, pre-refactor combat output,
-six-round capping, the 1% shield cutoff, defense-only DSP behavior, very large
-fleet counts, bounded and monotone sweep outputs, breakpoint feasibility, and
-knee feasibility.
+battle-report parsing, first-snapshot handling, the supplied espionage-report
+layout, AWS extraction without tech/unit false positives, pre-refactor combat
+output, debris, six-round capping, the 1% shield cutoff, defense-only DSP
+behavior, very large fleet counts, bounded and monotone sweep outputs,
+breakpoint feasibility, and knee feasibility.
 
 ## Good next validation step
 

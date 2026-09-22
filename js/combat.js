@@ -182,6 +182,18 @@
     return total;
   }
 
+  function debrisValue(composition) {
+    let total = 0;
+    for (const [name, count] of Object.entries(composition || {})) {
+      const unit = UNITS[name];
+      if (!unit || unit.kind !== 'ship' || !(count > 0)) continue;
+      // Base hull is 10% of Ore + Crystal build cost. Destroyed ships return
+      // 30% of those two resources as debris; Hydrogen and defenses add none.
+      total += count * unit.hull * 3;
+    }
+    return total;
+  }
+
   function initialZeusShotFactor(composition) {
     const total = Object.values(composition).reduce((sum, count) => sum + count, 0);
     if (!(total > 0)) return 1;
@@ -228,6 +240,7 @@
     const initialShipValue = initialDSP * 1000;
     const initialTargets = Object.values(defenders).reduce((sum, count) => sum + count, 0);
     const initialThreat = threatValue(defenders, defenderTech, attackerTech);
+    const initialDebrisPotential = debrisValue(defenders);
     const roundDetails = [];
 
     for (let round = 1; round <= MAX_ROUNDS; round++) {
@@ -282,6 +295,7 @@
       }, 0);
       const aliveAfter = stateCount(zeusState);
       const remainingThreat = threatValue(defenders, defenderTech, attackerTech);
+      const debrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
       roundDetails.push({
         round,
         aliveZeus:aliveAfter,
@@ -290,7 +304,8 @@
         dspDestroyed:initialDSP - shipDSPRemaining,
         dspDestroyedFraction:initialDSP > 0 ? (initialDSP - shipDSPRemaining) / initialDSP : 0,
         threatRemaining:remainingThreat,
-        threatDestroyedFraction:initialThreat > 0 ? 1 - remainingThreat / initialThreat : 1
+        threatDestroyedFraction:initialThreat > 0 ? 1 - remainingThreat / initialThreat : 1,
+        debrisGenerated
       });
     }
 
@@ -301,6 +316,7 @@
     }, 0);
     const remainingTargets = Object.values(defenders).reduce((sum, count) => sum + count, 0);
     const destroyedDSP = Math.max(0, initialDSP - remainingDSP);
+    const debrisGenerated = Math.max(0, initialDebrisPotential - debrisValue(defenders));
     const survival = Math.max(0, Math.min(1, aliveZeus / initialZeus));
     return {
       zeusCount:initialZeus,
@@ -312,6 +328,8 @@
       destroyedDSP,
       dspDestroyedFraction:initialDSP > 0 ? destroyedDSP / initialDSP : 0,
       initialShipValue,
+      initialDebrisPotential,
+      debrisGenerated,
       remainingTargets,
       targetDestroyedFraction:initialTargets > 0 ? 1 - remainingTargets / initialTargets : 0,
       initialThreat,
@@ -324,5 +342,5 @@
     };
   }
 
-  return {simulate, threatValue, initialZeusShotFactor, MAX_ROUNDS};
+  return {simulate, threatValue, debrisValue, initialZeusShotFactor, MAX_ROUNDS};
 });

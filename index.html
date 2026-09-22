@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Deterministic Zeus survival / NPC DSP frontier calculator for Starfleet Commander.">
+  <meta name="description" content="Deterministic Zeus commitment, survival, NPC DSP, and debris calculator for Starfleet Commander.">
   <title>SFC Zeus Frontier</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
@@ -12,130 +12,102 @@
     <header>
       <div>
         <p class="eyebrow">Starfleet Commander</p>
-        <h1>Zeus survival / DSP frontier</h1>
-        <p class="lede">Estimate how much NPC ship DSP a Zeus-only attack removes while keeping Zeus attrition inside a chosen survival band.</p>
+        <h1>Zeus commitment frontier</h1>
+        <p class="lede">Compare Zeus survival, NPC ship DSP destroyed, and debris generated across a practical range of attack sizes.</p>
       </div>
       <div class="badge">Deterministic large-fleet model</div>
     </header>
 
     <section class="grid inputs">
-      <article class="panel roster-panel">
+      <article class="panel fleet-panel">
         <div class="panel-head">
-          <h2>NPC composition</h2>
-          <div class="head-actions"><button id="reportToggleBtn" class="ghost" type="button">Paste battle report</button><button id="sampleBtn" class="ghost" type="button">Load sample</button></div>
+          <div><h2>NPC fleet</h2><p class="hint">These unit counts are the ground truth used by the optimizer.</p></div>
+          <div class="head-actions">
+            <button id="reportToggleBtn" class="ghost" type="button">Paste report</button>
+            <button id="sampleBtn" class="ghost" type="button">Load sample</button>
+            <button id="clearBtn" class="ghost" type="button">Clear</button>
+          </div>
         </div>
-        <p class="hint">Paste a battle report and import either side, or edit the roster manually. Manual examples: <code>Athena: 50M</code>, <code>2.5e12 Hades</code>.</p>
+
+        <div id="inputSummary" class="fleet-summary" aria-live="polite"></div>
+        <div class="unit-groups">
+          <section class="unit-group" aria-labelledby="shipsHeading">
+            <h3 id="shipsHeading">Ships</h3>
+            <div id="shipInputs" class="unit-input-grid"></div>
+          </section>
+          <section class="unit-group" aria-labelledby="defensesHeading">
+            <h3 id="defensesHeading">Defenses</h3>
+            <div id="defenseInputs" class="unit-input-grid"></div>
+          </section>
+        </div>
+
         <div id="reportImporter" class="report-importer hidden">
-          <div class="import-head"><div><h3>Battle report importer</h3><p class="hint">Paste the complete copied report. The importer reads the first attacker and defender snapshots and detects AWS tech levels when present.</p></div><button id="reportCloseBtn" class="ghost compact-button" type="button">Close</button></div>
-          <textarea id="reportText" class="report-text" spellcheck="false" aria-label="Battle report text" placeholder="Paste battle report here…"></textarea>
-          <div class="import-toolbar"><button id="parseReportBtn" class="primary inline-primary" type="button">Parse battle report</button><span id="reportStatus" class="status" aria-live="polite"></span></div>
+          <div class="import-head">
+            <div><h3>Report importer</h3><p class="hint">Paste a battle or espionage report. Review the detected fleet, then fill the unit table.</p></div>
+            <button id="reportCloseBtn" class="ghost compact-button" type="button">Close</button>
+          </div>
+          <textarea id="reportText" class="report-text" spellcheck="false" aria-label="Battle or espionage report text" placeholder="Paste report here…"></textarea>
+          <div class="import-toolbar">
+            <button id="parseReportBtn" class="primary inline-primary" type="button">Parse report</button>
+            <span id="reportStatus" class="status" aria-live="polite"></span>
+          </div>
           <div id="reportPreview" class="report-preview hidden"></div>
         </div>
-        <label class="subtle-label" for="roster">Incoming NPC fleet used by the optimizer</label>
-        <textarea id="roster" spellcheck="false" aria-label="NPC composition"></textarea>
-        <div id="parseStatus" class="status" aria-live="polite"></div>
       </article>
 
       <article class="panel controls-panel">
-        <h2>Combat settings</h2>
+        <h2>Combat tech</h2>
+        <p class="hint">Weapons, Shield, and Armor are the only report techs used by this model.</p>
         <div class="tech-grid">
-          <fieldset><legend>Your Zeus tech</legend>
+          <fieldset><legend>Your Zeus</legend>
             <label>Weapons <input id="aw" type="number" min="0" value="20"></label>
             <label>Shield <input id="as" type="number" min="0" value="20"></label>
             <label>Armor <input id="aa" type="number" min="0" value="20"></label>
           </fieldset>
-          <fieldset><legend>NPC tech</legend>
+          <fieldset><legend>NPC</legend>
             <label>Weapons <input id="dw" type="number" min="0" value="20"></label>
             <label>Shield <input id="ds" type="number" min="0" value="20"></label>
             <label>Armor <input id="da" type="number" min="0" value="20"></label>
           </fieldset>
         </div>
-        <div class="settings-row">
-          <label>Primary survival constraint
-            <select id="survival">
-              <option value="0.99">99%</option>
-              <option value="0.999">99.9%</option>
-              <option value="0.9999" selected>99.99%</option>
-              <option value="0.99999">99.999%</option>
-              <option value="0.999999">99.9999%</option>
-            </select>
-          </label>
-          <label>RF sensitivity
-            <select id="rfSigma">
-              <option value="0" selected>Mean (0σ)</option>
-              <option value="1">Conservative 1σ</option>
-              <option value="2">Conservative 2σ</option>
-            </select>
-          </label>
+        <div class="scenario-note">
+          <span class="scenario-swatch expected"></span><span><strong>Expected RF</strong> uses the deterministic mean.</span>
+          <span class="scenario-swatch conservative"></span><span><strong>Conservative RF</strong> applies the existing 2σ lower-shot stress case.</span>
         </div>
-        <div class="settings-row threshold-row">
-          <label>DSP breakpoints (%)
-            <input id="dspLevels" type="text" value="25, 50, 75, 90, 95, 99" inputmode="decimal">
-          </label>
-          <label>Matrix survival levels (%)
-            <input id="survivalLevels" type="text" value="99, 99.9, 99.99, 99.999" inputmode="decimal">
-          </label>
-        </div>
-        <button id="runBtn" class="primary" type="button">Calculate frontier</button>
-        <p class="hint compact">The default uses expected rapid-fire shots. The sensitivity option reduces attacker RF shots by 2% per σ as a simple stress test.</p>
+        <button id="runBtn" class="primary" type="button">Calculate curves</button>
+        <div id="inputStatus" class="status" aria-live="polite"></div>
       </article>
     </section>
 
     <section id="results" class="results hidden" aria-live="polite">
+      <div class="results-head">
+        <div><p class="eyebrow">Modeled outcome</p><h2>Commitment comparison</h2></div>
+        <button id="exportBtn" class="ghost" type="button">Export curves CSV</button>
+      </div>
+
       <div class="metrics" id="metrics"></div>
+      <article class="panel point-panel" id="pointDetails" aria-live="polite"></article>
 
-      <article class="panel knee-panel">
+      <article class="panel chart-panel">
         <div class="panel-head">
-          <div><h2>Efficiency knee</h2><p class="hint">A heuristic point where additional Zeus begin buying less incremental DSP destruction along the selected survival frontier.</p></div>
-          <button id="exportBtn" class="ghost" type="button">Export frontier CSV</button>
+          <div><h2>Zeus survival by commitment</h2><p class="hint">Zeus committed uses the same logarithmic scale as the DSP chart below. Hover or focus any dot for exact values.</p></div>
+          <div class="legend"><span class="line-key expected"></span> Expected RF <span class="line-key conservative"></span> Conservative RF</div>
         </div>
-        <div id="kneeSummary" class="knee-summary"></div>
+        <div id="survivalChart" class="chart interactive-chart" role="img" aria-label="Zeus survival versus Zeus committed"></div>
       </article>
 
       <article class="panel chart-panel">
         <div class="panel-head">
-          <div><h2>Survival frontier</h2><p class="hint">Each point is a Zeus fleet size. Right = better Zeus survival; up = more defender ship DSP destroyed.</p></div>
-          <div class="legend"><span class="dot good"></span> meets selected survival <span class="dot knee"></span> knee candidate <span class="dot muted"></span> below target</div>
+          <div><h2>NPC ship DSP destroyed by commitment</h2><p class="hint">Percent destruction and absolute DSP use ships only. Defenses still absorb shots but award no DSP or debris.</p></div>
+          <div class="legend"><span class="line-key expected"></span> Expected RF <span class="line-key conservative"></span> Conservative RF</div>
         </div>
-        <div id="chart" class="chart" role="img" aria-label="DSP destroyed versus Zeus survival frontier"></div>
-      </article>
-
-      <article class="panel chart-panel">
-        <div class="panel-head">
-          <div><h2>Commitment curve</h2><p class="hint">Shows diminishing returns directly: Zeus committed on a log scale versus NPC ship DSP destroyed.</p></div>
-        </div>
-        <div id="commitmentChart" class="chart" role="img" aria-label="DSP destroyed versus Zeus committed"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><div><h2>Selected survival breakpoints</h2><p class="hint">Minimum Zeus count satisfying both the DSP target and the survival setting above.</p></div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>DSP destroyed</th><th>Min Zeus</th><th>Zeus survival</th><th>Expected Zeus lost</th><th>Threat removed</th><th>DSP / Zeus committed</th></tr></thead>
-          <tbody id="breakpoints"></tbody>
-        </table></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><div><h2>Frontier matrix</h2><p class="hint">Minimum Zeus required for each DSP-destruction × survival combination. This is the quickest way to compare the 99%+ survival frontier.</p></div></div>
-        <div class="table-wrap"><table class="matrix-table">
-          <thead id="matrixHead"></thead>
-          <tbody id="matrixBody"></tbody>
-        </table></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><div><h2>Knee point by round</h2><p class="hint">Round-end state for the efficiency-knee fleet. Threat is defender firepower whose individual shots can damage a Zeus under the 1% shield rule.</p></div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Round</th><th>Zeus survival</th><th>DSP destroyed</th><th>Threat removed</th><th>Defenders remaining</th></tr></thead>
-          <tbody id="roundTable"></tbody>
-        </table></div>
+        <div id="commitmentChart" class="chart interactive-chart" role="img" aria-label="NPC ship DSP destroyed versus Zeus committed"></div>
       </article>
 
       <article class="panel notes">
         <h2>Model notes</h2>
-        <p>This is an expected-value approximation tailored to very large fleets. Defender fire is distributed over Zeus with a hull-bucket / hit-distribution model; Zeus rapid fire uses the expected geometric-chain length. Combat is simultaneous and capped at six rounds. DSP counts destroyed <em>ships</em> only; defenses still absorb Zeus shots and fire back but do not add DSP.</p>
-        <p><strong>Threat removed</strong> is a diagnostic, not an in-game score: it is the fraction of initial defender weapon output remaining after excluding shots that cannot pass the Zeus 1% shield threshold. It helps distinguish “DSP removed” from “dangerous units removed.”</p>
-        <p>The efficiency knee is heuristic. It finds the largest normalized bend in DSP destruction versus log Zeus count among points satisfying the selected survival threshold. Treat it as a useful candidate, not a uniquely optimal answer.</p>
+        <p>This is an expected-value approximation for very large fleets. Combat is simultaneous within each round and capped at six rounds; shields reset while hull damage persists. The expected curve uses mean Zeus rapid fire, while the conservative curve reduces expected RF shots by 4% using the existing 2σ stress case.</p>
+        <p><strong>DSP</strong> is the modeled ship build value destroyed divided by 1,000. <strong>Debris</strong> is 30% of the destroyed NPC ships’ ore-plus-crystal build cost; hydrogen and defenses contribute no debris. Threat removed remains a diagnostic based on defender fire that passes the Zeus 1% shield rule.</p>
       </article>
     </section>
 
