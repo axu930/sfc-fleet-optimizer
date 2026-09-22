@@ -96,13 +96,13 @@
 
       <article class="panel recommendations-panel">
         <div class="panel-head">
-          <div><h2>Fleet recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Choose the RF scenario and whether Dionysus planning should target crystal harvesting only.</p></div>
+          <div><h2>Fleet recommendations</h2><p class="hint">DSP target recommendations omit survival filtering. The Zeus survival table shows minimum commitments for each survival threshold. Choose the RF scenario and whether Dionysus planning should target crystal harvesting only.</p></div>
           <div class="recommendation-options">
             <label class="recommendation-toggle"><input id="conservativeRecommendations" type="checkbox"><span>Use conservative RF (2σ)</span></label>
             <label class="recommendation-toggle"><input id="crystalHarvestingOnly" type="checkbox"><span>Only harvesting crystal</span></label>
           </div>
         </div>
-        <div id="recommendations" class="table-wrap"></div>
+        <div id="recommendations" class="recommendation-tables"></div>
       </article>
 
       <div class="metrics" id="metrics"></div>
@@ -137,6 +137,6 @@
   <script src="js/battle-report-parser.js?v=recommendation-layout-1"></script>
   <script src="js/combat.js?v=net-points-1"></script>
   <script src="js/optimizer.js?v=recommendation-layout-1"></script>
-  <script src="js/app.js?v=net-points-1"></script>
+  <script src="js/app.js?v=recommendation-tables-1"></script>
 </body>
 </html>

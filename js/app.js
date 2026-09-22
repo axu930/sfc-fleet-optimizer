@@ -279,11 +279,11 @@
       </div>`;
   }
 
-  function integerRecommendation(config, scenario, destructionTarget, range) {
+  function integerDspRecommendation(config, scenario, destructionTarget, range) {
     const candidate = M.findBreakpoint(
       {...config, rfSigma:scenario.rfSigma},
       destructionTarget,
-      0.999,
+      0,
       range.lo,
       range.hi
     );
@@ -291,40 +291,83 @@
     let count = Math.max(1, Math.ceil(candidate.zeusCount));
     let result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
     let guard = 0;
-    while ((result.zeusSurvival < 0.999 || result.dspDestroyedFraction < destructionTarget) && guard < 1000) {
+    while (result.dspDestroyedFraction < destructionTarget && guard < 1000) {
       const nextCount = Math.max(count + 1, Math.ceil(count * 1.000001));
       if (nextCount === count) break;
       count = nextCount;
       result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
       guard++;
     }
-    return result.zeusSurvival >= 0.999 && result.dspDestroyedFraction >= destructionTarget ? result : null;
+    return result.dspDestroyedFraction >= destructionTarget ? result : null;
   }
 
-  function renderRecommendations(config, range) {
-    const targets = [0.90, 0.95, 0.99];
-    const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
-    const debrisLabel = 'Expected debris';
-    const dionysusLabel = 'Expected Dionysus needed';
+  function integerSurvivalRecommendation(config, scenario, survivalTarget, range) {
+    const candidate = M.findBreakpoint(
+      {...config, rfSigma:scenario.rfSigma},
+      0,
+      survivalTarget,
+      range.lo,
+      range.hi
+    );
+    if (!candidate) return null;
+    let count = Math.max(1, Math.ceil(candidate.zeusCount));
+    let result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
+    let guard = 0;
+    while (result.zeusSurvival < survivalTarget && guard < 1000) {
+      const nextCount = Math.max(count + 1, Math.ceil(count * 1.000001));
+      if (nextCount === count) break;
+      count = nextCount;
+      result = M.simulate({...config, rfSigma:scenario.rfSigma, zeusCount:count});
+      guard++;
+    }
+    return result.zeusSurvival >= survivalTarget ? result : null;
+  }
+
+  function recommendationTableRows(config, scenario, targets, range, mode) {
     const copyControl = (result, label, className='') => {
       if (!Number.isFinite(result)) return '—';
       const value = copyCount(result);
       return `<div class="recommendation-copy"><input class="recommendation-count ${className}" readonly value="${value}" aria-label="${label}"><button class="copy-count-button" type="button" data-copy-count="${value}" aria-label="Copy ${label}" title="Copy ${label}"><span aria-hidden="true">⧉</span></button></div>`;
     };
-    const rows = targets.map(target => {
-      const result = integerRecommendation(config, scenario, target, range);
+    const dspRows = targets.map(target => {
+      const result = integerDspRecommendation(config, scenario, target, range);
       const crystalRecyclers = result
         ? M.dionysusRecyclersNeededForCrystal(result.debrisOreGenerated, result.debrisCrystalGenerated)
         : NaN;
       const dionysusNeeded = useCrystalHarvestingOnly ? crystalRecyclers : result && result.dionysusRecyclersNeeded;
       return `<tr><th scope="row">${pct(target, 0)}</th>
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
-        <td data-label="Expected Zeus lost">${result ? formatCount(Math.max(0, result.zeusLosses)) : '—'}</td>
-        <td data-label="${debrisLabel}">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
-        <td data-label="${dionysusLabel}">${copyControl(dionysusNeeded, `${dionysusLabel} for ${pct(target, 0)} DSP`)}</td>
+        <td data-label="Expected Zeus lost">${result ? pct(Math.max(0, result.zeusLossFraction), 3) : '—'}</td>
+        <td data-label="Expected debris">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
+        <td data-label="Expected Dionysus needed">${copyControl(dionysusNeeded, `Expected Dionysus needed for ${pct(target, 0)} DSP`)}</td>
         <td data-label="Net points">${result ? formatCount(M.netPoints(result)) : '—'}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${rows}</tbody></table>`;
+    if (mode === 'dsp') return dspRows;
+
+    return targets.map(target => {
+      const result = integerSurvivalRecommendation(config, scenario, target, range);
+      return `<tr><th scope="row">${pct(target, 1)}</th>
+        <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 1)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
+        <td data-label="Expected Zeus lost">${result ? pct(Math.max(0, result.zeusLossFraction), 3) : '—'}</td>
+        <td data-label="Expected DSP"><span class="recommendation-pair"><span>${result ? pct(result.dspDestroyedFraction, 3) : '—'} of max</span><span>${result ? `${formatCount(result.destroyedDSP)} DSP` : '—'}</span></span></td></tr>`;
+    }).join('');
+  }
+
+  function renderRecommendations(config, range) {
+    const dspTargets = [0.90, 0.95, 0.99];
+    const survivalTargets = [0.99, 0.995, 0.999];
+    const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
+    const dspRows = recommendationTableRows(config, scenario, dspTargets, range, 'dsp');
+    const survivalRows = recommendationTableRows(config, scenario, survivalTargets, range, 'survival');
+    $('recommendations').innerHTML = `
+      <section class="recommendation-table-section">
+        <h3>DSP target</h3>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${dspRows}</tbody></table></div>
+      </section>
+      <section class="recommendation-table-section">
+        <h3>Zeus survival rate</h3>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>Expected DSP<br><small>% of max and absolute</small></th></tr></thead><tbody>${survivalRows}</tbody></table></div>
+      </section>`;
   }
 
   function refreshDisplayFormat() {

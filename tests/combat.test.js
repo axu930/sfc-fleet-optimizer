@@ -47,6 +47,14 @@ assert(breakpoint, '50% breakpoint should be reachable');
 assert(breakpoint.dspDestroyedFraction >= .5 - 1e-7);
 assert(breakpoint.zeusSurvival >= .999 - 1e-7);
 
+const dspOnlyBreakpoint = optimizer.findBreakpoint(config, .90, 0, sweep.range.lo, sweep.range.hi);
+assert(dspOnlyBreakpoint, 'DSP-only breakpoint should be reachable without a survival filter');
+assert(dspOnlyBreakpoint.dspDestroyedFraction >= .90 - 1e-7);
+
+const survivalBreakpoint = optimizer.findBreakpoint(config, 0, .995, sweep.range.lo, sweep.range.hi);
+assert(survivalBreakpoint, 'survival breakpoint should be reachable without a DSP filter');
+assert(survivalBreakpoint.zeusSurvival >= .995 - 1e-7);
+
 for (const target of [.90, .95, .99]) {
   const candidate = optimizer.findBreakpoint({...config, rfSigma:2}, target, .999, sweep.range.lo, sweep.range.hi);
   assert(candidate, `${target} recommendation should be reachable`);

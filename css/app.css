@@ -134,10 +134,15 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .recommendation-table th { color: var(--muted); font-size: .73rem; text-transform: uppercase; letter-spacing: .05em; }
 .recommendation-table th small { display: block; color: var(--accent); font-size: .65rem; text-transform: none; letter-spacing: 0; }
 .recommendation-table td { font-size: .86rem; }
+.recommendation-tables { display: grid; gap: 18px; }
+.recommendation-table-section { display: grid; gap: 8px; }
+.recommendation-table-section h3 { margin: 0; color: var(--text); font-size: .95rem; }
 .recommendation-options { display: grid; gap: 8px; flex: 0 0 auto; }
 .recommendation-toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; white-space: nowrap; cursor: pointer; }
 .recommendation-toggle input { width: 17px; height: 17px; margin: 0; accent-color: var(--conservative); }
 .recommendation-copy { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.recommendation-pair { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; line-height: 1.2; white-space: normal; }
+.recommendation-pair span { display: block; white-space: nowrap; }
 .recommendation-count { width: 150px; min-width: 150px; padding: 7px 8px; border: 1px solid #304455; border-radius: 7px; background: #071019; color: var(--text); font: 700 .82rem ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
 .recommendation-count.conservative-count { border-color: #80683b; color: var(--conservative); }
 .copy-count-button { display: inline-grid; place-items: center; width: 31px; min-width: 31px; height: 31px; padding: 0; border: 1px solid #304455; border-radius: 7px; background: #0b1822; color: var(--muted); cursor: pointer; }
@@ -199,4 +204,5 @@ footer { text-align: center; color: #647a89; font-size: .8rem; margin-top: 24px;
   .recommendation-table td > :not(.recommendation-copy) { margin-left: auto; text-align: right; }
   .recommendation-copy { flex: 0 1 auto; min-width: 0; }
   .recommendation-count { width: clamp(110px, 42vw, 150px); min-width: 0; }
+  .recommendation-pair { align-items: flex-end; }
 }
