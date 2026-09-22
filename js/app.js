@@ -25,6 +25,7 @@
   let lastRange = null;
   let lastPoint = null;
   let lastPointScenario = null;
+  let useConservativeRecommendations = false;
 
   function formatCount(value) {
     return M.formatCount(value, displayFormat);
@@ -293,25 +294,23 @@
 
   function renderRecommendations(config, range) {
     const targets = [0.90, 0.95, 0.99];
+    const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
+    const scenarioName = useConservativeRecommendations ? 'Conservative RF' : 'Expected RF';
     const copyControl = (result, label, className='') => {
       if (!result) return '—';
       const value = copyCount(result.zeusCount);
       return `<div class="recommendation-copy"><input class="recommendation-count ${className}" readonly value="${value}" aria-label="${label}"><button class="copy-count-button" type="button" data-copy-count="${value}" aria-label="Copy ${label}" title="Copy ${label}"><span aria-hidden="true">⧉</span></button></div>`;
     };
     const rows = targets.map(target => {
-      const expected = integerRecommendation(config, SCENARIOS[0], target, range);
-      const conservative = integerRecommendation(config, SCENARIOS[1], target, range);
+      const result = integerRecommendation(config, scenario, target, range);
       return `<tr><th scope="row">${pct(target, 0)}</th>
-        <td data-label="Expected RF Zeus">${copyControl(expected, `Expected RF Zeus count for ${pct(target, 0)} DSP`)}</td>
-        <td data-label="Conservative RF Zeus">${copyControl(conservative, `Conservative RF Zeus count for ${pct(target, 0)} DSP`, 'conservative-count')}</td>
-        <td data-label="Expected debris">${expected ? formatCount(expected.debrisGenerated) : '—'}</td>
-        <td data-label="Expected Dionysus recyclers">${expected ? formatCount(expected.dionysusRecyclersNeeded) : '—'}</td>
-        <td data-label="Conservative survival">${conservative ? pct(conservative.zeusSurvival, 5) : '—'}</td>
-        <td data-label="Conservative DSP">${conservative ? pct(conservative.dspDestroyedFraction) : '—'}</td>
-        <td data-label="Conservative debris">${conservative ? formatCount(conservative.debrisGenerated) : '—'}</td>
-        <td data-label="Conservative Dionysus recyclers">${conservative ? formatCount(conservative.dionysusRecyclersNeeded) : '—'}</td></tr>`;
+        <td data-label="${scenarioName} Zeus">${copyControl(result, `${scenarioName} Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
+        <td data-label="Survival">${result ? pct(result.zeusSurvival, 5) : '—'}</td>
+        <td data-label="DSP destroyed">${result ? pct(result.dspDestroyedFraction) : '—'}</td>
+        <td data-label="Debris">${result ? formatCount(result.debrisGenerated) : '—'}</td>
+        <td data-label="Dionysus recyclers">${result ? formatCount(result.dionysusRecyclersNeeded) : '—'}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Expected debris</th><th>Expected Dionysus<br><small>recyclers</small></th><th>Conservative survival</th><th>Conservative DSP</th><th>Conservative debris</th><th>Conservative Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>${scenarioName} Zeus<br><small>copy-ready</small></th><th>Survival</th><th>DSP destroyed</th><th>Debris</th><th>Dionysus<br><small>recyclers</small></th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function refreshDisplayFormat() {
@@ -500,6 +499,10 @@
   $('sampleBtn').addEventListener('click', () => setComposition(SAMPLE));
   $('clearBtn').addEventListener('click', () => setComposition({}));
   $('displayFormat').addEventListener('change', refreshDisplayFormat);
+  $('conservativeRecommendations').addEventListener('change', event => {
+    useConservativeRecommendations = event.target.checked;
+    if (lastRunConfig && lastRange) renderRecommendations(lastRunConfig, lastRange);
+  });
   $('parseReportBtn').addEventListener('click', parseReport);
   $('reportPreview').addEventListener('click', event => {
     const button = event.target.closest('[data-report-side]');

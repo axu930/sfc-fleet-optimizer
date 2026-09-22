@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Deterministic Zeus commitment, survival, NPC DSP, and debris calculator for Starfleet Commander.">
   <title>SFC Zeus Frontier</title>
-  <link rel="stylesheet" href="css/app.css?v=mobile-layout-1">
+  <link rel="stylesheet" href="css/app.css?v=recommendation-toggle-1">
 </head>
 <body>
   <main class="wrap">
@@ -96,7 +96,8 @@
 
       <article class="panel recommendations-panel">
         <div class="panel-head">
-          <div><h2>Fleet recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Conservative values include the 2σ RF stress case.</p></div>
+          <div><h2>Fleet recommendations</h2><p class="hint">Each integer count satisfies both the 99.9% Zeus-survival target and the DSP target. Choose standard expected RF or the conservative 2σ RF stress case.</p></div>
+          <label class="recommendation-toggle"><input id="conservativeRecommendations" type="checkbox"><span>Use conservative RF (2σ)</span></label>
         </div>
         <div id="recommendations" class="table-wrap"></div>
       </article>
