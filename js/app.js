@@ -355,9 +355,9 @@
 
     return targets.map(target => {
       const result = integerSurvivalRecommendation(config, scenario, target, range);
-      return `<tr><th scope="row">${pct(target, 3)}</th>
-        <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 3)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
+      return `<tr>
         <td data-label="Expected Zeus lost">${zeusLossMarkup(result)}</td>
+        <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 3)} survival`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
         <td data-label="Expected DSP">${dspMarkup(result)}</td>
         <td data-label="Expected debris">${result ? debrisPairMarkup(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
         <td data-label="Expected Dionysus needed">${copyControl(dionysusNeeded(result), `Expected Dionysus needed for ${pct(target, 1)} survival`)}</td>
@@ -378,7 +378,7 @@
       </section>
       <section class="recommendation-table-section">
         <h3>Zeus survival rate</h3>
-        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Survival threshold</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>Expected DSP<br><small>% of max and absolute</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${survivalRows}</tbody></table></div>
+        <div class="table-wrap"><table class="recommendation-table"><thead><tr><th>Expected Zeus lost</th><th>Zeus needed<br><small>copyable</small></th><th>Expected DSP<br><small>% of max and absolute</small></th><th>Expected debris</th><th>Expected Dionysus needed<br><small>copyable</small></th><th>Net points</th></tr></thead><tbody>${survivalRows}</tbody></table></div>
       </section>`;
   }
 
