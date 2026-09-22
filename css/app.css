@@ -105,8 +105,10 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .point-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
 .point-heading strong { display: block; margin-top: 2px; font-size: 1.2rem; }
 .point-hint { color: var(--muted); font-size: .76rem; }
-.point-facts { display: grid; grid-template-columns: repeat(6, minmax(100px, 1fr)); gap: 12px; margin-top: 12px; }
+.point-facts { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 12px; margin-top: 12px; }
 .point-facts span { display: block; font-size: 1.02rem; font-weight: 750; white-space: nowrap; }
+.point-facts .point-pair { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; line-height: 1.2; white-space: normal; }
+.point-facts .point-pair span { white-space: nowrap; }
 .point-facts small { display: block; color: var(--muted); font-size: .72rem; line-height: 1.3; margin-top: 3px; }
 
 .chart { position: relative; width: 100%; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }

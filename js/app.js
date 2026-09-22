@@ -275,13 +275,9 @@
       <div class="point-facts">
         <div><span>${pct(point.zeusSurvival, 5)}</span><small>Zeus survival</small></div>
         <div><span>${formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
-        <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
-        <div><span>${formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
-        <div>${debrisPairMarkup(point.npcDebrisOreGenerated, point.npcDebrisCrystalGenerated)}<small>NPC debris generated</small></div>
-        <div>${debrisPairMarkup(point.zeusDebrisOreGenerated, point.zeusDebrisCrystalGenerated)}<small>Own Zeus debris</small></div>
+        <div><span class="point-pair"><span>${pct(point.dspDestroyedFraction)}</span><span>${formatCount(point.destroyedDSP)} DSP</span></span><small>NPC DSP destroyed</small></div>
         <div>${debrisPairMarkup(point.debrisOreGenerated, point.debrisCrystalGenerated)}<small>Total debris generated</small></div>
         <div><span>${formatCount(point.dionysusRecyclersNeeded)}</span><small>Dionysus recyclers needed</small></div>
-        <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
   }
 
