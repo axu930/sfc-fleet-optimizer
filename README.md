@@ -47,8 +47,9 @@ uses their combined total for all-debris Dionysus recycler needs, estimated by
 dividing it by the 20,000 cargo capacity of one recycler. In crystal-only
 mode, each recycler contributes 10,000 crystal while ore remains to be
 collected (20,000 when there is no ore). The compact recommendation table has
-RF and crystal-only toggles, with one-click copy buttons for Zeus and Dionysus
-counts.
+RF and crystal-harvesting toggles, with one-click copy buttons for Zeus and
+Dionysus counts. The crystal-harvesting toggle changes only the Dionysus
+count; the debris column continues to show the full ore/crystal debris pair.
 
 ### CSV export
 

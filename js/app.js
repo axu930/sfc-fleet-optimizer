@@ -26,7 +26,7 @@
   let lastPoint = null;
   let lastPointScenario = null;
   let useConservativeRecommendations = false;
-  let useCrystalOnlyDebris = false;
+  let useCrystalHarvestingOnly = false;
 
   function formatCount(value) {
     return M.formatCount(value, displayFormat);
@@ -300,9 +300,8 @@
   function renderRecommendations(config, range) {
     const targets = [0.90, 0.95, 0.99];
     const scenario = useConservativeRecommendations ? SCENARIOS[1] : SCENARIOS[0];
-    const scenarioName = useConservativeRecommendations ? 'Conservative' : 'Expected';
-    const debrisLabel = useCrystalOnlyDebris ? 'Crystal debris' : `${scenarioName} debris`;
-    const dionysusLabel = useCrystalOnlyDebris ? 'Dionysus needed for crystal' : `${scenarioName} Dionysus needed`;
+    const debrisLabel = 'Expected debris';
+    const dionysusLabel = 'Expected Dionysus needed';
     const copyControl = (result, label, className='') => {
       if (!Number.isFinite(result)) return '—';
       const value = copyCount(result);
@@ -313,14 +312,14 @@
       const crystalRecyclers = result
         ? M.dionysusRecyclersNeededForCrystal(result.debrisOreGenerated, result.debrisCrystalGenerated)
         : NaN;
-      const dionysusNeeded = useCrystalOnlyDebris ? crystalRecyclers : result && result.dionysusRecyclersNeeded;
+      const dionysusNeeded = useCrystalHarvestingOnly ? crystalRecyclers : result && result.dionysusRecyclersNeeded;
       return `<tr><th scope="row">${pct(target, 0)}</th>
         <td data-label="Zeus needed">${copyControl(result && result.zeusCount, `Zeus count for ${pct(target, 0)} DSP`, useConservativeRecommendations ? 'conservative-count' : '')}</td>
-        <td data-label="${scenarioName} Zeus lost">${result ? formatCount(Math.max(0, result.zeusLosses)) : '—'}</td>
-        <td data-label="${debrisLabel}">${result ? (useCrystalOnlyDebris ? `${formatCount(result.debrisCrystalGenerated)} crystal` : debrisPair(result.debrisOreGenerated, result.debrisCrystalGenerated)) : '—'}</td>
+        <td data-label="Expected Zeus lost">${result ? formatCount(Math.max(0, result.zeusLosses)) : '—'}</td>
+        <td data-label="${debrisLabel}">${result ? debrisPair(result.debrisOreGenerated, result.debrisCrystalGenerated) : '—'}</td>
         <td data-label="${dionysusLabel}">${copyControl(dionysusNeeded, `${dionysusLabel} for ${pct(target, 0)} DSP`)}</td></tr>`;
     }).join('');
-    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>${scenarioName} Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th></tr></thead><tbody>${rows}</tbody></table>`;
+    $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Zeus needed<br><small>copyable</small></th><th>Expected Zeus lost</th><th>${debrisLabel}</th><th>${dionysusLabel}<br><small>copyable</small></th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function refreshDisplayFormat() {
@@ -519,8 +518,8 @@
     useConservativeRecommendations = event.target.checked;
     if (lastRunConfig && lastRange) renderRecommendations(lastRunConfig, lastRange);
   });
-  $('crystalOnlyDebris').addEventListener('change', event => {
-    useCrystalOnlyDebris = event.target.checked;
+  $('crystalHarvestingOnly').addEventListener('change', event => {
+    useCrystalHarvestingOnly = event.target.checked;
     if (lastRunConfig && lastRange) renderRecommendations(lastRunConfig, lastRange);
   });
   $('parseReportBtn').addEventListener('click', parseReport);
