@@ -29,6 +29,9 @@ h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; le
 .eyebrow { text-transform: uppercase; letter-spacing: .16em; color: var(--accent); font-size: .75rem; font-weight: 700; margin: 0; }
 .lede { max-width: 760px; color: #bed0dc; font-size: 1.08rem; margin: 0; }
 .badge { white-space: nowrap; border: 1px solid var(--border); background: #0b1720; padding: 8px 11px; border-radius: 999px; color: var(--muted); font-size: .8rem; }
+.header-tools { display: grid; gap: 10px; justify-items: end; min-width: 310px; }
+.format-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
+.format-control select { max-width: 310px; min-height: 36px; border: 1px solid var(--border); border-radius: 9px; background: #0b1822; color: var(--text); padding: 0 9px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr); gap: 16px; align-items: start; }
 .panel { background: linear-gradient(180deg, rgba(20, 33, 45, .96), rgba(13, 23, 32, .96)); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
@@ -37,7 +40,7 @@ h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; le
 .hidden { display: none !important; }
 
 button, input, textarea { font: inherit; }
-button:focus, input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107, 213, 255, .12); outline: none; }
+button:focus, input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107, 213, 255, .12); outline: none; }
 .primary, .ghost { border: 1px solid transparent; border-radius: 10px; min-height: 42px; padding: 0 14px; font-weight: 700; cursor: pointer; }
 .primary { width: 100%; margin-top: 14px; background: var(--accent); color: #03111a; }
 .primary:disabled { cursor: wait; opacity: .7; }
@@ -134,6 +137,7 @@ footer { text-align: center; color: #647a89; font-size: .8rem; margin-top: 24px;
 
 @media (max-width: 930px) {
   header { display: block; }
+  .header-tools { justify-items: start; margin-top: 14px; }
   .badge { display: inline-block; margin-top: 16px; }
   .grid { grid-template-columns: 1fr; }
   .point-facts { grid-template-columns: repeat(3, minmax(100px, 1fr)); }

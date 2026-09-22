@@ -81,14 +81,36 @@
     return !rapidFire || rapidFire <= 1 ? 0 : (rapidFire - 1) / rapidFire;
   }
 
-  function formatCount(value) {
+  const WORD_UNITS = [
+    ['nonillion', 1e30], ['octillion', 1e27], ['septillion', 1e24],
+    ['sextillion', 1e21], ['quintillion', 1e18], ['quadrillion', 1e15],
+    ['trillion', 1e12], ['billion', 1e9], ['million', 1e6], ['thousand', 1e3]
+  ];
+  const ABBREVIATED_UNITS = [
+    ['n', 1e30], ['o', 1e27], ['S', 1e24], ['s', 1e21], ['Q', 1e18],
+    ['q', 1e15], ['t', 1e12], ['b', 1e9], ['m', 1e6], ['k', 1e3]
+  ];
+
+  function decimal(value, useGrouping) {
+    return value.toLocaleString('en-US', {useGrouping, maximumFractionDigits:3});
+  }
+
+  function scientific(value) {
+    return value.toExponential(2).replace(/(\.\d*?[1-9])0+e/, '$1e').replace(/\.0+e/, 'e');
+  }
+
+  function formatCount(value, format='abbrev') {
     if (!Number.isFinite(value)) return '—';
+    if (format === 'raw') return decimal(value, false);
+    if (format === 'commas') return decimal(value, true);
+    if (format === 'scientific') return scientific(value);
+    const units = format === 'words' ? WORD_UNITS : ABBREVIATED_UNITS;
+    const suffix = format === 'words' ? ' ' : '';
     const abs = Math.abs(value);
-    const units = [['Sp',1e24],['Sx',1e21],['Qi',1e18],['Qa',1e15],['T',1e12],['B',1e9],['M',1e6],['K',1e3]];
-    for (const [suffix, magnitude] of units) {
-      if (abs >= magnitude) return (value / magnitude).toLocaleString(undefined, {maximumFractionDigits:3}) + suffix;
+    for (const [label, magnitude] of units) {
+      if (abs >= magnitude) return decimal(value / magnitude, false) + suffix + label;
     }
-    return value.toLocaleString(undefined, {maximumFractionDigits:0});
+    return decimal(value, format === 'commas');
   }
 
   return {UNITS, ALIASES, ZEUS_COST, normalize, scaled, rfContinue, formatCount};

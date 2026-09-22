@@ -18,8 +18,17 @@
   const POINT_COUNT = 64;
   const RANGE_SURVIVAL_TARGET = 0.9999;
 
+  let displayFormat = 'abbrev';
   let lastScenarios = null;
   let lastReportParse = null;
+  let lastRunConfig = null;
+  let lastRange = null;
+  let lastPoint = null;
+  let lastPointScenario = null;
+
+  function formatCount(value) {
+    return M.formatCount(value, displayFormat);
+  }
 
   function tech(prefix) {
     return {
@@ -101,7 +110,7 @@
     }, 0);
     const summary = invalid.length
       ? `${invalid.length} invalid unit count${invalid.length === 1 ? '' : 's'}`
-      : `${entries.length} populated classes · ${M.formatCount(total)} total units · ${M.formatCount(shipDSP)} modeled ship DSP`;
+      : `${entries.length} populated classes · ${formatCount(total)} total units · ${formatCount(shipDSP)} modeled ship DSP`;
     $('inputSummary').textContent = summary;
     $('inputSummary').className = invalid.length ? 'fleet-summary error' : 'fleet-summary';
     return {composition, invalid};
@@ -116,13 +125,30 @@
       .filter(([, value]) => Number.isFinite(value))
       .map(([name, value]) => `${name}${value}`);
     const list = entries.slice(0, 7)
-      .map(([name, count]) => `<li><span>${name}</span><strong>${M.formatCount(count)}</strong></li>`)
+      .map(([name, count]) => `<li><span>${name}</span><strong>${formatCount(count)}</strong></li>`)
       .join('');
     const more = entries.length > 7 ? `<li class="more"><span>+ ${entries.length - 7} more classes</span></li>` : '';
     return `<article class="report-side-card">
-      <div class="report-side-head"><div><span class="side-label">${label}</span><strong>${entries.length} types · ${M.formatCount(total)} units</strong></div><span class="tech-pill">${techBits.length ? techBits.join(' · ') : 'AWS not detected'}</span></div>
+      <div class="report-side-head"><div><span class="side-label">${label}</span><strong>${entries.length} types · ${formatCount(total)} units</strong></div><span class="tech-pill">${techBits.length ? techBits.join(' · ') : 'AWS not detected'}</span></div>
       <ul>${list}${more}</ul>
     </article>`;
+  }
+
+  function reportSides(parsed) {
+    const available = [];
+    if (parsed && parsed.attacker && Object.keys(parsed.attacker.composition).length) available.push(['Attacker','attacker',parsed.attacker]);
+    if (parsed && parsed.defender && Object.keys(parsed.defender.composition).length) available.push(['Defender','defender',parsed.defender]);
+    if (parsed && parsed.unassigned && Object.keys(parsed.unassigned.composition).length) available.push(['Detected fleet','unassigned',parsed.unassigned]);
+    return available;
+  }
+
+  function renderReportPreview(available=reportSides(lastReportParse)) {
+    if (!available.length) {
+      $('reportPreview').classList.add('hidden');
+      return;
+    }
+    $('reportPreview').innerHTML = available.map(([label, key, data]) => reportSideCard(label, key, data)).join('');
+    $('reportPreview').classList.remove('hidden');
   }
 
   function parseReport() {
@@ -135,10 +161,7 @@
     }
     const parsed = M.parseBattleReport(text);
     lastReportParse = parsed;
-    const available = [];
-    if (parsed.attacker && Object.keys(parsed.attacker.composition).length) available.push(['Attacker','attacker',parsed.attacker]);
-    if (parsed.defender && Object.keys(parsed.defender.composition).length) available.push(['Defender','defender',parsed.defender]);
-    if (parsed.unassigned && Object.keys(parsed.unassigned.composition).length) available.push(['Detected fleet','unassigned',parsed.unassigned]);
+    const available = reportSides(parsed);
     if (!available.length) {
       $('reportStatus').textContent = 'No supported ship or defense classes were recognized.';
       $('reportStatus').className = 'status error';
@@ -149,8 +172,7 @@
     applyReportSide(selected[1]);
     $('reportStatus').textContent = `Filled the NPC table from ${selected[0].toLowerCase()} (${Object.keys(selected[2].composition).length} classes).`;
     $('reportStatus').className = 'status success';
-    $('reportPreview').innerHTML = available.map(([label, key, data]) => reportSideCard(label, key, data)).join('');
-    $('reportPreview').classList.remove('hidden');
+    renderReportPreview(available);
   }
 
   function applyReportSide(key) {
@@ -186,11 +208,11 @@
     const expectedLast = datasets[0].sweep.points[datasets[0].sweep.points.length - 1];
     const conservativeLast = datasets[1].sweep.points[datasets[1].sweep.points.length - 1];
     const cards = [
-      ['NPC ship DSP', M.formatCount(first.initialDSP)],
-      ['Potential NPC debris', M.formatCount(first.initialDebrisPotential)],
-      ['Expected DSP at max', `${M.formatCount(expectedLast.destroyedDSP)} · ${pct(expectedLast.dspDestroyedFraction)}`],
-      ['Conservative DSP at max', `${M.formatCount(conservativeLast.destroyedDSP)} · ${pct(conservativeLast.dspDestroyedFraction)}`],
-      ['Expected debris at max', M.formatCount(expectedLast.debrisGenerated)],
+      ['NPC ship DSP', formatCount(first.initialDSP)],
+      ['Potential NPC debris', formatCount(first.initialDebrisPotential)],
+      ['Expected DSP at max', `${formatCount(expectedLast.destroyedDSP)} · ${pct(expectedLast.dspDestroyedFraction)}`],
+      ['Conservative DSP at max', `${formatCount(conservativeLast.destroyedDSP)} · ${pct(conservativeLast.dspDestroyedFraction)}`],
+      ['Expected debris at max', formatCount(expectedLast.debrisGenerated)],
       ['Initial Zeus RF factor', number(M.initialZeusShotFactor(readComposition().composition), 2) + '×']
     ];
     $('metrics').innerHTML = cards.map(([label, value]) => `<div class="metric"><span class="k">${label}</span><span class="v">${value}</span></div>`).join('');
@@ -198,15 +220,17 @@
 
   function renderPointDetails(point, scenario) {
     if (!point) return;
+    lastPoint = point;
+    lastPointScenario = scenario;
     const zeusLosses = Math.max(0, point.zeusLosses);
     $('pointDetails').innerHTML = `
-      <div class="point-heading"><div><span class="side-label">${scenario.label}</span><strong>${M.formatCount(point.zeusCount)} Zeus committed</strong></div><span class="point-hint">Hover either chart to inspect another point</span></div>
+      <div class="point-heading"><div><span class="side-label">${scenario.label}</span><strong>${formatCount(point.zeusCount)} Zeus committed</strong></div><span class="point-hint">Hover either chart to inspect another point</span></div>
       <div class="point-facts">
         <div><span>${pct(point.zeusSurvival, 5)}</span><small>Zeus survival</small></div>
-        <div><span>${M.formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
+        <div><span>${formatCount(zeusLosses)}</span><small>Expected Zeus lost</small></div>
         <div><span>${pct(point.dspDestroyedFraction)}</span><small>NPC DSP destroyed</small></div>
-        <div><span>${M.formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
-        <div><span>${M.formatCount(point.debrisGenerated)}</span><small>NPC debris generated</small></div>
+        <div><span>${formatCount(point.destroyedDSP)}</span><small>Actual DSP destroyed</small></div>
+        <div><span>${formatCount(point.debrisGenerated)}</span><small>NPC debris generated</small></div>
         <div><span>${pct(point.threatDestroyedFraction)}</span><small>Threat removed</small></div>
       </div>`;
   }
@@ -247,8 +271,20 @@
     $('recommendations').innerHTML = `<table class="recommendation-table"><thead><tr><th>DSP target</th><th>Expected RF Zeus<br><small>copy-ready</small></th><th>Conservative RF Zeus<br><small>copy-ready</small></th><th>Conservative survival</th><th>Conservative DSP</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
+  function refreshDisplayFormat() {
+    displayFormat = $('displayFormat').value;
+    updateInputSummary();
+    renderReportPreview();
+    if (!lastScenarios) return;
+    renderMetrics(lastScenarios);
+    renderChart('survivalChart', lastScenarios, 'zeusSurvival', 'Zeus survival', 'survival');
+    renderChart('commitmentChart', lastScenarios, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
+    renderRecommendations(lastRunConfig, lastRange);
+    renderPointDetails(lastPoint, lastPointScenario);
+  }
+
   function tooltipMarkup(point, scenario) {
-    return `<strong>${scenario.label}</strong><span>${M.formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${M.formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${M.formatCount(point.debrisGenerated)} debris</span>`;
+    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} debris</span>`;
   }
 
   function renderChart(containerId, datasets, yKey, yLabel, mode) {
@@ -270,7 +306,7 @@
     let grid = '';
     for (let index = 0; index <= 5; index++) {
       const logValue = xMin + (xMax - xMin) * index / 5;
-      grid += `<line x1="${x(logValue)}" y1="${margin.t}" x2="${x(logValue)}" y2="${height - margin.b}" class="gridline"/><text x="${x(logValue)}" y="${height - margin.b + 23}" text-anchor="middle" class="axis">${M.formatCount(Math.pow(10, logValue))}</text>`;
+      grid += `<line x1="${x(logValue)}" y1="${margin.t}" x2="${x(logValue)}" y2="${height - margin.b}" class="gridline"/><text x="${x(logValue)}" y="${height - margin.b + 23}" text-anchor="middle" class="axis">${formatCount(Math.pow(10, logValue))}</text>`;
     }
     for (let index = 0; index <= 5; index++) {
       const value = yMin + (yMax - yMin) * index / 5;
@@ -281,7 +317,7 @@
     const curves = datasets.map(dataset => {
       const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
       const dots = dataset.sweep.points.map((point, index) => {
-        const label = `${dataset.label}: ${M.formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${M.formatCount(point.destroyedDSP)} DSP destroyed, ${M.formatCount(point.debrisGenerated)} debris`;
+        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} debris`;
         return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
       }).join('');
       return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
@@ -391,6 +427,8 @@
         sweep:M.sweep({...config, rfSigma:scenario.rfSigma, points:POINT_COUNT, range})
       }));
       lastScenarios = datasets;
+      lastRunConfig = config;
+      lastRange = range;
       renderMetrics(datasets);
       renderChart('survivalChart', datasets, 'zeusSurvival', 'Zeus survival', 'survival');
       renderChart('commitmentChart', datasets, 'dspDestroyedFraction', 'NPC ship DSP destroyed', 'dsp');
@@ -414,6 +452,7 @@
   setComposition(SAMPLE);
   $('sampleBtn').addEventListener('click', () => setComposition(SAMPLE));
   $('clearBtn').addEventListener('click', () => setComposition({}));
+  $('displayFormat').addEventListener('change', refreshDisplayFormat);
   $('reportToggleBtn').addEventListener('click', () => {
     $('reportImporter').classList.toggle('hidden');
     if (!$('reportImporter').classList.contains('hidden')) $('reportText').focus();

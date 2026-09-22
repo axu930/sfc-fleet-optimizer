@@ -113,6 +113,12 @@ Each unit-table field and imported report count accepts values such as:
 
 Supported suffixes include `K`, `M`, `B`, `T`, `Qa`/`Q` (quadrillion), `Qi` (quintillion), `Sx`, and `Sp`. Scientific notation is also supported.
 
+The **Number display** selector changes rendered result counts without changing
+the underlying model: raw numbers, comma-grouped numbers, scientific notation,
+full magnitude words, or abbreviations (`k`, `m`, `b`, `t`, `q`, `Q`, `s`, `S`,
+`o`, `n`). Copy-ready Zeus recommendations remain plain integers without
+commas in every display mode.
+
 ## Model
 
 This is deliberately a **deterministic large-fleet approximation**:
@@ -149,6 +155,7 @@ The model has a zero-dependency Node test suite:
 ```bash
 node tests/parser.test.js
 node tests/combat.test.js
+node tests/units.test.js
 ```
 
 The tests cover count parsing, manual roster parsing, row-style and copied-table

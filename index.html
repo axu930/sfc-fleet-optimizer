@@ -15,7 +15,18 @@
         <h1>Zeus commitment frontier</h1>
         <p class="lede">Compare Zeus survival, NPC ship DSP destroyed, and debris generated across a practical range of attack sizes.</p>
       </div>
-      <div class="badge">Deterministic large-fleet model</div>
+      <div class="header-tools">
+        <div class="badge">Deterministic large-fleet model</div>
+        <label class="format-control" for="displayFormat"><span>Number display</span>
+          <select id="displayFormat">
+            <option value="abbrev" selected>Abbreviations (k, m, b, t, q, Q, s, S, o, n)</option>
+            <option value="raw">Raw numbers</option>
+            <option value="commas">With commas</option>
+            <option value="scientific">Scientific notation</option>
+            <option value="words">Words (million, quadrillion, etc.)</option>
+          </select>
+        </label>
+      </div>
     </header>
 
     <section class="grid inputs">
@@ -120,10 +131,10 @@
 
     <footer>Static HTML + JavaScript. No server required.</footer>
   </main>
-  <script src="js/units.js?v=layout-tech-1"></script>
-  <script src="js/battle-report-parser.js?v=layout-tech-1"></script>
-  <script src="js/combat.js?v=layout-tech-1"></script>
-  <script src="js/optimizer.js?v=layout-tech-1"></script>
-  <script src="js/app.js?v=layout-tech-1"></script>
+  <script src="js/units.js?v=number-format-1"></script>
+  <script src="js/battle-report-parser.js?v=number-format-1"></script>
+  <script src="js/combat.js?v=number-format-1"></script>
+  <script src="js/optimizer.js?v=number-format-1"></script>
+  <script src="js/app.js?v=number-format-1"></script>
 </body>
 </html>
