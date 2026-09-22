@@ -333,7 +333,8 @@
   }
 
   function tooltipMarkup(point, scenario) {
-    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} total debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
+    const zeusLosses = Math.max(0, point.zeusLosses);
+    return `<strong>${scenario.label}</strong><span>${formatCount(point.zeusCount)} Zeus</span><span>${formatCount(zeusLosses)} Zeus lost</span><span>${pct(point.zeusSurvival, 5)} survival</span><span>${formatCount(point.destroyedDSP)} DSP (${pct(point.dspDestroyedFraction)})</span><span>${formatCount(point.debrisGenerated)} total debris</span><span>${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers</span>`;
   }
 
   function renderChart(containerId, datasets, yKey, yLabel, mode) {
@@ -366,7 +367,7 @@
     const curves = datasets.map(dataset => {
       const path = dataset.sweep.points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${y(point[yKey]).toFixed(2)}`).join(' ');
       const dots = dataset.sweep.points.map((point, index) => {
-        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} total debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
+        const label = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${formatCount(point.debrisGenerated)} total debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
         return `<circle cx="${x(Math.log10(Math.max(1, point.zeusCount)))}" cy="${y(point[yKey])}" r="4.5" class="chart-dot ${dataset.key}" tabindex="0" role="button" aria-label="${label}" data-scenario="${dataset.key}" data-point="${index}"><title>${label}</title></circle>`;
       }).join('');
       return `<path d="${path}" class="curve ${dataset.key}"/>${dots}`;
