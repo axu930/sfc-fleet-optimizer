@@ -24,7 +24,7 @@ body {
 .wrap { max-width: 1180px; margin: 0 auto; padding: 36px 20px 64px; }
 
 /* Shared page shell. The optimizer theme is the source of truth for all tools. */
-.site-shell { max-width: 980px; margin: 0 auto; padding: 36px 20px 64px; }
+.site-shell { max-width: 1180px; margin: 0 auto; padding: 36px 20px 64px; }
 .site-nav { display: flex; align-items: center; gap: 18px; min-height: 42px; margin-bottom: 36px; }
 .site-nav-brand { color: var(--text); font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
 .site-nav-links { display: flex; align-items: center; gap: 18px; margin-left: auto; }
