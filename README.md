@@ -102,14 +102,13 @@ scripts so it works from GitHub Pages and when pages are opened directly:
 
 - `index.html` is the landing page and tool directory.
 - `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
-- `css/site.css` owns shared landing-page and navigation presentation.
-- `css/app.css` owns Zeus optimizer-specific presentation.
+- `css/app.css` owns the canonical theme, shared shell, and Zeus
+  optimizer-specific presentation.
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
 - `js/combat.js` owns the deterministic six-round combat simulation, DSP, debris, and threat metrics.
 - `js/optimizer.js` owns range selection, sweeps, breakpoints, the matrix, and knee detection.
 - `js/app.js` owns DOM events, rendering, chart generation, importing, and CSV export.
-- `css/app.css` owns all presentation styles.
 
 The four model modules expose browser globals and CommonJS exports. The browser
 loads them in dependency order; Node tests import the same production files.
@@ -124,10 +123,10 @@ The included `.nojekyll` file keeps GitHub Pages from applying Jekyll processing
 
 ## Adding a tool
 
-Create a new `/tools/<tool-name>/index.html` page, reuse the shared navigation
-and `css/site.css`, add a card to the root landing page, and use relative paths
-back to shared assets. Keep tool-specific logic isolated and add tests for any
-new model or parser behavior.
+Create a new `/tools/<tool-name>/index.html` page, reuse the shared navigation,
+shell, and theme from `css/app.css`, add a card to the root landing page, and
+use relative paths back to shared assets. Keep tool-specific logic isolated and
+add tests for any new model or parser behavior.
 
 ## Count format
 

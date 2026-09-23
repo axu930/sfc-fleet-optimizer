@@ -6,8 +6,8 @@ This repository is a zero-build, GitHub Pages-compatible static tool hub.
 
 - `/index.html` is the public landing page.
 - `/tools/zeus-optimizer/index.html` is the Zeus fleet optimizer.
-- `/css/site.css` contains shared landing-page and navigation styles.
-- `/css/app.css` contains Zeus optimizer-specific styles.
+- `/css/app.css` is the canonical theme and contains shared shell styles plus
+  Zeus optimizer-specific styles.
 - `/js/` contains shared model and parser modules loaded by the optimizer.
 - `/tests/` contains the zero-dependency Node regression tests.
 
@@ -87,7 +87,7 @@ Do not introduce a server/backend unless necessary.
 ## Adding a tool
 
 1. Create `/tools/<tool-name>/index.html`.
-2. Reuse shared navigation and `css/site.css` where appropriate.
+2. Reuse the shared navigation, shell, and theme from `css/app.css`.
 3. Keep tool-specific CSS and JavaScript scoped to that directory or clearly
    named shared modules.
 4. Add a card and link on the root landing page.
