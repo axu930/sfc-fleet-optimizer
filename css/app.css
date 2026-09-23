@@ -63,8 +63,8 @@ body {
 .optimizer-page h2 { font-size: 1.05rem; margin: 0 0 .55rem; }
 .optimizer-page h3 { margin: 0; font-size: .84rem; color: #cbd9e1; text-transform: uppercase; letter-spacing: .08em; }
 .optimizer-page .eyebrow { text-transform: uppercase; letter-spacing: .16em; color: var(--accent); font-size: .75rem; font-weight: 700; margin: 0; }
-.optimizer-page .lede { max-width: 760px; color: #bed0dc; font-size: 1.08rem; margin: 0; }
-.optimizer-page .intro-guide { max-width: 780px; color: var(--muted); font-size: .88rem; margin: .8rem 0 0; }
+.lede { max-width: 760px; color: #bed0dc; font-size: 1.08rem; margin: 0; }
+.intro-guide { max-width: 780px; color: var(--muted); font-size: .88rem; margin: .8rem 0 0; }
 .optimizer-page .badge { white-space: nowrap; border: 1px solid var(--border); background: #0b1720; padding: 8px 11px; border-radius: var(--radius-pill); color: var(--muted); font-size: .8rem; }
 .optimizer-page .header-tools { display: grid; gap: 10px; justify-items: end; min-width: 310px; }
 .optimizer-page .format-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; }
@@ -74,9 +74,6 @@ body {
 /* Landing page structure uses the same optimizer theme without calculator-specific styling. */
 .landing-header { max-width: 720px; margin-bottom: 36px; }
 .landing-header h1 { margin: 0 0 16px; font-size: clamp(1.9rem, 4vw, 2.7rem); line-height: 1.1; letter-spacing: -.035em; }
-.landing-description { color: var(--muted); }
-.landing-description p { margin: 0; }
-.landing-description p + p { margin-top: 8px; }
 .landing-section { margin-top: 0; }
 .landing-section h2 { margin: 0 0 14px; font-size: 1.25rem; letter-spacing: -.02em; }
 .tool-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
