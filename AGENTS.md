@@ -1,4 +1,19 @@
-# SFC Zeus Frontier
+# Starfleet Commander Tools
+
+## Site structure
+
+This repository is a zero-build, GitHub Pages-compatible static tool hub.
+
+- `/index.html` is the public landing page.
+- `/tools/zeus-optimizer/index.html` is the Zeus fleet optimizer.
+- `/css/site.css` contains shared landing-page and navigation styles.
+- `/css/app.css` contains Zeus optimizer-specific styles.
+- `/js/` contains shared model and parser modules loaded by the optimizer.
+- `/tests/` contains the zero-dependency Node regression tests.
+
+GitHub Pages deploys from the repository root. New tools should live in their
+own `/tools/<tool-name>/` directory with an `index.html` entry point and
+relative paths back to shared assets.
 
 ## Purpose
 
@@ -47,10 +62,10 @@ than per-ship Monte Carlo.
 - 95%
 - 99%
 
-## Existing features
+## Zeus optimizer features
 
 - deterministic Zeus sweep
-- survival/DSP Pareto frontier
+- scenario-specific survival/DSP charts for expected and conservative RF
 - breakpoint matrix
 - efficiency knee detector
 - threat-removed metric
@@ -68,3 +83,13 @@ than per-ship Monte Carlo.
 5. GitHub Pages compatibility
 
 Do not introduce a server/backend unless necessary.
+
+## Adding a tool
+
+1. Create `/tools/<tool-name>/index.html`.
+2. Reuse shared navigation and `css/site.css` where appropriate.
+3. Keep tool-specific CSS and JavaScript scoped to that directory or clearly
+   named shared modules.
+4. Add a card and link on the root landing page.
+5. Use relative asset paths so direct GitHub Pages sub-page URLs work.
+6. Add regression tests for model or parser behavior before pushing.

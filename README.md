@@ -1,6 +1,14 @@
-# SFC Zeus Frontier
+# Starfleet Commander Tools
 
-A dependency-free browser optimizer for **Zeus-only attacks on Starfleet Commander NPCs**. It is designed for very large fleets, where an expected-value / large-fleet treatment is more useful than simulating individual ships.
+This repository hosts a dependency-free browser toolkit for Starfleet
+Commander planning. The root landing page links to individual tools under
+`/tools/`; the current production tool is the **Zeus Fleet Optimizer**.
+
+## Zeus Fleet Optimizer
+
+The Zeus optimizer evaluates **Zeus-only attacks on Starfleet Commander NPCs**.
+It is designed for very large fleets, where an expected-value / large-fleet
+treatment is more useful than simulating individual ships.
 
 The goal is not “how many Zeus fully wipe the NPC?” The app estimates the trade-off among:
 
@@ -16,16 +24,12 @@ directly from copied combat or espionage text.
 
 ## What the UI provides
 
-### Zeus survival curve
+### Scenario charts
 
-Plots Zeus committed on a logarithmic x-axis against Zeus survival. Expected
-and conservative RF scenarios use the same sampled commitment points.
-
-### Commitment curve
-
-Plots Zeus committed on the identical logarithmic x-axis against NPC ship DSP
-destroyed. Hoverable, keyboard-focusable points show survival, absolute and
-percentage DSP destruction, debris, and threat removed.
+The results show separate Expected RF and Conservative RF charts. Each chart
+plots Zeus survival and NPC ship DSP destroyed against the same logarithmic
+Zeus-commitment x-axis. Hoverable, keyboard-focusable points show survival,
+absolute and percentage DSP destruction, debris, and recycler details.
 
 ### Unit input table
 
@@ -62,12 +66,11 @@ The complete sampled frontier can be downloaded as CSV for further analysis.
 ### Battle report import
 
 Paste a copied combat or espionage report into the always-visible report box
-under the unit table, then press **Parse report**. The importer immediately
-fills the unit table, preferring the
-defender block, then the attacker block, then a single detected fleet. It:
-
-Parsing immediately computes the curves while leaving the populated inputs in
-view so the detected counts and tech values can be verified before use.
+under the unit table, then press **Parse report**. Parsing immediately computes
+the curves while leaving the populated inputs in view so the detected counts
+and tech values can be verified before use. The importer fills the unit table,
+preferring the defender block, then the attacker block, then a single detected
+fleet. It:
 
 - reads the first attacker and defender snapshots rather than adding later-round repeats;
 - accepts row-style copies such as `Athena Class Battleship 50,000`;
@@ -94,9 +97,13 @@ Opening `index.html` directly also works in most browsers.
 
 ## Architecture
 
-The app stays dependency-free and uses ordered classic scripts so it works from
-GitHub Pages and when `index.html` is opened directly:
+The site stays dependency-free and uses static HTML plus ordered classic
+scripts so it works from GitHub Pages and when pages are opened directly:
 
+- `index.html` is the landing page and tool directory.
+- `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
+- `css/site.css` owns shared landing-page and navigation presentation.
+- `css/app.css` owns Zeus optimizer-specific presentation.
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
 - `js/combat.js` owns the deterministic six-round combat simulation, DSP, debris, and threat metrics.
@@ -109,12 +116,18 @@ loads them in dependency order; Node tests import the same production files.
 
 ## GitHub Pages
 
-1. Create a GitHub repository.
-2. Copy the contents of this folder into the repository root.
-3. In **Settings → Pages**, choose **Deploy from a branch**.
-4. Select the branch (usually `main`) and `/ (root)`.
+1. In **Settings → Pages**, choose **Deploy from a branch**.
+2. Select the branch (usually `main`) and `/ (root)`.
+3. Open the landing page at `/` and the optimizer at `/tools/zeus-optimizer/`.
 
 The included `.nojekyll` file keeps GitHub Pages from applying Jekyll processing.
+
+## Adding a tool
+
+Create a new `/tools/<tool-name>/index.html` page, reuse the shared navigation
+and `css/site.css`, add a card to the root landing page, and use relative paths
+back to shared assets. Keep tool-specific logic isolated and add tests for any
+new model or parser behavior.
 
 ## Count format
 
