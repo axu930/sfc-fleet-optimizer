@@ -10,7 +10,12 @@
 
   const MAX_FRONTIER_STATES = 5_000;
   const CANDIDATE_POINTS = 64;
-  const WIN_REFINEMENT_TARGETS = [0.5, 0.9, 0.95, 0.99, 0.999];
+  const REFINEMENT_TARGETS = Object.freeze({
+    dspDestroyed:Object.freeze([0.5, 0.9, 0.95, 0.99, 0.999]),
+    winProbability:Object.freeze([0.9, 0.95, 0.99, 0.999])
+  });
+  // Treat survival at 99.999% or better as equivalent to 100% in comparisons.
+  const SURVIVAL_SATURATION = 0.99999;
   const OBJECTIVES = Object.freeze({
     dsp:{label:'DSP destroyed', value:outcome => outcome.dspDestroyed},
     hydrogen:{label:'Hydrogen raided', value:outcome => outcome.resourcesRaided.hydrogen},
@@ -31,6 +36,11 @@
     const parsed = Number(enteredPercent);
     const percent = Number.isFinite(parsed) && parsed >= 0 ? Math.min(100, parsed) : 0.1;
     return Math.max(0, availableZeus * percent / 100);
+  }
+
+  function survivalForComparison(survival) {
+    const rate = Math.max(0, Math.min(1, Number(survival) || 0));
+    return rate >= SURVIVAL_SATURATION ? 1 : rate;
   }
 
   function candidateCounts(maximum, points=CANDIDATE_POINTS) {
@@ -120,7 +130,7 @@
     return outcome;
   }
 
-  function refineWinThreshold(target, config, low, high, cache, probabilityTarget) {
+  function refineThreshold(target, config, low, high, cache, metric, threshold) {
     let lower = low;
     let upper = high;
     let best = cache.get(upper) || evaluateTarget(target, upper, config);
@@ -133,7 +143,7 @@
         outcome = evaluateTarget(target, middle, config);
         cache.set(middle, outcome);
       }
-      if (outcome.winProbability >= probabilityTarget) {
+      if (outcome[metric] >= threshold) {
         upper = middle;
         best = outcome;
       } else {
@@ -150,22 +160,31 @@
     let priorOutcome = null;
     const thresholdBrackets = new Map();
     const outcomes = [];
+    // Destruction milestones are always useful; raid objectives also refine
+    // win-probability transitions that directly affect their expected reward.
+    const thresholds = [
+      ...REFINEMENT_TARGETS.dspDestroyed.map(value => ({metric:'dspDestroyedFraction', value})),
+      ...(config.objective === 'hydrogen' || config.objective === 'resourcesDebris'
+        ? REFINEMENT_TARGETS.winProbability.map(value => ({metric:'winProbability', value}))
+        : [])
+    ];
     for (const count of counts) {
       const outcome = evaluateTarget(target, count, config);
       cache.set(count, outcome);
       outcomes.push(outcome);
       if (priorOutcome) {
-        for (const targetProbability of WIN_REFINEMENT_TARGETS) {
-          if (!thresholdBrackets.has(targetProbability) && outcome.winProbability >= targetProbability && priorOutcome.winProbability < targetProbability) {
-            thresholdBrackets.set(targetProbability, [priorCount, count]);
+        for (const {metric, value} of thresholds) {
+          const key = `${metric}:${value}`;
+          if (!thresholdBrackets.has(key) && outcome[metric] >= value && priorOutcome[metric] < value) {
+            thresholdBrackets.set(key, {low:priorCount, high:count, metric, value});
           }
         }
       }
       priorCount = count;
       priorOutcome = outcome;
     }
-    for (const [targetProbability, bracket] of thresholdBrackets) {
-      outcomes.push(refineWinThreshold(target, config, bracket[0], bracket[1], cache, targetProbability));
+    for (const bracket of thresholdBrackets.values()) {
+      outcomes.push(refineThreshold(target, config, bracket.low, bracket.high, cache, bracket.metric, bracket.value));
     }
 
     const unique = new Map();
@@ -181,8 +200,13 @@
     const noMoreZeus = left.zeusCount <= right.zeusCount;
     const noMoreLosses = left.zeusLosses <= right.zeusLosses + 1e-10;
     const noLessValue = left.objectiveValue >= right.objectiveValue - 1e-10 * Math.max(1, Math.abs(right.objectiveValue));
-    const strict = left.zeusCount < right.zeusCount || left.zeusLosses < right.zeusLosses - 1e-10 || left.objectiveValue > right.objectiveValue + 1e-10 * Math.max(1, Math.abs(right.objectiveValue));
-    return noMoreZeus && noMoreLosses && noLessValue && strict;
+    const leftSurvival = survivalForComparison(left.zeusSurvival);
+    const rightSurvival = survivalForComparison(right.zeusSurvival);
+    const noLessSurvival = leftSurvival >= rightSurvival - 1e-12;
+    const strict = left.zeusCount < right.zeusCount || left.zeusLosses < right.zeusLosses - 1e-10
+      || left.objectiveValue > right.objectiveValue + 1e-10 * Math.max(1, Math.abs(right.objectiveValue))
+      || leftSurvival > rightSurvival + 1e-12;
+    return noMoreZeus && noMoreLosses && noLessValue && noLessSurvival && strict;
   }
 
   function pruneTargetOptions(options) {
@@ -194,28 +218,112 @@
     return output.sort((left, right) => left.zeusCount - right.zeusCount || left.zeusLosses - right.zeusLosses || right.objectiveValue - left.objectiveValue);
   }
 
-  function upperBound(tree, index) {
-    let maximum = -Infinity;
-    for (let cursor = index; cursor > 0; cursor -= cursor & -cursor) maximum = Math.max(maximum, tree[cursor]);
-    return maximum;
+  function lowerBound(values, target) {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (values[middle] < target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
   }
 
-  function updateBound(tree, index, value) {
-    for (let cursor = index; cursor < tree.length; cursor += cursor & -cursor) tree[cursor] = Math.max(tree[cursor], value);
+  function upperBoundValue(values, target) {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (values[middle] <= target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  }
+
+  function lowerBoundDescending(values, target) {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (values[middle] > target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  }
+
+  function countAtLeastDescending(values, target) {
+    let low = 0;
+    let high = values.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (values[middle] >= target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  }
+
+  function stateSurvival(state) {
+    if (!(state.zeus > 0)) return 1;
+    return survivalForComparison((state.zeus - state.losses) / state.zeus);
+  }
+
+  // Offline 2D Fenwick tree: query the best value with no more losses and
+  // at least as much capped survival among states already sorted by Zeus.
+  function paretoIndex(states) {
+    const losses = [...new Set(states.map(state => state.losses))].sort((left, right) => left - right);
+    const nodes = Array.from({length:losses.length + 1}, () => ({values:[], tree:[]}));
+    for (const state of states) {
+      const lossPosition = lowerBound(losses, state.losses) + 1;
+      const survival = stateSurvival(state);
+      for (let cursor = lossPosition; cursor < nodes.length; cursor += cursor & -cursor) {
+        nodes[cursor].values.push(survival);
+      }
+    }
+    for (let index = 1; index < nodes.length; index++) {
+      const node = nodes[index];
+      node.values = [...new Set(node.values)].sort((left, right) => right - left);
+      node.tree = Array(node.values.length + 1).fill(-Infinity);
+    }
+
+    return {
+      query(loss, survival) {
+        let best = -Infinity;
+        for (let cursor = upperBoundValue(losses, loss + 1e-10); cursor > 0; cursor -= cursor & -cursor) {
+          const node = nodes[cursor];
+          for (let inner = countAtLeastDescending(node.values, survival - 1e-12); inner > 0; inner -= inner & -inner) {
+            best = Math.max(best, node.tree[inner]);
+          }
+        }
+        return best;
+      },
+      update(loss, survival, value) {
+        const lossPosition = lowerBound(losses, loss) + 1;
+        for (let cursor = lossPosition; cursor < nodes.length; cursor += cursor & -cursor) {
+          const node = nodes[cursor];
+          const survivalPosition = lowerBoundDescending(node.values, survival) + 1;
+          for (let inner = survivalPosition; inner < node.tree.length; inner += inner & -inner) {
+            node.tree[inner] = Math.max(node.tree[inner], value);
+          }
+        }
+      }
+    };
   }
 
   function paretoStates(states) {
     if (states.length < 2) return states;
-    const losses = [...new Set(states.map(state => state.losses))].sort((left, right) => left - right);
-    const lossIndex = new Map(losses.map((loss, index) => [loss, index + 1]));
-    const tree = Array(losses.length + 1).fill(-Infinity);
-    states.sort((left, right) => left.zeus - right.zeus || left.losses - right.losses || right.value - left.value);
+    states.sort((left, right) => left.zeus - right.zeus || left.losses - right.losses
+      || stateSurvival(right) - stateSurvival(left) || right.value - left.value);
+    const index = paretoIndex(states);
     const output = [];
+    const seen = new Set();
     for (const state of states) {
-      const index = lossIndex.get(state.losses);
-      if (upperBound(tree, index) >= state.value - 1e-10 * Math.max(1, Math.abs(state.value))) continue;
+      const survival = stateSurvival(state);
+      const key = `${state.zeus}:${state.losses}:${survival}:${state.value}`;
+      if (seen.has(key)) continue;
+      if (index.query(state.losses, survival) >= state.value - 1e-10 * Math.max(1, Math.abs(state.value))) continue;
       output.push(state);
-      updateBound(tree, index, state.value);
+      seen.add(key);
+      index.update(state.losses, survival, state.value);
     }
     return output;
   }
@@ -229,11 +337,12 @@
       const lossBin = maxLosses > 0 ? Math.min(bins - 1, Math.floor(state.losses / maxLosses * bins)) : 0;
       const key = `${zeusBin}:${lossBin}`;
       const previous = representatives.get(key);
-      if (!previous || state.value > previous.value || (state.value === previous.value && (state.losses < previous.losses || (state.losses === previous.losses && state.zeus < previous.zeus)))) representatives.set(key, state);
+      if (betterFinal(state, previous)) representatives.set(key, state);
     }
     const chosen = [...representatives.values()];
     const selected = new Set(chosen);
-    states.sort((left, right) => right.value - left.value || left.losses - right.losses || left.zeus - right.zeus);
+    states.sort((left, right) => right.value - left.value || left.losses - right.losses
+      || stateSurvival(right) - stateSurvival(left) || left.zeus - right.zeus);
     for (const state of states) {
       if (selected.size >= limit) break;
       selected.add(state);
@@ -247,6 +356,9 @@
     if (left.value > right.value + tolerance) return true;
     if (left.value < right.value - tolerance) return false;
     if (left.losses !== right.losses) return left.losses < right.losses;
+    const leftSurvival = stateSurvival(left);
+    const rightSurvival = stateSurvival(right);
+    if (Math.abs(leftSurvival - rightSurvival) > 1e-12) return leftSurvival > rightSurvival;
     return left.zeus < right.zeus;
   }
 
@@ -305,5 +417,5 @@
     };
   }
 
-  return {OBJECTIVES, parseLocation, expectedLossLimit, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, solve};
+  return {OBJECTIVES, REFINEMENT_TARGETS, parseLocation, expectedLossLimit, survivalForComparison, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, solve};
 });

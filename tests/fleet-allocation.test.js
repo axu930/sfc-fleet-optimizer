@@ -13,6 +13,11 @@ for (const location of ['[0:1:1]', '[101:1:1]', '[1:0:1]', '[1:501:1]', '[1:1:0]
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, undefined), 1_000);
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, 0.25), 2_500);
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, 200), 1_000_000);
+assert.strictEqual(allocation.survivalForComparison(0.999989), 0.999989);
+assert.strictEqual(allocation.survivalForComparison(0.99999), 1);
+assert.strictEqual(allocation.survivalForComparison(1), 1);
+assert.deepStrictEqual(allocation.REFINEMENT_TARGETS.dspDestroyed, [0.5, 0.9, 0.95, 0.99, 0.999]);
+assert.deepStrictEqual(allocation.REFINEMENT_TARGETS.winProbability, [0.9, 0.95, 0.99, 0.999]);
 assert(units.UNITS.Carmanor.cargo >= 125_000);
 
 const sampled = allocation.candidateCounts(1_000_000);
@@ -41,6 +46,51 @@ assert(outcome.debrisGenerated >= outcome.debrisOreGenerated);
 assert(outcome.debrisGenerated >= outcome.debrisCrystalGenerated);
 assert(outcome.zeusLosses >= 0);
 assert.strictEqual(outcome.location, '[8:115:3]');
+
+const refinementTarget = {
+  id:9,
+  location:'[1:1:1]',
+  composition:{Artemis:10_000},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  resources:{ore:1_000_000, crystal:1_000_000, hydrogen:1_000_000}
+};
+const refinementConfig = {
+  ...targetConfig,
+  availableZeus:1_000,
+  maxExpectedLosses:1_000
+};
+const dspOptions = allocation.targetOptions(refinementTarget, refinementConfig);
+for (const threshold of allocation.REFINEMENT_TARGETS.dspDestroyed) {
+  const crossing = dspOptions.find(option => option.dspDestroyedFraction >= threshold
+    && (option.zeusCount === 1 || allocation.evaluateTarget(refinementTarget, option.zeusCount - 1, refinementConfig).dspDestroyedFraction < threshold));
+  assert(crossing, `DSP refinement should include the first Zeus count reaching ${threshold * 100}% destruction`);
+}
+const raidConfig = {...refinementConfig, objective:'hydrogen'};
+const raidOptions = allocation.targetOptions(refinementTarget, raidConfig);
+for (const threshold of allocation.REFINEMENT_TARGETS.winProbability) {
+  const crossing = raidOptions.find(option => option.winProbability >= threshold
+    && (option.zeusCount === 1 || allocation.evaluateTarget(refinementTarget, option.zeusCount - 1, raidConfig).winProbability < threshold));
+  assert(crossing, `Raid refinement should include the first Zeus count reaching ${threshold * 100}% win probability`);
+}
+
+const smallTargets = [
+  {...refinementTarget, id:10, location:'[1:1:2]', composition:{Artemis:1_000, Athena:100}, defenderTech:{weapons:100, shield:0, armor:0}},
+  {...refinementTarget, id:11, location:'[1:1:3]', composition:{Athena:100, Poseidon:50}, defenderTech:{weapons:200, shield:0, armor:0}}
+];
+const smallConfig = {...targetConfig, availableZeus:10, maxExpectedLosses:2};
+const optimizedSmallPlan = allocation.solve({...smallConfig, targets:smallTargets});
+let exhaustiveBestValue = 0;
+for (let firstCount = 0; firstCount <= smallConfig.availableZeus; firstCount++) {
+  for (let secondCount = 0; secondCount <= smallConfig.availableZeus - firstCount; secondCount++) {
+    const firstOutcome = allocation.evaluateTarget(smallTargets[0], firstCount, smallConfig);
+    const secondOutcome = allocation.evaluateTarget(smallTargets[1], secondCount, smallConfig);
+    if (firstOutcome.zeusLosses + secondOutcome.zeusLosses > smallConfig.maxExpectedLosses + 1e-9) continue;
+    exhaustiveBestValue = Math.max(exhaustiveBestValue, firstOutcome.objectiveValue + secondOutcome.objectiveValue);
+  }
+}
+assert(Math.abs(optimizedSmallPlan.totalObjectiveValue - exhaustiveBestValue) < 1e-8);
+assert(optimizedSmallPlan.expectedZeusLosses <= smallConfig.maxExpectedLosses + 1e-9);
+assert.strictEqual(optimizedSmallPlan.searchTruncated, false);
 
 const undefendedTarget = {
   id:2,
