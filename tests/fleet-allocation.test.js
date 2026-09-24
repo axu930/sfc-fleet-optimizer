@@ -59,6 +59,29 @@ const refinementConfig = {
   availableZeus:1_000,
   maxExpectedLosses:1_000
 };
+assert.strictEqual(allocation.MIN_ATTACK_SURVIVAL, 0.999);
+const highRiskTarget = {
+  ...refinementTarget,
+  id:12,
+  composition:{Athena:100},
+  defenderTech:{weapons:100, shield:0, armor:0}
+};
+const highRiskConfig = {
+  ...refinementConfig,
+  availableZeus:100,
+  maxExpectedLosses:100,
+  defaultDefenderTech:{weapons:100, shield:0, armor:0}
+};
+const safeAttackOptions = allocation.targetOptions(highRiskTarget, highRiskConfig);
+assert(safeAttackOptions.some(option => option.zeusCount === 0));
+assert(safeAttackOptions.some(option => option.zeusCount > 0));
+assert(safeAttackOptions.every(option => option.zeusCount === 0
+  || option.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
+const firstSafeAttack = safeAttackOptions.filter(option => option.zeusCount > 0)
+  .sort((left, right) => left.zeusCount - right.zeusCount)[0];
+assert(allocation.evaluateTarget(highRiskTarget, firstSafeAttack.zeusCount - 1, highRiskConfig).zeusSurvival
+  < allocation.MIN_ATTACK_SURVIVAL);
+
 const dspOptions = allocation.targetOptions(refinementTarget, refinementConfig);
 for (const threshold of allocation.REFINEMENT_TARGETS.dspDestroyed) {
   const crossing = dspOptions.find(option => option.dspDestroyedFraction >= threshold
@@ -84,12 +107,16 @@ for (let firstCount = 0; firstCount <= smallConfig.availableZeus; firstCount++) 
   for (let secondCount = 0; secondCount <= smallConfig.availableZeus - firstCount; secondCount++) {
     const firstOutcome = allocation.evaluateTarget(smallTargets[0], firstCount, smallConfig);
     const secondOutcome = allocation.evaluateTarget(smallTargets[1], secondCount, smallConfig);
+    if ((firstCount > 0 && firstOutcome.zeusSurvival < allocation.MIN_ATTACK_SURVIVAL - 1e-12)
+      || (secondCount > 0 && secondOutcome.zeusSurvival < allocation.MIN_ATTACK_SURVIVAL - 1e-12)) continue;
     if (firstOutcome.zeusLosses + secondOutcome.zeusLosses > smallConfig.maxExpectedLosses + 1e-9) continue;
     exhaustiveBestValue = Math.max(exhaustiveBestValue, firstOutcome.objectiveValue + secondOutcome.objectiveValue);
   }
 }
 assert(Math.abs(optimizedSmallPlan.totalObjectiveValue - exhaustiveBestValue) < 1e-8);
 assert(optimizedSmallPlan.expectedZeusLosses <= smallConfig.maxExpectedLosses + 1e-9);
+assert(optimizedSmallPlan.allocations.every(({outcome:attack}) => attack.zeusCount === 0
+  || attack.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
 assert.strictEqual(optimizedSmallPlan.searchTruncated, false);
 
 const undefendedTarget = {
@@ -124,6 +151,8 @@ const plan = allocation.solve({
 });
 assert(plan.zeusCommitted <= plan.availableZeus);
 assert(plan.expectedZeusLosses <= plan.maxExpectedLosses + 1e-9);
+assert(plan.allocations.every(({outcome:attack}) => attack.zeusCount === 0
+  || attack.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
 assert.strictEqual(plan.allocations.length, 1);
 assert.strictEqual(plan.objective, 'dsp');
 

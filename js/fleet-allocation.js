@@ -10,6 +10,7 @@
 
   const MAX_FRONTIER_STATES = 5_000;
   const CANDIDATE_POINTS = 64;
+  const MIN_ATTACK_SURVIVAL = 0.999;
   const REFINEMENT_TARGETS = Object.freeze({
     dspDestroyed:Object.freeze([0.5, 0.9, 0.95, 0.99, 0.999]),
     winProbability:Object.freeze([0.9, 0.95, 0.99, 0.999])
@@ -163,6 +164,7 @@
     // Destruction milestones are always useful; raid objectives also refine
     // win-probability transitions that directly affect their expected reward.
     const thresholds = [
+      {metric:'zeusSurvival', value:MIN_ATTACK_SURVIVAL},
       ...REFINEMENT_TARGETS.dspDestroyed.map(value => ({metric:'dspDestroyedFraction', value})),
       ...(config.objective === 'hydrogen' || config.objective === 'resourcesDebris'
         ? REFINEMENT_TARGETS.winProbability.map(value => ({metric:'winProbability', value}))
@@ -190,7 +192,9 @@
     const unique = new Map();
     for (const outcome of outcomes) unique.set(outcome.zeusCount, outcome);
     const options = [...unique.values()].filter(outcome =>
-      outcome.zeusCount <= config.availableZeus && outcome.zeusLosses <= config.maxExpectedLosses
+      outcome.zeusCount <= config.availableZeus
+      && outcome.zeusLosses <= config.maxExpectedLosses
+      && (outcome.zeusCount === 0 || outcome.zeusSurvival >= MIN_ATTACK_SURVIVAL - 1e-12)
     );
     if (!options.some(outcome => outcome.zeusCount === 0)) options.unshift(evaluateTarget(target, 0, config));
     return pruneTargetOptions(options);
@@ -417,5 +421,5 @@
     };
   }
 
-  return {OBJECTIVES, REFINEMENT_TARGETS, parseLocation, expectedLossLimit, survivalForComparison, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, solve};
+  return {OBJECTIVES, REFINEMENT_TARGETS, MIN_ATTACK_SURVIVAL, parseLocation, expectedLossLimit, survivalForComparison, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, solve};
 });

@@ -41,7 +41,7 @@
     <section class="allocation-layout" aria-label="Allocation inputs">
       <article class="panel allocation-controls">
         <h2>Allocation constraints</h2>
-        <p class="hint">The loss limit applies to expected Zeus losses across all selected targets. Blank loss limit defaults to 0.1% of your available Zeus. Count fields accept abbreviations such as 1k, 1q, 1Q, 1s, and 1S.</p>
+        <p class="hint">Each nonzero attack must have at least 99.9% expected Zeus survival; otherwise that target is left unassigned. The loss limit also applies to expected losses across all targets. Blank loss limit defaults to 0.1% of your available Zeus. Count fields accept abbreviations such as 1k, 1q, 1Q, 1s, and 1S.</p>
         <div class="allocation-control-grid">
           <label>Available Zeus
             <input id="availableZeus" inputmode="decimal" value="1000000" autocomplete="off">
@@ -114,7 +114,7 @@
   <script src="../../js/battle-report-parser.js?v=count-suffixes-1"></script>
   <script src="../../js/combat.js?v=net-points-2"></script>
   <script src="../../js/plunder.js?v=allocation-plunder-1"></script>
-  <script src="../../js/fleet-allocation.js?v=allocation-solver-2"></script>
+  <script src="../../js/fleet-allocation.js?v=allocation-solver-individual-survival-1"></script>
   <script src="../../js/allocation-app.js?v=allocation-ui-3"></script>
 </body>
 </html>
