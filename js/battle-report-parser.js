@@ -7,6 +7,7 @@
   'use strict';
 
   const {UNITS, ALIASES, normalize} = units;
+  const COUNT_SUFFIX_PATTERN = '(?:nonillion|octillion|septillion|sextillion|quintillion|quadrillion|trillion|billion|million|thousand|Qi|Qa|Sx|Sp|[KMBTQSON])';
 
   function parseCount(value) {
     if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : NaN;
@@ -16,15 +17,8 @@
     if (!match) return NaN;
     const number = Number(match[1]);
     if (!Number.isFinite(number) || number < 0) return NaN;
-    const suffix = match[2].toLowerCase();
-    const multiplier = {
-      '':1, k:1e3, m:1e6, b:1e9, t:1e12,
-      q:1e15, qa:1e15, quadrillion:1e15,
-      qi:1e18, quintillion:1e18,
-      sx:1e21, sextillion:1e21,
-      sp:1e24, septillion:1e24
-    }[suffix];
-    return multiplier ? number * multiplier : NaN;
+    const suffixPower = units.countSuffixPower(match[2]);
+    return suffixPower === null ? NaN : number * (10 ** suffixPower);
   }
 
   function parseRoster(text) {
@@ -122,7 +116,7 @@
   function reportNumberTokens(line) {
     const source = String(line || '');
     const output = [];
-    const expression = /(?:^|[\s|>])([+-]?(?:(?:\d{1,3}(?:,\d{3})+)|(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:e[+-]?\d+)?\s*(?:quadrillion|quintillion|sextillion|septillion|Qi|Qa|Sx|Sp|[KMBTQ])?)(?=$|[\s|<])/ig;
+    const expression = new RegExp('(?:^|[\\s|>])([+-]?(?:(?:\\d{1,3}(?:,\\d{3})+)|(?:\\d+(?:\\.\\d*)?)|(?:\\.\\d+))(?:e[+-]?\\d+)?(?:\\s*' + COUNT_SUFFIX_PATTERN + ')?)(?=$|[\\s|<])', 'ig');
     let match;
     while ((match = expression.exec(source))) {
       const raw = match[1].trim();
@@ -244,7 +238,7 @@
           const before = numbers.filter(number => number.end <= unit.index);
           const after = numbers.filter(number => number.index >= unit.end);
           const prefix = line.slice(0, unit.index).trim();
-          const prefixCount = /^[\d.,eE+\-]+\s*(?:quadrillion|quintillion|sextillion|septillion|Qi|Qa|Sx|Sp|[KMBTQ])?\s*(?:x|×)?$/i.test(prefix);
+          const prefixCount = new RegExp('^[\\d.,eE+\\-]+\\s*(?:' + COUNT_SUFFIX_PATTERN + ')?\\s*(?:x|×)?$', 'i').test(prefix);
           const chosen = prefixCount && before.length ? before[before.length - 1] : (after[0] || before[before.length - 1]);
           if (chosen) setFirst(unit.key, chosen.value, chosen.raw);
           else queue([unit.key]);
@@ -309,7 +303,7 @@
     const resources = {};
     const rawResources = {};
     const lines = String(text || '').replace(/\r/g, '').split('\n');
-    const number = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:e[+-]?\\d+)?(?:\\s*(?:quadrillion|quintillion|sextillion|septillion|Qi|Qa|Sx|Sp|[KMBTQ]))?';
+    const number = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:e[+-]?\\d+)?(?:\\s*' + COUNT_SUFFIX_PATTERN + ')?';
     const labels = '(ore|metal|crystal|hydrogen)';
     const tableHeader = /^\s*(?:[-•|]\s*)?(?:ore|metal)\s*[|\t ]+crystal\s*[|\t ]+hydrogen\s*(?:[|]\s*)?$/i;
     for (let index = 0; index < lines.length; index++) {

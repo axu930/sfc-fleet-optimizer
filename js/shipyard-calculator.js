@@ -6,10 +6,6 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (units) {
   'use strict';
 
-  const COUNT_SUFFIX_POWERS = Object.freeze({
-    '':0, k:3, m:6, b:9, t:12, q:15, qa:15, quadrillion:15,
-    qi:18, quintillion:18, sx:21, sextillion:21, sp:24, septillion:24
-  });
   const MULTIPLIER_POWERS = Object.freeze({
     ones:0, thousand:3, million:6, billion:9, trillion:12,
     quadrillion:15, quintillion:18, sextillion:21, septillion:24
@@ -45,18 +41,19 @@
     if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > 1000) {
       throw new RangeError('Scientific notation exponent must be between -1,000 and 1,000.');
     }
-    const suffix = (match[4] || '').toLowerCase();
+    const suffix = match[4] || '';
     if (!allowSuffix && suffix) {
       throw new TypeError('Enter the amount without a suffix when using the magnitude selector.');
     }
-    if (!Object.prototype.hasOwnProperty.call(COUNT_SUFFIX_POWERS, suffix)) {
+    const suffixPower = units.countSuffixPower(suffix);
+    if (suffixPower === null) {
       throw new TypeError('That ship-count suffix is not supported.');
     }
 
     const fraction = match[2] || '';
     const coefficientText = (match[1].replace(/,/g, '') + fraction).replace(/^0+(?=\d)/, '');
     const coefficient = BigInt(coefficientText);
-    const scale = COUNT_SUFFIX_POWERS[suffix] - fraction.length + exponent + multiplierPower;
+    const scale = suffixPower - fraction.length + exponent + multiplierPower;
     if (scale >= 0) return coefficient * (10n ** BigInt(scale));
 
     const divisor = 10n ** BigInt(-scale);

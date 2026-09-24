@@ -5,6 +5,12 @@ const calculator = require('../js/shipyard-calculator.js');
 
 assert.strictEqual(calculator.parseShipCount('1 septillion'), 10n ** 24n);
 assert.strictEqual(calculator.parseShipCount('1Sp'), 10n ** 24n);
+for (const [suffix, power] of [
+  ['k',3], ['m',6], ['b',9], ['t',12], ['q',15],
+  ['Q',18], ['s',21], ['S',24], ['o',27], ['n',30]
+]) {
+  assert.strictEqual(calculator.parseShipCount(`1 ${suffix}`), 10n ** BigInt(power));
+}
 assert.strictEqual(calculator.parseShipCount('1,000,000'), 1_000_000n);
 assert.strictEqual(calculator.parseShipCount('1.25Sp'), 125n * (10n ** 22n));
 assert.strictEqual(calculator.parseShipCount('1e24'), 10n ** 24n);

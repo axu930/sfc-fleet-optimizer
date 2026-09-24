@@ -92,6 +92,27 @@
     ['n', 1e30], ['o', 1e27], ['S', 1e24], ['s', 1e21], ['Q', 1e18],
     ['q', 1e15], ['t', 1e12], ['b', 1e9], ['m', 1e6], ['k', 1e3]
   ];
+  // Keep the single-letter suffix case significant: q/Q and s/S represent
+  // different magnitudes in the display format.
+  const COUNT_SUFFIX_POWERS = Object.freeze({
+    k:3, K:3, m:6, M:6, b:9, B:9, t:12, T:12,
+    q:15, Q:18, s:21, S:24, o:27, O:27, n:30, N:30
+  });
+  const COUNT_SUFFIX_WORD_POWERS = Object.freeze({
+    thousand:3, million:6, billion:9, trillion:12,
+    quadrillion:15, quintillion:18, sextillion:21, septillion:24,
+    octillion:27, nonillion:30, qa:15, qi:18, sx:21, sp:24
+  });
+
+  function countSuffixPower(suffix) {
+    const raw = String(suffix == null ? '' : suffix);
+    if (!raw) return 0;
+    if (Object.prototype.hasOwnProperty.call(COUNT_SUFFIX_POWERS, raw)) return COUNT_SUFFIX_POWERS[raw];
+    const word = raw.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(COUNT_SUFFIX_WORD_POWERS, word)
+      ? COUNT_SUFFIX_WORD_POWERS[word]
+      : null;
+  }
 
   function decimal(value, useGrouping) {
     // Preserve already-integral raw/count values; round displayed decimals to
@@ -120,5 +141,5 @@
     return decimal(value, format === 'commas');
   }
 
-  return {UNITS, ALIASES, ZEUS_COST, normalize, scaled, rfContinue, formatCount};
+  return {UNITS, ALIASES, ZEUS_COST, normalize, scaled, rfContinue, formatCount, countSuffixPower};
 });

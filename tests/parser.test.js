@@ -11,6 +11,12 @@ near(parser.parseCount('2.5M'), 2.5e6);
 near(parser.parseCount('10Qi'), 1e19);
 near(parser.parseCount('3e12'), 3e12);
 near(parser.parseCount('1 quadrillion'), 1e15);
+for (const [suffix, expected] of [
+  ['k',1e3], ['m',1e6], ['b',1e9], ['t',1e12], ['q',1e15],
+  ['Q',1e18], ['s',1e21], ['S',1e24], ['o',1e27], ['n',1e30]
+]) {
+  near(parser.parseCount(`1 ${suffix}`), expected);
+}
 assert(Number.isNaN(parser.parseCount('-1')));
 assert(Number.isNaN(parser.parseCount('12ZZ')));
 
@@ -156,6 +162,9 @@ assert.deepStrictEqual(allocationReport.resources, {ore:1.2e6, crystal:2.5e6, hy
 assert.deepStrictEqual(allocationReport.rawResources, {ore:'1,200,000', crystal:'2.5M', hydrogen:'9Qi'});
 assert.strictEqual(allocationReport.hasResources, true);
 assert.deepStrictEqual(allocationReport.unknown, []);
+const abbreviatedReport = parser.parseEspionageReport(`NPC SHIPS:\n- Zeus Class: 1s\nRESOURCES:\n- ore: 1q\n- crystal: 1Q\n- hydrogen: 1S`);
+assert.strictEqual(abbreviatedReport.composition.Zeus, 1e21);
+assert.deepStrictEqual(abbreviatedReport.resources, {ore:1e15, crystal:1e18, hydrogen:1e24});
 assert.deepStrictEqual(parser.parseEspionageLocation(`Coordinates: [101:1:1], then [8:115:3] and [9:2:4]`), {
   galaxy:8, system:115, planet:3, normalized:'[8:115:3]'
 });
