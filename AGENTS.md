@@ -12,8 +12,8 @@ This repository is a zero-build, GitHub Pages-compatible static tool hub.
   provides exact digits-only count strings.
 - `/css/app.css` is the canonical theme and contains shared shell styles plus
   scoped presentation for each tool.
-- `/js/` contains shared model, parser, plunder, allocation, and shipyard
-  calculator modules loaded by the tools.
+- `/js/` contains shared model, parser, plunder, allocation, shipyard
+  calculator, and SVG chart modules loaded by the tools.
 - `/tests/` contains the zero-dependency Node regression tests.
 
 GitHub Pages deploys from the repository root. New tools should live in their
@@ -37,6 +37,11 @@ relative paths back to shared assets.
   links do not belong in the header unless explicitly requested.
 - Reuse the existing responsive breakpoints in `app.css` (`930px`, `760px`,
   and `650px`) before adding a new breakpoint.
+- Use the browser-only primitives in `/js/svg-charts.js` for SVG scales, paths,
+  labels, points, and hover/focus/click interactions. Keep chart data selection
+  and page-specific presentation in each tool's app module.
+- When changing a shared or tool JavaScript module, bump that script's query
+  string in every page that loads it so static hosts receive the update.
 - When changing shared CSS, bump the stylesheet query-string version in every
   page that loads it so GitHub Pages and browser caches receive the update.
 

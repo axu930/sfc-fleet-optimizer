@@ -211,7 +211,10 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .chart-dot { stroke: var(--surface-input); stroke-width: 1.5; cursor: crosshair; transition: r .12s ease, stroke-width .12s ease; }
 .chart-dot.survival { fill: var(--accent); }
 .chart-dot.dsp { fill: var(--expected); }
+.chart-dot.frontier-dot { fill: var(--accent); cursor: pointer; }
+.chart-dot.frontier-dot.is-selected { r: 7px; stroke: #fff; stroke-width: 2; }
 .chart-dot:hover, .chart-dot:focus { r: 7px; stroke: #fff; stroke-width: 2; outline: none; }
+.curve.pareto-frontier { stroke: var(--accent); stroke-width: 2.2; }
 .label { fill: #c8d7df; font: 600 13px system-ui; }
 .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: .78rem; }
 .line-key { width: 22px; height: 3px; display: inline-block; border-radius: 3px; background: var(--expected); }
@@ -305,6 +308,13 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .allocation-unparsed li { display: block; text-align: left; overflow-wrap: anywhere; }
 .remove-target:disabled { opacity: .5; cursor: not-allowed; }
 .allocation-page .primary { margin-top: 12px; }
+.allocation-frontier-facts { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
+.allocation-mix-heading { margin: 15px 0 7px; font-size: .9rem; }
+.allocation-mix-heading small { color: var(--muted); font-size: .72rem; font-weight: 450; }
+.allocation-mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 5px 14px; margin: 0; padding: 0; list-style: none; }
+.allocation-mix li { display: grid; grid-template-columns: minmax(72px, .7fr) minmax(115px, 1fr) auto; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-subtle); font-size: .76rem; }
+.allocation-mix li > strong { color: var(--text); }
+.allocation-mix li > span:nth-child(2) { color: var(--muted); }
 .allocation-warning { padding: 12px 14px; border: 1px solid var(--border-conservative); border-radius: var(--radius-lg); background: var(--surface-warning); color: var(--conservative); font-size: .86rem; }
 .allocation-table { width: 100%; border-collapse: collapse; }
 .allocation-table th, .allocation-table td { padding: 10px 9px; border-bottom: 1px solid var(--border-subtle); text-align: right; vertical-align: top; font-size: .8rem; font-variant-numeric: tabular-nums; }
@@ -325,6 +335,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .grid { grid-template-columns: 1fr; }
   .shipyard-calculator-page .build-layout { grid-template-columns: 1fr; }
   .point-facts { grid-template-columns: repeat(3, minmax(100px, 1fr)); }
+  .allocation-frontier-facts { grid-template-columns: repeat(2, minmax(100px, 1fr)); }
   .allocation-layout { grid-template-columns: 1fr; }
   .allocation-header { display: block; }
   .allocation-header-tools { justify-items: start; margin-top: 14px; }
@@ -374,6 +385,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .allocation-target-head { align-items: flex-start; }
   .allocation-target-head-actions { gap: 5px; }
   .allocation-table { min-width: 1160px; }
+  .allocation-mix li { grid-template-columns: minmax(72px, .7fr) minmax(100px, 1fr) auto; }
 
   .recommendation-table,
   .recommendation-table tbody,

@@ -4,13 +4,15 @@
   const U = root.SFCUnits;
   const P = root.SFCBattleReportParser;
   const A = root.SFCFleetAllocation;
+  const C = root.SFCSvgCharts;
   const $ = id => document.getElementById(id);
   const targetList = $('targetList');
   const targets = [];
   let nextId = 1;
   let displayFormat = 'abbrev';
-  let lastResult = null;
+  let lastFrontier = null;
   let lastModels = null;
+  let selectedFrontierIndex = 0;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -36,8 +38,8 @@
   }
 
   function invalidateResults() {
-    const hadResult = Boolean(lastResult);
-    lastResult = null;
+    const hadResult = Boolean(lastFrontier);
+    lastFrontier = null;
     lastModels = null;
     $('results').classList.add('hidden');
     if (hadResult) {
@@ -185,14 +187,15 @@
     return value;
   }
 
-  function validateObjectiveReports(models, objective) {
-    if (objective === 'dsp') return;
+  function validateObjectiveReports(models, objectiveKeys) {
+    const objectives = new Set(objectiveKeys);
+    if (!objectives.has('hydrogen') && !objectives.has('resourcesDebris')) return;
     for (const target of models) {
       const label = target.location;
-      if (objective === 'hydrogen' && !target.availableResourceKeys.has('hydrogen')) {
+      if (objectives.has('hydrogen') && !target.availableResourceKeys.has('hydrogen')) {
         throw new Error(`${label}: enter a Hydrogen resource value to use the hydrogen objective.`);
       }
-      if (objective === 'resourcesDebris') {
+      if (objectives.has('resourcesDebris')) {
         const missing = ['ore', 'crystal', 'hydrogen'].filter(key => !target.availableResourceKeys.has(key));
         if (missing.length) throw new Error(`${label}: enter Ore, Crystal, and Hydrogen values for the resources + debris objective (missing ${missing.join(', ')}).`);
       }
@@ -212,8 +215,17 @@
     return `<span class="allocation-pair">${waves.map(wave => `<span>Wave ${wave.number}: ${format(wave.carmanors)}</span>`).join('')}</span><small>if each wave is won</small>`;
   }
 
-  function renderAllocationTable(result) {
-    const rows = result.allocations.map(({target, outcome}) => {
+  function objectiveLabel(key) {
+    return ({
+      dsp:'NPC ship DSP destroyed',
+      hydrogen:'Hydrogen raided',
+      resourcesDebris:'Resources raided + gross debris'
+    })[key] || key;
+  }
+
+  function renderAllocationTable(frontier, point) {
+    const [objectiveX, objectiveY] = frontier.objectiveKeys;
+    const rows = point.allocations.map(({target, outcome}) => {
       const model = target;
       const totalDSP = outcome.battle ? outcome.battle.initialDSP : 0;
       const dspPercent = totalDSP > 0 ? outcome.dspDestroyed / totalDSP : 0;
@@ -226,36 +238,69 @@
         <td>${groupedDebris(outcome)}</td>
         <td>${groupedResources(outcome.resourcesRaided)}</td>
         <td>${waveOutput(outcome.waves)}</td>
-        <td>${format(outcome.objectiveValue)}</td>
+        <td>${format(outcome.objectiveValues[objectiveX])}</td>
+        <td>${format(outcome.objectiveValues[objectiveY])}</td>
       </tr>`;
     }).join('');
     $('allocationTable').innerHTML = `<table class="allocation-table">
-      <thead><tr><th>Target</th><th>Zeus to send</th><th>Expected Zeus lost</th><th>Estimated full-win chance</th><th>Expected DSP destroyed</th><th>Gross debris</th><th>Expected resources raided</th><th>Carmanors per wave</th><th>Objective contribution</th></tr></thead>
+      <thead><tr><th>Target</th><th>Zeus to send</th><th>Expected Zeus lost</th><th>Estimated full-win chance</th><th>Expected DSP destroyed</th><th>Gross debris</th><th>Expected resources raided</th><th>Carmanors per wave</th><th>${escapeHtml(objectiveLabel(objectiveX))}</th><th>${escapeHtml(objectiveLabel(objectiveY))}</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
 
-  function renderResults(result, objective, models) {
-    const totalDSP = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.dspDestroyed, 0);
-    const totalDebris = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.debrisGenerated, 0);
-    const totalResources = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.resourcesRaided.total, 0);
-    const totalHydrogen = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.resourcesRaided.hydrogen, 0);
+  function renderFrontierPointDetails(frontier, point, pointIndex) {
+    const [objectiveX, objectiveY] = frontier.objectiveKeys;
+    const attacks = point.allocations.map(({target, outcome}) => {
+      const count = plainCount(outcome.zeusCount);
+      const losses = outcome.zeusCount > 0 ? `${format(outcome.zeusLosses)} lost · ${percent(outcome.zeusSurvival)} survive` : 'No attack';
+      return `<li><strong>${escapeHtml(target.location)}</strong><span>${losses}</span><span class="allocation-copy"><code>${escapeHtml(count)}</code><button class="copy-count-button" type="button" data-copy-value="${escapeHtml(count)}" aria-label="Copy Zeus count for ${escapeHtml(target.location)}" title="Copy Zeus count"><span aria-hidden="true">▢</span></button></span></li>`;
+    }).join('');
+    $('frontierPointDetails').innerHTML = `
+      <div class="point-heading"><div><span class="side-label">Frontier point ${pointIndex + 1} of ${frontier.points.length}</span><strong>${escapeHtml(objectiveLabel(objectiveX))}: ${format(point.objectiveValues[objectiveX])} · ${escapeHtml(objectiveLabel(objectiveY))}: ${format(point.objectiveValues[objectiveY])}</strong></div><span class="point-hint">Hover, focus, or click another point to inspect its attack mix</span></div>
+      <div class="point-facts allocation-frontier-facts">
+        <div><span>${format(point.zeusCommitted)}</span><small>Zeus committed</small></div>
+        <div><span>${format(point.unusedZeus)}</span><small>Zeus left unused</small></div>
+        <div><span>${format(point.expectedZeusLosses)}</span><small>Expected Zeus lost</small></div>
+        <div><span>${percent(point.expectedLossFraction)}</span><small>Of available fleet</small></div>
+      </div>
+      <h3 class="allocation-mix-heading">Exact attack mix <small>Zeus counts are copyable</small></h3>
+      <ul class="allocation-mix">${attacks}</ul>`;
+  }
+
+  function renderFrontierMetrics(frontier, point) {
+    const totalDSP = point.allocations.reduce((sum, allocation) => sum + allocation.outcome.dspDestroyed, 0);
+    const totalDebris = point.allocations.reduce((sum, allocation) => sum + allocation.outcome.debrisGenerated, 0);
+    const totalResources = point.allocations.reduce((sum, allocation) => sum + allocation.outcome.resourcesRaided.total, 0);
+    const [objectiveX, objectiveY] = frontier.objectiveKeys;
     const tiles = [
-      ['Optimized objective', `${format(result.totalObjectiveValue)} <small>${escapeHtml(result.objectiveLabel)}</small>`],
-      ['Zeus committed', `${format(result.zeusCommitted)} <small>of ${format(result.availableZeus)} available</small>`],
-      ['Zeus left unused', format(result.unusedZeus)],
-      ['Expected Zeus lost', `${format(result.expectedZeusLosses)} <small>${percent(result.expectedLossFraction)} of available fleet</small>`],
+      [objectiveLabel(objectiveX), format(point.objectiveValues[objectiveX])],
+      [objectiveLabel(objectiveY), format(point.objectiveValues[objectiveY])],
+      ['Zeus committed', `${format(point.zeusCommitted)} <small>of ${format(frontier.availableZeus)} available</small>`],
+      ['Expected Zeus lost', `${format(point.expectedZeusLosses)} <small>${percent(point.expectedLossFraction)} of available fleet</small>`],
       ['Expected DSP destroyed', format(totalDSP)],
       ['Expected gross debris', format(totalDebris)],
-      ['Expected resources raided', format(totalResources)],
-      ['Expected Hydrogen raided', format(totalHydrogen)]
+      ['Expected resources raided', format(totalResources)]
     ];
     $('allocationMetrics').innerHTML = tiles.map(([label, value]) => `<div class="metric"><span class="k">${label}</span><span class="v">${value}</span></div>`).join('');
-    $('resultHeading').textContent = `${result.objectiveLabel} across ${models.length} target${models.length === 1 ? '' : 's'}`;
-    renderAllocationTable(result);
+  }
+
+  function renderFrontierPoint(frontier, pointIndex) {
+    const point = frontier.points[pointIndex];
+    if (!point) return;
+    const chart = $('allocationFrontierChart');
+    const previous = chart.querySelector(`[data-frontier-point="${selectedFrontierIndex}"]`);
+    const selected = chart.querySelector(`[data-frontier-point="${pointIndex}"]`);
+    previous?.classList.remove('is-selected');
+    previous?.setAttribute('aria-pressed', 'false');
+    selected?.classList.add('is-selected');
+    selected?.setAttribute('aria-pressed', 'true');
+    selectedFrontierIndex = pointIndex;
+    renderFrontierMetrics(frontier, point);
+    renderFrontierPointDetails(frontier, point, pointIndex);
+    renderAllocationTable(frontier, point);
 
     const warning = $('allocationWarning');
-    const lossPercent = result.expectedLossFraction * 100;
+    const lossPercent = point.expectedLossFraction * 100;
     if (lossPercent > 0.1 + 1e-9) {
       warning.textContent = `Caution: expected losses are ${lossPercent.toLocaleString('en-US', {maximumFractionDigits:3})}% of the available Zeus fleet. This exceeds the 0.1% warning threshold.`;
       warning.classList.remove('hidden');
@@ -263,11 +308,92 @@
       warning.classList.add('hidden');
       warning.textContent = '';
     }
-    if (result.searchTruncated) {
-      warning.textContent = `${warning.textContent ? `${warning.textContent} ` : ''}The target-combination frontier was bounded for browser performance; the result is the best allocation found in that bounded search.`;
+    if (frontier.searchTruncated) {
+      warning.textContent = `${warning.textContent ? `${warning.textContent} ` : ''}The target-combination frontier was bounded for browser performance; the displayed frontier is an approximation from that bounded search.`;
       warning.classList.remove('hidden');
     }
+  }
+
+  function renderFrontierChart(frontier) {
+    const width = 960;
+    const height = 420;
+    const margin = {l:92, r:28, t:24, b:68};
+    const [objectiveX, objectiveY] = frontier.objectiveKeys;
+    const valuesX = frontier.points.map(point => point.objectiveValues[objectiveX]);
+    const valuesY = frontier.points.map(point => point.objectiveValues[objectiveY]);
+    const xScale = C.createScale([0, Math.max(0, ...valuesX)], [margin.l, width - margin.r], 'log1p');
+    const yScale = C.createScale([0, Math.max(0, ...valuesY)], [height - margin.b, margin.t], 'log1p');
+    const plotWidth = width - margin.l - margin.r;
+    const plotHeight = height - margin.t - margin.b;
+    let grid = '';
+    for (const value of xScale.ticks(5)) {
+      const x = xScale(value);
+      grid += C.line({x1:x, y1:margin.t, x2:x, y2:height - margin.b});
+      grid += C.text({x, y:height - margin.b + 22, value:format(value)});
+    }
+    for (const value of yScale.ticks(5)) {
+      const y = yScale(value);
+      grid += C.line({x1:margin.l, y1:y, x2:width - margin.r, y2:y});
+      grid += C.text({x:margin.l - 10, y:y + 4, anchor:'end', value:format(value)});
+    }
+    const frontierPath = C.linePath(frontier.points,
+      point => point.objectiveValues[objectiveX],
+      point => point.objectiveValues[objectiveY],
+      xScale, yScale);
+    const dots = frontier.points.map((point, index) => {
+      const xValue = point.objectiveValues[objectiveX];
+      const yValue = point.objectiveValues[objectiveY];
+      const label = `Frontier point ${index + 1}: ${objectiveLabel(objectiveX)} ${format(xValue)}, ${objectiveLabel(objectiveY)} ${format(yValue)}, ${format(point.zeusCommitted)} Zeus committed, ${format(point.expectedZeusLosses)} expected losses`;
+      return C.circle({
+        cx:xScale(xValue), cy:yScale(yValue), r:5,
+        className:'chart-dot frontier-dot',
+        attributes:{
+          tabindex:'0', role:'button', 'aria-label':label,
+          'aria-pressed':String(index === selectedFrontierIndex),
+          'data-frontier-point':index
+        },
+        title:label
+      });
+    }).join('');
+    const centerX = margin.l + plotWidth / 2;
+    const centerY = margin.t + plotHeight / 2;
+    const chart = $('allocationFrontierChart');
+    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Pareto frontier of ${escapeHtml(objectiveLabel(objectiveX))} versus ${escapeHtml(objectiveLabel(objectiveY))}">${grid}${C.path(frontierPath, 'curve pareto-frontier')}${dots}${C.text({x:centerX, y:height - 12, className:'label', value:`${objectiveLabel(objectiveX)} (log scale)`})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:`${objectiveLabel(objectiveY)} (log scale)`})}</svg>`;
+    C.bindPointInteractions(chart, {
+      selector:'.frontier-dot',
+      onPoint:dot => {
+        const pointIndex = Number(dot.dataset.frontierPoint);
+        if (pointIndex !== selectedFrontierIndex) renderFrontierPoint(frontier, pointIndex);
+      }
+    });
+  }
+
+  function initialFrontierPoint(frontier) {
+    let maxX = 1;
+    let maxY = 1;
+    for (const point of frontier.points) {
+      maxX = Math.max(maxX, point.objectiveValues[frontier.objectiveKeys[0]]);
+      maxY = Math.max(maxY, point.objectiveValues[frontier.objectiveKeys[1]]);
+    }
+    return frontier.points.reduce((bestIndex, point, index) => {
+      const best = frontier.points[bestIndex];
+      const score = point.objectiveValues[frontier.objectiveKeys[0]] / maxX
+        + point.objectiveValues[frontier.objectiveKeys[1]] / maxY;
+      const bestScore = best.objectiveValues[frontier.objectiveKeys[0]] / maxX
+        + best.objectiveValues[frontier.objectiveKeys[1]] / maxY;
+      return score > bestScore ? index : bestIndex;
+    }, 0);
+  }
+
+  function renderResults(frontier, models, preferredIndex=null) {
+    const scenario = frontier.rfSigma > 0 ? 'Conservative RF (2σ)' : 'Expected RF';
+    $('resultScenario').textContent = `${scenario} · Two-objective Pareto frontier`;
+    $('resultHeading').textContent = `${objectiveLabel(frontier.objectiveKeys[0])} vs ${objectiveLabel(frontier.objectiveKeys[1])} across ${models.length} target${models.length === 1 ? '' : 's'}`;
     $('results').classList.remove('hidden');
+    const pointIndex = preferredIndex === null ? initialFrontierPoint(frontier) : Math.min(preferredIndex, frontier.points.length - 1);
+    selectedFrontierIndex = pointIndex;
+    renderFrontierChart(frontier);
+    renderFrontierPoint(frontier, pointIndex);
   }
 
   function solve() {
@@ -279,25 +405,28 @@
       const models = targets.map(parseTarget);
       const locations = models.map(target => target.location);
       if (new Set(locations).size !== locations.length) throw new Error('Each location can only appear once; Zeus attacks are not repeated on a target.');
-      const objective = $('objective').value;
-      validateObjectiveReports(models, objective);
+      const objectives = [$('objectiveX').value, $('objectiveY').value];
+      if (objectives[0] === objectives[1]) throw new Error('Choose two different objectives for the Pareto frontier.');
+      validateObjectiveReports(models, objectives);
       const availableZeus = readAvailableZeus();
       const lossPercent = readLossLimitPercent();
       const maxExpectedLosses = A.expectedLossLimit(availableZeus, lossPercent);
       const config = {
         availableZeus,
         maxExpectedLosses,
-        objective,
+        objectives,
+        rfSigma:$('conservativeEstimates').checked ? 2 : 0,
         attackerTech:{weapons:readTech('attackerWeapons'), shield:readTech('attackerShield'), armor:readTech('attackerArmor')},
         defaultDefenderTech:defaultDefenderTech()
       };
-      const result = A.solve({...config, targets:models});
+      const result = A.solveFrontier({...config, targets:models});
       renderTargets();
-      lastResult = result;
+      lastFrontier = result;
       lastModels = models;
-      renderResults(result, objective, models);
+      renderResults(result, models);
       status.className = 'status success';
-      status.textContent = `Allocation calculated for ${models.length} distinct target${models.length === 1 ? '' : 's'}. Check each location and parsed report above before using the recommendations.`;
+      const rfScenario = config.rfSigma > 0 ? 'Conservative RF (2σ)' : 'Expected RF';
+      status.textContent = `Pareto frontier calculated using ${rfScenario} for ${models.length} distinct target${models.length === 1 ? '' : 's'}. Check each location and parsed report above before using the recommendations.`;
       $('results').scrollIntoView({behavior:'smooth', block:'start'});
     } catch (error) {
       status.className = 'status error';
@@ -464,7 +593,7 @@
   });
   $('displayFormat').addEventListener('change', event => {
     displayFormat = event.target.value;
-    if (lastResult && lastModels) renderResults(lastResult, lastResult.objective, lastModels);
+    if (lastFrontier && lastModels) renderResults(lastFrontier, lastModels, selectedFrontierIndex);
   });
   document.querySelector('.allocation-controls').addEventListener('input', invalidateResults);
   document.querySelector('.allocation-controls').addEventListener('change', invalidateResults);

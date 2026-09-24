@@ -2,6 +2,7 @@
   'use strict';
 
   const M = Object.assign({}, window.SFCUnits, window.SFCBattleReportParser, window.SFCCombat, window.SFCOptimizer);
+  const C = window.SFCSvgCharts;
   const $ = id => document.getElementById(id);
   const SAMPLE = {
     Hades:1e8,
@@ -414,14 +415,15 @@
     const xMax = Math.max(...logs);
     const survivalMin = Math.min(...points.map(point => point.zeusSurvival));
     const survivalYMin = Math.max(0, survivalMin - Math.max(0.0005, (1 - survivalMin) * 0.12));
-    const x = value => margin.l + (width - margin.l - margin.r) * (value - xMin) / (xMax - xMin || 1);
-    const yDsp = value => height - margin.b - (height - margin.t - margin.b) * value;
-    const ySurvival = value => height - margin.b - (height - margin.t - margin.b) * (value - survivalYMin) / (1 - survivalYMin || 1);
+    const x = C.createScale([xMin, xMax], [margin.l, width - margin.r]);
+    const yDsp = C.createScale([0, 1], [height - margin.b, margin.t]);
+    const ySurvival = C.createScale([survivalYMin, 1], [height - margin.b, margin.t]);
 
     let grid = '';
     for (let index = 0; index <= 5; index++) {
       const logValue = xMin + (xMax - xMin) * index / 5;
-      grid += `<line x1="${x(logValue)}" y1="${margin.t}" x2="${x(logValue)}" y2="${height - margin.b}" class="gridline"/><text x="${x(logValue)}" y="${height - margin.b + 23}" text-anchor="middle" class="axis">${formatCount(Math.pow(10, logValue))}</text>`;
+      grid += C.line({x1:x(logValue), y1:margin.t, x2:x(logValue), y2:height - margin.b});
+      grid += C.text({x:x(logValue), y:height - margin.b + 23, value:formatCount(Math.pow(10, logValue))});
     }
     for (let index = 0; index <= 5; index++) {
       const fraction = index / 5;
@@ -429,23 +431,30 @@
       const survivalValue = survivalYMin + (1 - survivalYMin) * fraction;
       const yPosition = yDsp(dspValue);
       const survivalDigits = survivalValue > 0.999 ? 3 : survivalValue > 0.99 ? 2 : 1;
-      grid += `<line x1="${margin.l}" y1="${yPosition}" x2="${width - margin.r}" y2="${yPosition}" class="gridline"/><text x="${margin.l - 10}" y="${yPosition + 4}" text-anchor="end" class="axis">${(100 * dspValue).toFixed(0)}%</text><text x="${width - margin.r + 10}" y="${yPosition + 4}" text-anchor="start" class="axis">${(100 * survivalValue).toFixed(survivalDigits)}%</text>`;
+      grid += C.line({x1:margin.l, y1:yPosition, x2:width - margin.r, y2:yPosition});
+      grid += C.text({x:margin.l - 10, y:yPosition + 4, anchor:'end', value:`${(100 * dspValue).toFixed(0)}%`});
+      grid += C.text({x:width - margin.r + 10, y:yPosition + 4, anchor:'start', value:`${(100 * survivalValue).toFixed(survivalDigits)}%`});
     }
 
-    const survivalPath = points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${ySurvival(point.zeusSurvival).toFixed(2)}`).join(' ');
-    const dspPath = points.map((point, index) => `${index ? 'L' : 'M'}${x(Math.log10(Math.max(1, point.zeusCount))).toFixed(2)},${yDsp(point.dspDestroyedFraction).toFixed(2)}`).join(' ');
+    const survivalPath = C.linePath(points, point => Math.log10(Math.max(1, point.zeusCount)), point => point.zeusSurvival, x, ySurvival);
+    const dspPath = C.linePath(points, point => Math.log10(Math.max(1, point.zeusCount)), point => point.dspDestroyedFraction, x, yDsp);
     const dots = points.map((point, index) => {
       const baseLabel = `${dataset.label}: ${formatCount(point.zeusCount)} Zeus, ${formatCount(Math.max(0, point.zeusLosses))} Zeus lost, ${pct(point.zeusSurvival, 5)} survival, ${formatCount(point.destroyedDSP)} DSP destroyed, ${debrisPair(point.debrisOreGenerated, point.debrisCrystalGenerated)} debris, ${formatCount(point.dionysusRecyclersNeeded)} Dionysus recyclers`;
       const survivalLabel = `${baseLabel}, Zeus survival ${pct(point.zeusSurvival, 5)}`;
       const dspLabel = `${baseLabel}, NPC DSP destroyed ${pct(point.dspDestroyedFraction, 5)}`;
       const cx = x(Math.log10(Math.max(1, point.zeusCount)));
-      return `<circle cx="${cx}" cy="${ySurvival(point.zeusSurvival)}" r="4.5" class="chart-dot survival" tabindex="0" role="button" aria-label="${survivalLabel}" data-scenario="${dataset.key}" data-point="${index}" data-metric="survival"><title>${survivalLabel}</title></circle><circle cx="${cx}" cy="${yDsp(point.dspDestroyedFraction)}" r="4.5" class="chart-dot dsp" tabindex="0" role="button" aria-label="${dspLabel}" data-scenario="${dataset.key}" data-point="${index}" data-metric="dsp"><title>${dspLabel}</title></circle>`;
+      const attributes = metricLabel => ({
+        tabindex:'0', role:'button', 'aria-label':metricLabel,
+        'data-scenario':dataset.key, 'data-point':index
+      });
+      return C.circle({cx, cy:ySurvival(point.zeusSurvival), className:'chart-dot survival', attributes:{...attributes(survivalLabel), 'data-metric':'survival'}, title:survivalLabel})
+        + C.circle({cx, cy:yDsp(point.dspDestroyedFraction), className:'chart-dot dsp', attributes:{...attributes(dspLabel), 'data-metric':'dsp'}, title:dspLabel});
     }).join('');
-    const curves = `<path d="${survivalPath}" class="curve survival"/><path d="${dspPath}" class="curve dsp"/>${dots}`;
+    const curves = C.path(survivalPath, 'curve survival') + C.path(dspPath, 'curve dsp') + dots;
 
     const container = $(containerId);
     const centerY = (margin.t + height - margin.b) / 2;
-    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${grid}${curves}<text x="${(margin.l + width - margin.r) / 2}" y="${height - 10}" text-anchor="middle" class="label">Zeus committed (log scale)</text><text x="18" y="${centerY}" text-anchor="middle" transform="rotate(-90 18 ${centerY})" class="label">NPC DSP destroyed (%)</text><text x="${width - 18}" y="${centerY}" text-anchor="middle" transform="rotate(90 ${width - 18} ${centerY})" class="label">Zeus survival (%)</text></svg><div class="chart-tooltip hidden" role="status"></div>`;
+    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${grid}${curves}${C.text({x:(margin.l + width - margin.r) / 2, y:height - 10, className:'label', value:'Zeus committed (log scale)'})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:'NPC DSP destroyed (%)'})}${C.text({x:width - 18, y:centerY, className:'label', transform:`rotate(90 ${width - 18} ${centerY})`, value:'Zeus survival (%)'})}</svg><div class="chart-tooltip hidden" role="status"></div>`;
     bindChartInteractions(container, [dataset]);
   }
 
@@ -483,13 +492,7 @@
       renderPointDetails(point, dataset);
     };
     const hide = () => tooltip.classList.add('hidden');
-    for (const dot of container.querySelectorAll('.chart-dot')) {
-      dot.addEventListener('pointerenter', event => show(dot, event));
-      dot.addEventListener('pointermove', event => show(dot, event));
-      dot.addEventListener('pointerleave', hide);
-      dot.addEventListener('focus', event => show(dot, event));
-      dot.addEventListener('blur', hide);
-    }
+    C.bindPointInteractions(container, {selector:'.chart-dot', onPoint:show, onLeave:hide});
   }
 
   function exportCSV() {

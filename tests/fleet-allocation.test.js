@@ -1,8 +1,16 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const units = require('../js/units.js');
 const allocation = require('../js/fleet-allocation.js');
+
+const allocationPage = fs.readFileSync(path.join(__dirname, '../tools/fleet-allocation/index.html'), 'utf8');
+assert.match(allocationPage, /id="conservativeEstimates" type="checkbox" checked/);
+assert.match(allocationPage, /id="objectiveX"[\s\S]*?<option value="dsp" selected>/);
+assert.match(allocationPage, /id="objectiveY"[\s\S]*?<option value="hydrogen" selected>/);
+assert.match(allocationPage, /id="frontierPointDetails"[\s\S]*?id="allocationFrontierChart"/);
 
 assert.deepStrictEqual(allocation.parseLocation('[8:115:3]'), {galaxy:8, system:115, planet:3, normalized:'[8:115:3]'});
 assert.deepStrictEqual(allocation.parseLocation('[ 001 : 500 : 15 ]'), {galaxy:1, system:500, planet:15, normalized:'[1:500:15]'});
@@ -81,6 +89,17 @@ const firstSafeAttack = safeAttackOptions.filter(option => option.zeusCount > 0)
   .sort((left, right) => left.zeusCount - right.zeusCount)[0];
 assert(allocation.evaluateTarget(highRiskTarget, firstSafeAttack.zeusCount - 1, highRiskConfig).zeusSurvival
   < allocation.MIN_ATTACK_SURVIVAL);
+const sevenZeusOutcome = allocation.evaluateTarget(highRiskTarget, 7, highRiskConfig);
+const toppedOffState = allocation.refineUnusedZeus({
+  zeus:7,
+  losses:sevenZeusOutcome.zeusLosses,
+  value:sevenZeusOutcome.objectiveValue,
+  choices:[sevenZeusOutcome]
+}, [highRiskTarget], [safeAttackOptions], highRiskConfig);
+assert(toppedOffState.zeus > 7);
+assert(toppedOffState.losses < sevenZeusOutcome.zeusLosses);
+assert(toppedOffState.choices.every(option => option.zeusCount === 0
+  || option.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
 
 const dspOptions = allocation.targetOptions(refinementTarget, refinementConfig);
 for (const threshold of allocation.REFINEMENT_TARGETS.dspDestroyed) {
@@ -155,5 +174,94 @@ assert(plan.allocations.every(({outcome:attack}) => attack.zeusCount === 0
   || attack.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
 assert.strictEqual(plan.allocations.length, 1);
 assert.strictEqual(plan.objective, 'dsp');
+assert.strictEqual(plan.rfSigma, 0);
+const conservativePlan = allocation.solve({
+  ...targetConfig,
+  rfSigma:2,
+  targets:[reportTarget]
+});
+assert.strictEqual(conservativePlan.rfSigma, 2);
+
+const frontierTargets = [
+  {
+    id:20,
+    location:'[2:10:1]',
+    composition:{Athena:100_000},
+    defenderTech:{weapons:0, shield:0, armor:0},
+    resources:{ore:0, crystal:0, hydrogen:0}
+  },
+  {
+    id:21,
+    location:'[2:10:2]',
+    composition:{Artemis:1},
+    defenderTech:{weapons:0, shield:0, armor:0},
+    resources:{ore:0, crystal:0, hydrogen:10_000_000}
+  }
+];
+const frontierConfig = {
+  availableZeus:20,
+  maxExpectedLosses:20,
+  attackerTech:{weapons:20, shield:20, armor:20},
+  defaultDefenderTech:{weapons:0, shield:0, armor:0},
+  objectives:['dsp', 'hydrogen']
+};
+const frontier = allocation.solveFrontier({...frontierConfig, targets:frontierTargets});
+assert.deepStrictEqual(frontier.objectiveKeys, ['dsp', 'hydrogen']);
+assert.strictEqual(frontier.rfSigma, 0);
+assert(frontier.points.length >= 2, 'the two objectives should create a genuine trade-off for this fixture');
+assert.strictEqual(frontier.searchTruncated, false);
+for (const point of frontier.points) {
+  assert(point.zeusCommitted <= frontier.availableZeus);
+  assert(point.expectedZeusLosses <= frontier.maxExpectedLosses + 1e-9);
+  assert.strictEqual(point.allocations.length, frontierTargets.length);
+  assert(point.allocations.every(({outcome:attack}) => attack.zeusCount === 0
+    || attack.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
+  for (const objective of frontier.objectiveKeys) {
+    const summed = point.allocations.reduce((sum, attack) => sum + attack.outcome.objectiveValues[objective], 0);
+    assert(Math.abs(point.objectiveValues[objective] - summed) <= 1e-8 * Math.max(1, summed));
+  }
+}
+for (let leftIndex = 0; leftIndex < frontier.points.length; leftIndex++) {
+  for (let rightIndex = 0; rightIndex < frontier.points.length; rightIndex++) {
+    if (leftIndex === rightIndex) continue;
+    const left = frontier.points[leftIndex].objectiveValues;
+    const right = frontier.points[rightIndex].objectiveValues;
+    assert(!(left.dsp >= right.dsp && left.hydrogen >= right.hydrogen
+      && (left.dsp > right.dsp || left.hydrogen > right.hydrogen)), 'reported frontier points must be non-dominated');
+  }
+}
+const exhaustivePairs = [];
+for (let firstCount = 0; firstCount <= frontierConfig.availableZeus; firstCount++) {
+  for (let secondCount = 0; secondCount <= frontierConfig.availableZeus - firstCount; secondCount++) {
+    const outcomes = frontierTargets.map((target, index) => allocation.evaluateTarget(
+      target,
+      index === 0 ? firstCount : secondCount,
+      {...frontierConfig, objective:'dsp'}
+    ));
+    if (outcomes.some(outcome => outcome.zeusCount > 0 && outcome.zeusSurvival < allocation.MIN_ATTACK_SURVIVAL - 1e-12)) continue;
+    const losses = outcomes.reduce((sum, outcome) => sum + outcome.zeusLosses, 0);
+    if (losses > frontierConfig.maxExpectedLosses + 1e-9) continue;
+    exhaustivePairs.push({
+      dsp:outcomes.reduce((sum, outcome) => sum + outcome.objectiveValues.dsp, 0),
+      hydrogen:outcomes.reduce((sum, outcome) => sum + outcome.objectiveValues.hydrogen, 0)
+    });
+  }
+}
+const exhaustiveFrontier = exhaustivePairs.filter(candidate => !exhaustivePairs.some(other =>
+  other.dsp >= candidate.dsp && other.hydrogen >= candidate.hydrogen
+  && (other.dsp > candidate.dsp || other.hydrogen > candidate.hydrogen)
+)).filter((candidate, index, all) => all.findIndex(other =>
+  Math.abs(other.dsp - candidate.dsp) < 1e-8 && Math.abs(other.hydrogen - candidate.hydrogen) < 1e-8
+) === index);
+assert.strictEqual(frontier.points.length, exhaustiveFrontier.length);
+for (const expected of exhaustiveFrontier) {
+  assert(frontier.points.some(point => Math.abs(point.objectiveValues.dsp - expected.dsp) < 1e-8
+    && Math.abs(point.objectiveValues.hydrogen - expected.hydrogen) < 1e-8), 'frontier should match exhaustive small-budget enumeration');
+}
+assert.deepStrictEqual(allocation.solveFrontier({...frontierConfig, targets:frontierTargets}).objectiveKeys, ['dsp', 'hydrogen']);
+const conservativeFrontier = allocation.solveFrontier({...frontierConfig, rfSigma:2, targets:frontierTargets});
+assert.strictEqual(conservativeFrontier.rfSigma, 2);
+assert(conservativeFrontier.points.length > 0);
+assert.throws(() => allocation.solveFrontier({...frontierConfig, objectives:['dsp', 'dsp'], targets:frontierTargets}), /two different supported objectives/);
 
 console.log('fleet allocation tests passed');

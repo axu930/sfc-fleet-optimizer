@@ -32,9 +32,12 @@ espionage report. The tool parses supported ship/defense counts, technology,
 and resource values, then distributes the available Zeus fleet across targets
 without revisiting any target.
 
-Choose one objective at a time: ship DSP destroyed, Hydrogen raided, or
-resources raided plus gross debris. A single expected-loss limit applies to
-the full allocation and defaults to 0.1% of available Zeus if left blank.
+Choose two distinct objectives to view a Pareto frontier: ship DSP destroyed,
+Hydrogen raided, or resources raided plus gross debris. The default pair is
+DSP and Hydrogen. Hover, focus, or click a frontier point to see its exact
+per-target Zeus attack mix and copy individual counts. A single expected-loss
+limit applies to the full allocation and defaults to 0.1% of available Zeus if
+left blank.
 DSP can accrue from partial destruction; resource objectives require an
 attacker win and weight each conditional raid by the model's deterministic
 full-win probability estimate. This estimate treats expected remaining
@@ -55,6 +58,10 @@ target and combines them with a bounded Pareto dynamic program. If the browser
 performance bound is reached, results explicitly say the search was bounded;
 treat them as a practical best allocation found, not a proof of global
 optimality.
+
+Both the Zeus and fleet-allocation charts use the dependency-free SVG helpers in
+`js/svg-charts.js` for scales, paths, labels, points, and accessible hover/focus/
+click interactions; chart-specific data and descriptions remain in each tool.
 
 ## What the UI provides
 
@@ -272,6 +279,7 @@ node tests/units.test.js
 node tests/shipyard-calculator.test.js
 node tests/plunder.test.js
 node tests/fleet-allocation.test.js
+node tests/svg-charts.test.js
 ```
 
 The tests cover count parsing, manual roster parsing, row-style and copied-table
@@ -279,7 +287,8 @@ battle-report parsing, first-snapshot handling, the supplied espionage-report
 layout, AWS extraction without tech/unit false positives, pre-refactor combat
 output, debris, six-round capping, the 1% shield cutoff, defense-only DSP
 behavior, very large fleet counts, bounded and monotone sweep outputs,
-breakpoint feasibility, and knee feasibility.
+two-objective frontier results against exhaustive small cases, reusable chart
+primitives, breakpoint feasibility, and knee feasibility.
 
 ## Good next validation step
 
