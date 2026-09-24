@@ -156,6 +156,27 @@ assert.deepStrictEqual(allocationReport.resources, {ore:1.2e6, crystal:2.5e6, hy
 assert.deepStrictEqual(allocationReport.rawResources, {ore:'1,200,000', crystal:'2.5M', hydrogen:'9Qi'});
 assert.strictEqual(allocationReport.hasResources, true);
 assert.deepStrictEqual(allocationReport.unknown, []);
+assert.deepStrictEqual(parser.parseEspionageLocation(`Coordinates: [101:1:1], then [8:115:3] and [9:2:4]`), {
+  galaxy:8, system:115, planet:3, normalized:'[8:115:3]'
+});
+assert.strictEqual(parser.parseEspionageLocation('No coordinates here'), null);
+
+const planetHeadingReport = parser.parseEspionageReport(`Hephaestus Class Attack Platform Hummer’ [ [7:283:5] ](https://playstarfleet.com/galaxy/show?galaxy=7&solar_system=283) has:
+RESOURCES:
+* ore: 86,096,264,882,284,135,537,368,786
+* crystal: 30,191,107,392,208,789,027,513,628
+* hydrogen: 34,623,518,690,730,418,335,051
+BRUCE MAYS'S SHIPS:
+* Hermes Class Probe: 10,000,000,000,709,544,530
+* Hephaestus Class Attack Platform: 1
+TECHS:
+* Laser Tech: 25
+* Armor Tech: 24
+* Weapons Tech: 24
+* Shield Tech: 24`);
+assert.strictEqual(parser.parseEspionageLocation(`Hephaestus Class Attack Platform Hummer’ [ [7:283:5] ](planet) has:`).normalized, '[7:283:5]');
+assert.strictEqual(planetHeadingReport.composition.Hephaestus, 1);
+assert.strictEqual(planetHeadingReport.rawCounts.Hephaestus, '1');
 
 const unsupportedAllocationLine = parser.parseEspionageReport(`Target's Ships:
 Artemis Class Fighter: 2,000

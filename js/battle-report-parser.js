@@ -199,6 +199,11 @@
     for (let index = 0; index < lines.length; index++) {
       const line = String(lines[index] || '').replace(/\u00a0/g, ' ').trim();
       if (!line) continue;
+      // Espionage headers may use a unit name as the planet title, followed by
+      // the planet coordinate and "has:". Coordinate digits are not a count.
+      if (/\d{1,3}\s*:\s*\d{1,3}\s*:\s*\d{1,2}/.test(line)
+        && /\bhas\s*:\s*$/i.test(line)
+        && reportUnitMatches(line).length) continue;
       if (/^(?:[-•]\s*)?techs?\s*:?$/i.test(line)) {
         inTechSection = true;
         continue;
@@ -340,6 +345,20 @@
     return parseEspionageResourceDetails(text).resources;
   }
 
+  function parseEspionageLocation(text) {
+    const expression = /\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})\s*\]/g;
+    const source = String(text || '');
+    let match;
+    while ((match = expression.exec(source))) {
+      const galaxy = Number(match[1]);
+      const system = Number(match[2]);
+      const planet = Number(match[3]);
+      if (galaxy < 1 || galaxy > 100 || system < 1 || system > 500 || planet < 1 || planet > 15) continue;
+      return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}]`};
+    }
+    return null;
+  }
+
   function unparsedCountLines(text) {
     const unknown = [];
     let inTechSection = false;
@@ -374,5 +393,5 @@
     };
   }
 
-  return {parseCount, parseRoster, parseBattleReport, parseEspionageResources, parseEspionageReport};
+  return {parseCount, parseRoster, parseBattleReport, parseEspionageResources, parseEspionageLocation, parseEspionageReport};
 });

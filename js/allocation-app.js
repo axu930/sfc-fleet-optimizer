@@ -49,13 +49,17 @@
   function parsedPreview(target) {
     if (!target.model || !target.parsed) return '';
     const unitRows = Object.entries(target.model.composition).map(([name, count]) => {
-      const value = target.parsed.rawCounts[name] || U.formatCount(count, 'commas');
-      return `<li><span>${escapeHtml(name)}</span><strong>${escapeHtml(value)}</strong></li>`;
+      const value = target.model.rawCounts[name] ?? U.formatCount(count, 'commas');
+      return `<li><span>${escapeHtml(name)}</span><input class="allocation-edit-count" data-edit-kind="unit" data-edit-key="${escapeHtml(name)}" aria-label="${escapeHtml(name)} count" inputmode="decimal" value="${escapeHtml(value)}"></li>`;
     }).join('');
     const resources = ['ore', 'crystal', 'hydrogen'].map(key => {
-      const raw = target.parsed.rawResources[key];
-      return `<li><span>${key[0].toUpperCase()}${key.slice(1)}</span><strong>${raw ? escapeHtml(raw) : (target.parsed.resources[key] === undefined ? 'Not found' : U.formatCount(target.parsed.resources[key], 'commas'))}</strong></li>`;
+      const raw = target.model.rawResources[key] ?? (target.model.availableResourceKeys.has(key) ? U.formatCount(target.model.resources[key], 'commas') : '');
+      return `<li><span>${key[0].toUpperCase()}${key.slice(1)}</span><input class="allocation-edit-count" data-edit-kind="resource" data-edit-key="${key}" aria-label="${key} resource amount" inputmode="decimal" placeholder="Not found" value="${escapeHtml(raw)}"></li>`;
     }).join('');
+    const missingUnits = Object.keys(U.UNITS).filter(name => !Object.prototype.hasOwnProperty.call(target.model.composition, name));
+    const addUnitControl = missingUnits.length
+      ? `<div class="allocation-add-unit"><select data-add-unit-select aria-label="Unit type to add"><option value="">Add an unlisted unit…</option>${missingUnits.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}</select><button class="ghost compact-button" type="button" data-action="add-unit" data-target-id="${target.id}">Add unit</button></div>`
+      : '';
     const tech = ['weapons', 'shield', 'armor'].map(key =>
       `${key[0].toUpperCase()}${key.slice(1)} ${target.model.defenderTech[key]}`
     ).join(' · ');
@@ -63,8 +67,8 @@
       ? `<section class="allocation-unparsed"><h4>Review unparsed count lines</h4><ul>${target.parsed.unknown.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul></section>`
       : '';
     return `<div class="allocation-preview-grid">
-      <section><h4>Parsed ships and defenses</h4><ul>${unitRows}</ul></section>
-      <section><h4>Report resources</h4><ul>${resources}</ul></section>
+      <section><h4>Parsed ships and defenses · editable</h4><ul>${unitRows}</ul>${addUnitControl}</section>
+      <section><h4>Report resources · editable</h4><ul>${resources}</ul></section>
     </div><p class="allocation-preview-tech">NPC tech used: ${escapeHtml(tech)}${Object.keys(target.parsed.tech).length ? ' (from report)' : ' (default inputs)'}</p>${unknown}`;
   }
 
@@ -90,33 +94,49 @@
   }
 
   function parseTarget(target) {
+    if (!target.report.trim()) throw new Error('Paste an espionage report for this target.');
+    const detectedLocation = P.parseEspionageLocation(target.report);
+    if (target.locationSource !== 'manual' && detectedLocation) {
+      target.location = detectedLocation.normalized;
+      target.locationSource = 'report';
+      target.detectedLocation = true;
+    }
     const location = A.parseLocation(target.location);
-    if (!location) throw new Error(`${target.location || 'A target'} needs a location like [8:115:3] (galaxy 1–100, system 1–500, planet 1–15).`);
-    if (!target.report.trim()) throw new Error(`${location.normalized} needs an espionage report.`);
+    if (!location) throw new Error(`${target.location || 'This target'} needs a location like [8:115:3] (galaxy 1–100, system 1–500, planet 1–15).`);
 
-    const parsed = P.parseEspionageReport(target.report);
-    const composition = Object.fromEntries(Object.entries(parsed.composition)
-      .filter(([name, count]) => U.UNITS[name] && Number(count) > 0));
-    if (!Object.keys(composition).length) throw new Error(`${location.normalized}: no supported ship or defense counts were found in the report.`);
+    if (!target.parsed || !target.model) {
+      const parsed = P.parseEspionageReport(target.report);
+      const composition = Object.fromEntries(Object.entries(parsed.composition)
+        .filter(([name, count]) => U.UNITS[name] && Number(count) > 0));
+      if (!Object.keys(composition).length) throw new Error(`${location.normalized}: no supported ship or defense counts were found in the report.`);
 
-    target.parsed = parsed;
-    target.model = {
-      id:target.id,
-      location:location.normalized,
-      composition,
-      defenderTech:{...defaultDefenderTech(), ...parsed.tech},
-      resources:{ore:Number(parsed.resources.ore) || 0, crystal:Number(parsed.resources.crystal) || 0, hydrogen:Number(parsed.resources.hydrogen) || 0},
-      hasResources:parsed.hasResources,
-      parsedResourceKeys:Object.keys(parsed.resources),
-      rawCounts:{...parsed.rawCounts},
-      rawResources:{...parsed.rawResources}
-    };
-    const unitCount = Object.keys(composition).length;
-    const resourceText = parsed.hasResources
-      ? `; resources: ${target.model.parsedResourceKeys.join(', ')}`
-      : '; no resource values found';
-    const unknownText = parsed.unknown.length ? `; review ${parsed.unknown.length} unparsed count line${parsed.unknown.length === 1 ? '' : 's'}` : '';
-    target.status = `Parsed ${unitCount} supported unit types${Object.keys(parsed.tech).length ? '; report tech found' : '; using default NPC tech'}${resourceText}${unknownText}.`;
+      target.parsed = parsed;
+      target.model = {
+        id:target.id,
+        location:location.normalized,
+        composition,
+        defenderTech:{...defaultDefenderTech(), ...parsed.tech},
+        resources:{ore:Number(parsed.resources.ore) || 0, crystal:Number(parsed.resources.crystal) || 0, hydrogen:Number(parsed.resources.hydrogen) || 0},
+        availableResourceKeys:new Set(Object.keys(parsed.resources)),
+        rawCounts:{...parsed.rawCounts},
+        rawResources:{...parsed.rawResources}
+      };
+      const unitCount = Object.keys(composition).length;
+      const resourceText = parsed.hasResources
+        ? `; resources: ${Object.keys(parsed.resources).join(', ')}`
+        : '; no resource values found';
+      const unknownText = parsed.unknown.length ? `; review ${parsed.unknown.length} unparsed count line${parsed.unknown.length === 1 ? '' : 's'}` : '';
+      const locationText = target.detectedLocation ? `; location detected ${location.normalized}` : '';
+      target.status = `Parsed ${unitCount} supported unit types${Object.keys(parsed.tech).length ? '; report tech found' : '; using default NPC tech'}${resourceText}${locationText}${unknownText}.`;
+    }
+    target.model.location = location.normalized;
+    target.model.defenderTech = {...defaultDefenderTech(), ...target.parsed.tech};
+    for (const [name, count] of Object.entries(target.model.composition)) {
+      if (!U.UNITS[name] || !Number.isFinite(count) || count < 0) throw new Error(`${location.normalized}: check the edited count for ${name}.`);
+    }
+    for (const [key, value] of Object.entries(target.model.resources)) {
+      if (!Number.isFinite(value) || value < 0) throw new Error(`${location.normalized}: check the edited ${key} amount.`);
+    }
     return target.model;
   }
 
@@ -152,12 +172,12 @@
     if (objective === 'dsp') return;
     for (const target of models) {
       const label = target.location;
-      if (objective === 'hydrogen' && !target.parsedResourceKeys.includes('hydrogen')) {
-        throw new Error(`${label}: add a Hydrogen resource value to use the hydrogen objective.`);
+      if (objective === 'hydrogen' && !target.availableResourceKeys.has('hydrogen')) {
+        throw new Error(`${label}: enter a Hydrogen resource value to use the hydrogen objective.`);
       }
       if (objective === 'resourcesDebris') {
-        const missing = ['ore', 'crystal', 'hydrogen'].filter(key => !target.parsedResourceKeys.includes(key));
-        if (missing.length) throw new Error(`${label}: the resources + debris objective needs Ore, Crystal, and Hydrogen values (missing ${missing.join(', ')}).`);
+        const missing = ['ore', 'crystal', 'hydrogen'].filter(key => !target.availableResourceKeys.has(key));
+        if (missing.length) throw new Error(`${label}: enter Ore, Crystal, and Hydrogen values for the resources + debris objective (missing ${missing.join(', ')}).`);
       }
     }
   }
@@ -177,7 +197,7 @@
 
   function renderAllocationTable(result) {
     const rows = result.allocations.map(({target, outcome}) => {
-      const model = target.model;
+      const model = target;
       const totalDSP = outcome.battle ? outcome.battle.initialDSP : 0;
       const dspPercent = totalDSP > 0 ? outcome.dspDestroyed / totalDSP : 0;
       return `<tr>
@@ -289,6 +309,18 @@
       renderTargets();
       return;
     }
+    if (action === 'add-unit') {
+      const card = targetList.querySelector(`[data-target-id="${target.id}"]`);
+      const select = card?.querySelector('[data-add-unit-select]');
+      const name = select?.value;
+      if (!name || !U.UNITS[name] || !target.model) return;
+      target.model.composition[name] = 0;
+      target.model.rawCounts[name] = '0';
+      invalidateResults();
+      setTargetStatus(target, `Added ${name}; enter its count below.`);
+      renderTargets();
+      return;
+    }
     if (action === 'parse') {
       try {
         const model = parseTarget(target);
@@ -304,14 +336,46 @@
 
   targetList.addEventListener('input', event => {
     const card = event.target.closest('[data-target-id]');
-    if (!card || !event.target.dataset.field) return;
+    if (!card) return;
     const target = targetById(card.dataset.targetId);
     if (!target) return;
+    if (event.target.dataset.editKind) {
+      if (!target.model) return;
+      const kind = event.target.dataset.editKind;
+      const key = event.target.dataset.editKey;
+      const raw = event.target.value;
+      const parsedValue = raw.trim() ? P.parseCount(raw) : (kind === 'unit' ? 0 : NaN);
+      if (kind === 'unit') {
+        target.model.composition[key] = parsedValue;
+        target.model.rawCounts[key] = raw;
+      } else if (kind === 'resource') {
+        target.model.resources[key] = Number.isFinite(parsedValue) ? parsedValue : (raw.trim() ? NaN : 0);
+        target.model.rawResources[key] = raw;
+        if (raw.trim() && Number.isFinite(parsedValue)) target.model.availableResourceKeys.add(key);
+        else target.model.availableResourceKeys.delete(key);
+      }
+      invalidateResults();
+      const valid = Number.isFinite(parsedValue) && parsedValue >= 0;
+      event.target.classList.toggle('invalid', !valid);
+      setTargetStatus(target, valid ? 'Edited values will be used in the next calculation.' : `Enter a valid nonnegative ${kind === 'unit' ? 'ship count' : 'resource amount'}.`, valid ? 'neutral' : 'error');
+      return;
+    }
+    if (!event.target.dataset.field) return;
     target[event.target.dataset.field === 'report' ? 'report' : 'location'] = event.target.value;
     invalidateResults();
+    if (event.target.dataset.field === 'location') {
+      target.locationSource = event.target.value.trim() ? 'manual' : 'report';
+      target.detectedLocation = false;
+    }
     if (event.target.dataset.field === 'report') {
       target.parsed = null;
       target.model = null;
+      if (target.locationSource === 'report') {
+        target.location = '';
+        target.detectedLocation = false;
+        const locationInput = card.querySelector('[data-field="location"]');
+        if (locationInput) locationInput.value = '';
+      }
       setTargetStatus(target, 'Report changed; parse again or calculate to refresh it.');
       const preview = targetList.querySelector(`[data-target-id="${target.id}"] .allocation-preview`);
       if (preview) {
@@ -347,7 +411,7 @@
 
   $('addTargetBtn').addEventListener('click', () => {
     invalidateResults();
-    targets.push({id:nextId++, location:'', report:'', status:''});
+    targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:''});
     renderTargets();
     targetList.lastElementChild?.querySelector('[data-field="location"]')?.focus();
   });
@@ -359,6 +423,6 @@
   document.querySelector('.allocation-controls').addEventListener('change', invalidateResults);
   $('solveBtn').addEventListener('click', solve);
   $('availableZeus').addEventListener('input', () => { $('availableZeus').classList.remove('invalid'); });
-  targets.push({id:nextId++, location:'', report:'', status:''});
+  targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:''});
   renderTargets();
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -252,6 +252,10 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .allocation-preview ul { margin: 0; padding: 0; list-style: none; }
 .allocation-preview li { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 1px solid var(--border-row); color: #bfd0da; font-size: .78rem; }
 .allocation-preview li strong { color: var(--text); font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.allocation-edit-count { width: min(100%, 240px); min-width: 0; padding: 5px 7px; text-align: right; font-variant-numeric: tabular-nums; }
+.allocation-edit-count.invalid { border-color: var(--bad); background: #211216; }
+.allocation-add-unit { display: flex; gap: 7px; margin-top: 9px; }
+.allocation-add-unit select { flex: 1; min-width: 0; }
 .allocation-preview-tech { margin: 9px 0 0; color: var(--muted); font-size: .76rem; }
 .allocation-unparsed { margin-top: 10px; padding: 8px 10px; border-left: 2px solid var(--conservative); background: var(--surface-warning); }
 .allocation-unparsed h4 { color: var(--conservative); }
