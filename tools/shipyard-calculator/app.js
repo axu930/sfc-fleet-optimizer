@@ -5,14 +5,20 @@
   const $ = id => document.getElementById(id);
   const numberFormat = new Intl.NumberFormat('en-US');
 
-  function populateShips() {
-    const ships = Object.entries(window.SFCUnits.UNITS).filter(([, unit]) => unit.kind === 'ship');
-    $('shipName').innerHTML = ships.map(([name]) => `<option value="${name}">${name}</option>`).join('');
-    $('shipName').value = 'Zeus';
+  function populateBuildables() {
+    const units = Object.entries(window.SFCUnits.UNITS);
+    const optionsFor = kind => units
+      .filter(([, unit]) => unit.kind === kind)
+      .map(([name]) => `<option value="${name}">${name}</option>`)
+      .join('');
+    $('buildItem').innerHTML = `<optgroup label="Ships">${optionsFor('ship')}</optgroup><optgroup label="Defenses">${optionsFor('defense')}</optgroup>`;
+    $('buildItem').value = 'Zeus';
   }
 
   function updateDroidCapacity() {
     const level = Number($('shipyardLevel').value);
+    const fillAllSlots = $('assumeAllDroids').checked;
+    $('assignedDroids').disabled = fillAllSlots;
     if (!Number.isSafeInteger(level) || level < 0) {
       $('droidSlotsHint').textContent = 'Enter a valid Shipyard level to see its worker slots.';
       $('assignedDroids').removeAttribute('max');
@@ -21,7 +27,10 @@
     try {
       const slots = M.maxShipyardDroids(level);
       $('assignedDroids').max = String(slots);
-      $('droidSlotsHint').textContent = `This Shipyard has ${slots} worker slot${slots === 1 ? '' : 's'}; each assigned Build Droid adds 2% speed.`;
+      if (fillAllSlots) $('assignedDroids').value = String(slots);
+      $('droidSlotsHint').textContent = fillAllSlots
+        ? `Assuming all ${slots} worker slot${slots === 1 ? ' is' : 's are'} filled (${slots * 2}% extra build speed). Uncheck to choose fewer.`
+        : `This Shipyard has ${slots} worker slot${slots === 1 ? '' : 's'}; each assigned Build Droid adds 2% speed.`;
     } catch (error) {
       $('droidSlotsHint').textContent = error.message;
     }
@@ -36,31 +45,36 @@
     if (event) event.preventDefault();
     updateDroidCapacity();
     try {
-      const shipName = $('shipName').value;
-      const count = M.parseShipCount($('shipCount').value);
+      const itemName = $('buildItem').value;
+      const count = M.parseShipCountWithMagnitude($('itemCount').value, $('countMagnitude').value);
+      const assignedDroids = $('assumeAllDroids').checked
+        ? M.maxShipyardDroids($('shipyardLevel').value)
+        : $('assignedDroids').value;
       const result = M.calculateBuildTime({
-        shipName,
+        itemName,
         count,
         shipyardLevel:$('shipyardLevel').value,
         foundryLevel:$('foundryLevel').value,
-        assignedDroids:$('assignedDroids').value
+        assignedDroids
       });
 
       $('totalBuildTime').textContent = M.formatDuration(result.totalSeconds);
-      $('perShipTime').textContent = `${M.formatDuration(result.perShipSeconds)} per ${shipName}`;
-      $('resourceCost').textContent = `${numberFormat.format(result.oreCrystalPerShip)} resources`;
+      $('perItemTime').textContent = `${M.formatDuration(result.perItemSeconds)} per ${itemName}`;
+      $('resourceCost').textContent = `${numberFormat.format(result.oreCrystalPerItem)} resources`;
       $('workerSlots').textContent = `${result.assignedDroids} / ${result.droidSlots} used`;
       $('copyCountText').value = result.countDigits;
       $('copyCountButton').dataset.copyCount = result.countDigits;
       $('copyCountButton').disabled = false;
       const groupedCount = M.groupDigits(result.count);
+      const itemLabel = result.itemKind === 'defense' ? 'defense' : 'ship';
+      const pluralLabel = result.itemKind === 'defense' ? 'defenses' : 'ships';
       $('countReview').textContent = result.count < 1000n
-        ? `${groupedCount} ${result.count === 1n ? 'ship' : 'ships'}`
-        : `${groupedCount} · ${M.formatMagnitude(result.count)} ships`;
+        ? `${groupedCount} ${result.count === 1n ? itemLabel : pluralLabel}`
+        : `${groupedCount} · ${M.formatMagnitude(result.count)} ${pluralLabel}`;
       setStatus('Estimate updated. Check the grouped count before copying.');
     } catch (error) {
       $('totalBuildTime').textContent = '—';
-      $('perShipTime').textContent = '';
+      $('perItemTime').textContent = '';
       $('resourceCost').textContent = '—';
       $('workerSlots').textContent = '—';
       $('copyCountText').value = '';
@@ -99,18 +113,23 @@
     const original = button.innerHTML;
     button.innerHTML = copied ? '<span aria-hidden="true">✓</span>' : '<span aria-hidden="true">!</span>';
     button.classList.toggle('copied', copied);
-    button.title = copied ? 'Copied exact ship count' : 'Copy failed';
+    button.title = copied ? 'Copied exact build count' : 'Copy failed';
     setTimeout(() => {
       button.innerHTML = original;
       button.classList.remove('copied');
-      button.title = button.getAttribute('aria-label') || 'Copy exact ship count';
+      button.title = button.getAttribute('aria-label') || 'Copy exact build count';
     }, 1400);
   }
 
-  populateShips();
+  populateBuildables();
   updateDroidCapacity();
   $('buildForm').addEventListener('submit', calculate);
   $('shipyardLevel').addEventListener('input', updateDroidCapacity);
+  $('assumeAllDroids').addEventListener('change', () => {
+    updateDroidCapacity();
+    calculate();
+  });
+  $('countMagnitude').addEventListener('change', calculate);
   $('copyCountButton').addEventListener('click', event => copyCount(event.currentTarget));
   $('copyCountButton').disabled = true;
   calculate();

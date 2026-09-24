@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Estimate Starfleet Commander ship build times and copy exact large ship counts.">
-  <title>Ship Build Time Calculator | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=shared-theme-5-shared-tools">
+  <meta name="description" content="Estimate Starfleet Commander ship and defense build times and copy exact large build counts.">
+  <title>Ship and Defense Build Time Calculator | Starfleet Commander Tools</title>
+  <link rel="stylesheet" href="../../css/app.css?v=shared-theme-6-shipyard-controls">
 </head>
 <body class="shipyard-calculator-page">
   <main class="wrap">
@@ -15,28 +15,46 @@
         <a href="../../">All tools</a>
         <a href="../zeus-optimizer/">Zeus Optimizer</a>
         <a href="../fleet-allocation/">Fleet Allocation</a>
-        <a href="./" aria-current="page">Ship Build Time</a>
+        <a href="./" aria-current="page">Build Time</a>
       </div>
     </nav>
 
     <header>
-      <h1>Ship Build Time</h1>
-      <p class="lede">Estimate the total shipyard time for huge orders, then copy the exact ship count without commas or an extra zero.</p>
-      <p class="intro-guide"><strong>How to use:</strong> Choose a ship, enter its count (for example, <strong>1 septillion</strong> or <strong>1Sp</strong>), then set the Shipyard and Foundry levels and the number of Build Droids assigned to that Shipyard. The grouped count and magnitude label let you check the value before copying the digits-only string.</p>
+      <h1>Ship and Defense Build Time</h1>
+      <p class="lede">Estimate Shipyard production time for huge ship or defense orders, then copy the exact build count without commas or an extra zero.</p>
+      <p class="intro-guide"><strong>How to use:</strong> Choose a ship or defense, enter an amount and select its magnitude (for example, <strong>1</strong> + <strong>Septillion</strong>), then set the Shipyard and Foundry levels. The calculator assumes all available Build Droid slots are filled by default; uncheck the option to enter a smaller number. Check the grouped count before copying the digits-only string.</p>
     </header>
 
-    <section class="build-layout" aria-label="Ship build time calculator">
+    <section class="build-layout" aria-label="Ship and defense build time calculator">
       <article class="panel">
         <h2>Build order</h2>
-        <p class="hint">Estimates one ship type in an otherwise empty queue.</p>
+        <p class="hint">Estimates one ship or defense type in an otherwise empty queue.</p>
         <form id="buildForm" class="build-form" novalidate>
-          <label class="build-field" for="shipName">Ship type
-            <select id="shipName" name="shipName"></select>
+          <label class="build-field" for="buildItem">Ship or defense
+            <select id="buildItem" name="buildItem"></select>
           </label>
-          <label class="build-field" for="shipCount">Number of ships
-            <input id="shipCount" name="shipCount" type="text" inputmode="decimal" autocomplete="off" value="1" aria-describedby="countHint">
-            <span id="countHint" class="field-hint">Whole numbers, comma grouping, and suffixes through septillion are supported.</span>
-          </label>
+          <div class="build-count-control">
+            <span class="build-count-title">Build quantity</span>
+            <div class="build-count-grid">
+              <label class="build-field" for="itemCount">Amount
+                <input id="itemCount" name="itemCount" type="text" inputmode="decimal" autocomplete="off" value="1" aria-describedby="countHint">
+              </label>
+              <label class="build-field" for="countMagnitude">Magnitude
+                <select id="countMagnitude" name="countMagnitude" aria-label="Build count magnitude">
+                  <option value="ones">Ones</option>
+                  <option value="thousand">Thousand</option>
+                  <option value="million">Million</option>
+                  <option value="billion">Billion</option>
+                  <option value="trillion">Trillion</option>
+                  <option value="quadrillion">Quadrillion</option>
+                  <option value="quintillion">Quintillion</option>
+                  <option value="sextillion">Sextillion</option>
+                  <option value="septillion">Septillion</option>
+                </select>
+              </label>
+            </div>
+            <span id="countHint" class="field-hint">Enter an amount and choose its magnitude. Decimals are allowed when the result is whole; with Ones selected, suffix input also works.</span>
+          </div>
           <div class="build-field-grid">
             <label class="build-field" for="shipyardLevel">Shipyard level
               <input id="shipyardLevel" name="shipyardLevel" type="number" min="0" max="1000" step="1" value="12">
@@ -45,10 +63,16 @@
               <input id="foundryLevel" name="foundryLevel" type="number" min="0" max="1000" step="1" value="0">
             </label>
           </div>
-          <label class="build-field" for="assignedDroids">Build Droids assigned to Shipyard
-            <input id="assignedDroids" name="assignedDroids" type="number" min="0" step="1" value="0">
-            <span id="droidSlotsHint" class="field-hint"></span>
-          </label>
+          <div class="build-droid-controls">
+            <label class="build-toggle" for="assumeAllDroids">
+              <input id="assumeAllDroids" name="assumeAllDroids" type="checkbox" checked>
+              <span>Use all available Build Droid slots</span>
+            </label>
+            <label class="build-field" for="assignedDroids">Build Droids assigned to Shipyard
+              <input id="assignedDroids" name="assignedDroids" type="number" min="0" step="1" value="1" disabled>
+              <span id="droidSlotsHint" class="field-hint"></span>
+            </label>
+          </div>
           <button class="primary" type="submit">Calculate build time</button>
           <div id="buildStatus" class="status" role="status" aria-live="polite"></div>
         </form>
@@ -57,33 +81,33 @@
       <article class="panel build-summary" aria-labelledby="resultHeading">
         <div>
           <h2 id="resultHeading">Estimate</h2>
-          <p class="hint">The estimate uses Ore and Crystal costs; Hydrogen does not affect ship build time.</p>
+          <p class="hint">The estimate uses Ore and Crystal costs; Hydrogen does not affect build time.</p>
         </div>
         <div class="build-time-card">
           <span class="build-time-label">Estimated total queue time</span>
           <strong id="totalBuildTime" class="build-time-value">—</strong>
-          <span id="perShipTime" class="build-time-label"></span>
+          <span id="perItemTime" class="build-time-label"></span>
         </div>
         <div class="build-facts">
-          <div class="build-fact"><span>Ore + Crystal per ship</span><strong id="resourceCost">—</strong></div>
+          <div class="build-fact"><span>Ore + Crystal per item</span><strong id="resourceCost">—</strong></div>
           <div class="build-fact"><span>Shipyard worker slots</span><strong id="workerSlots">—</strong></div>
         </div>
         <div class="count-copy-card">
           <h3>Exact count to paste</h3>
           <div class="count-copy-row">
-            <input id="copyCountText" class="count-output" type="text" readonly aria-label="Exact digits-only ship count">
-            <button id="copyCountButton" class="copy-count-button" type="button" aria-label="Copy exact ship count" title="Copy exact ship count"><span aria-hidden="true">⧉</span></button>
+            <input id="copyCountText" class="count-output" type="text" readonly aria-label="Exact digits-only build count">
+            <button id="copyCountButton" class="copy-count-button" type="button" aria-label="Copy exact build count" title="Copy exact build count"><span aria-hidden="true">⧉</span></button>
           </div>
           <p id="countReview" class="count-review" aria-live="polite"></p>
         </div>
-        <p class="formula-note">Time formula: (Ore + Crystal) × ship count ÷ [2,500 × (Shipyard level + 1) × 2<sup>Foundry level</sup>], adjusted for assigned Build Droids. Based on the <a href="https://playstarfleet.com/wiki/shipyard">Shipyard</a> and <a href="https://playstarfleet.com/wiki/build-droid">Build Droid</a> references. Time is rounded to the nearest second; years use 365 days.</p>
+        <p class="formula-note">Time formula: (Ore + Crystal) × build count ÷ [2,500 × (Shipyard level + 1) × 2<sup>Foundry level</sup>], adjusted for assigned Build Droids. Based on the <a href="https://playstarfleet.com/wiki/shipyard">Shipyard</a> and <a href="https://playstarfleet.com/wiki/build-droid">Build Droid</a> references. Time is rounded to the nearest second; years use 365 days.</p>
       </article>
     </section>
 
     <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
   </main>
   <script src="../../js/units.js?v=two-significant-figures-1"></script>
-  <script src="../../js/shipyard-calculator.js?v=shipyard-calculator-1"></script>
-  <script src="app.js?v=shipyard-calculator-1"></script>
+  <script src="../../js/shipyard-calculator.js?v=shipyard-calculator-2"></script>
+  <script src="app.js?v=shipyard-calculator-2"></script>
 </body>
 </html>

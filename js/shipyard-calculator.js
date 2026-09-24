@@ -10,6 +10,10 @@
     '':0, k:3, m:6, b:9, t:12, q:15, qa:15, quadrillion:15,
     qi:18, quintillion:18, sx:21, sextillion:21, sp:24, septillion:24
   });
+  const MULTIPLIER_POWERS = Object.freeze({
+    ones:0, thousand:3, million:6, billion:9, trillion:12,
+    quadrillion:15, quintillion:18, sextillion:21, septillion:24
+  });
   const MAGNITUDES = [
     ['nonillion',30], ['octillion',27], ['septillion',24], ['sextillion',21],
     ['quintillion',18], ['quadrillion',15], ['trillion',12], ['billion',9],
@@ -17,20 +21,34 @@
   ];
 
   function parseShipCount(value) {
+    return parseCount(value, 0, true);
+  }
+
+  function parseShipCountWithMagnitude(value, magnitude='ones') {
+    if (!Object.prototype.hasOwnProperty.call(MULTIPLIER_POWERS, magnitude)) {
+      throw new TypeError('Choose a supported count magnitude.');
+    }
+    return parseCount(value, MULTIPLIER_POWERS[magnitude], magnitude === 'ones');
+  }
+
+  function parseCount(value, multiplierPower, allowSuffix) {
     if (typeof value === 'bigint') {
       if (value < 0n) throw new RangeError('Ship count cannot be negative.');
-      return value;
+      return value * (10n ** BigInt(multiplierPower));
     }
 
     const source = String(value == null ? '' : value).trim();
     const match = source.match(/^((?:\d{1,3}(?:,\d{3})+|\d+))(?:\.(\d+))?(?:[eE]([+-]?\d+))?\s*([a-z]+)?$/i);
-    if (!match) throw new TypeError('Enter a whole ship count, optionally using commas or a supported suffix.');
+    if (!match) throw new TypeError('Enter a whole build count, optionally using commas or a supported suffix.');
 
     const exponent = Number(match[3] || 0);
     if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > 1000) {
       throw new RangeError('Scientific notation exponent must be between -1,000 and 1,000.');
     }
     const suffix = (match[4] || '').toLowerCase();
+    if (!allowSuffix && suffix) {
+      throw new TypeError('Enter the amount without a suffix when using the magnitude selector.');
+    }
     if (!Object.prototype.hasOwnProperty.call(COUNT_SUFFIX_POWERS, suffix)) {
       throw new TypeError('That ship-count suffix is not supported.');
     }
@@ -38,7 +56,7 @@
     const fraction = match[2] || '';
     const coefficientText = (match[1].replace(/,/g, '') + fraction).replace(/^0+(?=\d)/, '');
     const coefficient = BigInt(coefficientText);
-    const scale = COUNT_SUFFIX_POWERS[suffix] - fraction.length + exponent;
+    const scale = COUNT_SUFFIX_POWERS[suffix] - fraction.length + exponent + multiplierPower;
     if (scale >= 0) return coefficient * (10n ** BigInt(scale));
 
     const divisor = 10n ** BigInt(-scale);
@@ -84,12 +102,14 @@
     return quotient + (remainder * 2n >= denominator ? 1n : 0n);
   }
 
-  function calculateBuildTime({shipName, count, shipyardLevel, foundryLevel, assignedDroids=0}) {
-    const unit = units.UNITS[shipName];
-    if (!unit || unit.kind !== 'ship') throw new TypeError('Choose a supported ship.');
+  function calculateBuildTime({itemName, count, shipyardLevel, foundryLevel, assignedDroids=0}) {
+    const unit = units.UNITS[itemName];
+    if (!unit || (unit.kind !== 'ship' && unit.kind !== 'defense')) {
+      throw new TypeError('Choose a supported ship or defense.');
+    }
 
     const quantity = typeof count === 'bigint' ? count : parseShipCount(count);
-    if (quantity < 1n) throw new RangeError('Enter a ship count of at least 1.');
+    if (quantity < 1n) throw new RangeError('Enter a build count of at least 1.');
 
     const yard = validateLevel(shipyardLevel, 'Shipyard level');
     const foundry = validateLevel(foundryLevel, 'Foundry level');
@@ -100,26 +120,27 @@
 
     const ore = BigInt(unit.ore || 0);
     const crystal = BigInt(unit.crystal || 0);
-    const oreCrystalPerShip = ore + crystal;
+    const oreCrystalPerItem = ore + crystal;
     const foundryMultiplier = 2n ** BigInt(foundry);
     const speedHundredths = 50n + BigInt(droids);
     const denominator = 2500n * BigInt(yard + 1) * foundryMultiplier * speedHundredths;
-    const secondsNumeratorPerShip = oreCrystalPerShip * 50n * 3600n;
-    const perShipSeconds = roundFraction(secondsNumeratorPerShip, denominator);
-    const totalSeconds = roundFraction(secondsNumeratorPerShip * quantity, denominator);
+    const secondsNumeratorPerItem = oreCrystalPerItem * 50n * 3600n;
+    const perItemSeconds = roundFraction(secondsNumeratorPerItem, denominator);
+    const totalSeconds = roundFraction(secondsNumeratorPerItem * quantity, denominator);
 
     return {
-      shipName,
+      itemName,
+      itemKind:unit.kind,
       count:quantity,
       countDigits:quantity.toString(),
-      orePerShip:ore,
-      crystalPerShip:crystal,
-      oreCrystalPerShip,
+      orePerItem:ore,
+      crystalPerItem:crystal,
+      oreCrystalPerItem,
       shipyardLevel:yard,
       foundryLevel:foundry,
       assignedDroids:droids,
       droidSlots,
-      perShipSeconds,
+      perItemSeconds,
       totalSeconds
     };
   }
@@ -140,5 +161,5 @@
     return parts.join(' · ');
   }
 
-  return {parseShipCount, groupDigits, formatMagnitude, maxShipyardDroids, calculateBuildTime, formatDuration};
+  return {parseShipCount, parseShipCountWithMagnitude, groupDigits, formatMagnitude, maxShipyardDroids, calculateBuildTime, formatDuration};
 });

@@ -3,7 +3,8 @@
 This repository hosts a dependency-free browser toolkit for Starfleet
 Commander planning. The root landing page links to individual tools under
 `/tools/`; currently available tools are the **Zeus Fleet Optimizer**, the
-**Fleet Allocation Optimizer**, and the **Ship Build Time Calculator**.
+**Fleet Allocation Optimizer**, and the **Ship and Defense Build Time
+Calculator**.
 
 ## Zeus Fleet Optimizer
 
@@ -116,18 +117,18 @@ fleet. It:
 
 If only one fleet block is pasted and no Attacker/Defender heading is present, it is offered as a single **Detected fleet**. Only unit classes currently supported by the model are imported.
 
-## Ship Build Time Calculator
+## Ship and Defense Build Time Calculator
 
-The ship build calculator estimates the total queue time for a single ship
-type and a large order quantity in a Foundry-based universe. It reuses the
-ship Ore and Crystal costs from `js/units.js`; Hydrogen does not contribute to
-build time. The displayed estimate rounds to the nearest second and uses a
+The build calculator estimates the total queue time for one ship or defense
+type and a large order quantity in a Foundry-based universe. It reuses each
+item's Ore and Crystal costs from `js/units.js`; Hydrogen does not contribute
+to build time. The displayed estimate rounds to the nearest second and uses a
 365-day year when expressing very long durations.
 
 The calculator applies the Shipyard wiki formula:
 
 ```text
-(Ore + Crystal) × ship count
+(Ore + Crystal) × build count
 ÷ (2,500 × (Shipyard level + 1) × 2^Foundry level)
 ```
 
@@ -138,8 +139,12 @@ human Builder bonuses, or time already present in another queue entry.
 
 Count input preserves integers through `BigInt`, accepts decimal digits,
 comma-grouping, scientific notation, and supported suffixes through
-septillion, and rejects fractional ship quantities. The grouped preview is
-for checking; the copy button writes the exact plain-decimal digits.
+septillion when `Ones` is selected, and rejects fractional ship quantities. A
+magnitude selector offers ones through septillion, so an amount such as `1`
+with `Million` selected resolves to exactly `1000000`. The calculator assumes
+all Shipyard Build Droid slots are filled by default; unchecking that option
+lets you set a smaller assigned count. The grouped preview is for checking;
+the copy button writes the exact plain-decimal digits.
 
 ## Run locally
 
@@ -160,7 +165,8 @@ scripts so it works from GitHub Pages and when pages are opened directly:
 
 - `index.html` is the landing page and tool directory.
 - `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
-- `tools/shipyard-calculator/index.html` is the ship build-time calculator.
+- `tools/shipyard-calculator/index.html` is the ship and defense build-time
+  calculator.
 - `css/app.css` owns the canonical theme, shared shell, and Zeus
 - `tools/fleet-allocation/index.html` is the multi-target Zeus allocator.
 - `css/app.css` owns the canonical theme, shared shell, and Zeus
@@ -221,7 +227,7 @@ full magnitude words, or abbreviations (`k`, `m`, `b`, `t`, `q`, `Q`, `s`, `S`,
 figures, while copy-ready Zeus recommendations remain exact plain integers
 without commas in every display mode.
 
-The Ship Build Time Calculator uses a separate exact integer path for order
+The Ship and Defense Build Time Calculator uses a separate exact integer path for order
 quantities. For example, entering `1 septillion` copies
 `1000000000000000000000000` exactly, while showing grouped digits and the
 magnitude name for visual verification.

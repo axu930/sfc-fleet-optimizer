@@ -142,13 +142,16 @@ Do not introduce a server/backend unless necessary.
 5. Use relative asset paths so direct GitHub Pages sub-page URLs work.
 6. Add regression tests for model or parser behavior before pushing.
 
-## Ship Build Time Calculator
+## Ship and Defense Build Time Calculator
 
-- Use ship Ore and Crystal costs from `SFCUnits.UNITS` and the Foundry-based
-  Shipyard formula; Hydrogen does not affect build time.
+- Use ship or defense Ore and Crystal costs from `SFCUnits.UNITS` and the
+  Foundry-based Shipyard formula; Hydrogen does not affect build time.
 - Apply Build Droids at 2% speed each, capped by Shipyard worker slots
-  (`1 + floor(level / 3)`).
-- Keep ship counts exact with `BigInt`; copy plain decimal digits without
-  grouping or rounding.
-- V1 supports one ship type per estimate and does not model Hired Guns
-  Construction, human Builder bonuses, or time already in another queue item.
+  (`1 + floor(level / 3)`); the UI defaults to assuming every slot is filled
+  and offers an option to enter a smaller assigned count.
+- Keep build counts exact with `BigInt`; copy plain decimal digits without
+  grouping or rounding. The UI magnitude selector ranges from ones through
+  septillion and multiplies the entered amount exactly.
+- V1 supports one ship or defense type per estimate and does not model Hired
+  Guns Construction, human Builder bonuses, or time already in another queue
+  item.
