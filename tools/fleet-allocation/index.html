@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Allocate a fixed Zeus fleet across multiple Starfleet Commander NPC targets.">
+  <title>Fleet Allocation Optimizer | Starfleet Commander Tools</title>
+  <link rel="stylesheet" href="../../css/app.css?v=fleet-allocation-1">
+</head>
+<body class="allocation-page">
+  <main class="wrap">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="site-nav-brand" href="../../">SFC Tools</a>
+      <div class="site-nav-links">
+        <a href="../../">All tools</a>
+        <a href="../zeus-optimizer/">Zeus Optimizer</a>
+        <a href="./" aria-current="page">Fleet Allocation</a>
+      </div>
+    </nav>
+
+    <header class="allocation-header">
+      <div>
+        <h1>Fleet Allocation Optimizer</h1>
+        <p class="lede">Allocate a limited Zeus fleet across distinct NPC targets. Each target can be attacked at most once.</p>
+        <p class="intro-guide">Add one location and espionage report per target, enter your available Zeus and acceptable loss limit, then calculate. DSP rewards partial destruction; raid resources require a full attacker win. Results are deterministic estimates, not a guarantee of battle outcome.</p>
+      </div>
+      <div class="allocation-header-tools">
+        <label class="allocation-number-format" for="displayFormat"><span>Number display</span>
+          <select id="displayFormat">
+            <option value="abbrev" selected>Abbreviations (k, m, b, t, q, Q, s, S, o, n)</option>
+            <option value="raw">Raw numbers</option>
+            <option value="commas">With commas</option>
+            <option value="scientific">Scientific notation</option>
+            <option value="words">Words (million, quadrillion, etc.)</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <section class="allocation-layout" aria-label="Allocation inputs">
+      <article class="panel allocation-controls">
+        <h2>Allocation constraints</h2>
+        <p class="hint">The loss limit applies to expected Zeus losses across all selected targets. Blank loss limit defaults to 0.1% of your available Zeus.</p>
+        <div class="allocation-control-grid">
+          <label>Available Zeus
+            <input id="availableZeus" inputmode="decimal" value="1000000" autocomplete="off">
+          </label>
+          <label>Maximum expected Zeus losses (% of fleet)
+            <input id="lossLimitPercent" type="number" min="0" max="100" step="0.01" placeholder="0.1">
+          </label>
+          <label>Optimize for
+            <select id="objective">
+              <option value="dsp">NPC ship DSP destroyed</option>
+              <option value="hydrogen">Hydrogen raided</option>
+              <option value="resourcesDebris">Resources raided + gross debris</option>
+            </select>
+          </label>
+        </div>
+
+        <fieldset class="allocation-tech">
+          <legend>Combat technology</legend>
+          <div class="allocation-tech-grid">
+            <div>
+              <h3>Your Zeus</h3>
+              <label>Weapons <input id="attackerWeapons" type="number" min="0" value="20"></label>
+              <label>Shield <input id="attackerShield" type="number" min="0" value="20"></label>
+              <label>Armor <input id="attackerArmor" type="number" min="0" value="20"></label>
+            </div>
+            <div>
+              <h3>Default NPC (when report has no tech)</h3>
+              <label>Weapons <input id="defenderWeapons" type="number" min="0" value="20"></label>
+              <label>Shield <input id="defenderShield" type="number" min="0" value="20"></label>
+              <label>Armor <input id="defenderArmor" type="number" min="0" value="20"></label>
+            </div>
+          </div>
+        </fieldset>
+      </article>
+
+      <section class="allocation-target-section" aria-labelledby="targetsHeading">
+        <div class="allocation-section-head">
+          <div><h2 id="targetsHeading">Targets</h2><p class="hint">Each card is one target and accepts one espionage report.</p></div>
+          <button id="addTargetBtn" class="ghost" type="button">Add target</button>
+        </div>
+        <div id="targetList" class="allocation-target-list"></div>
+        <button id="solveBtn" class="primary" type="button">Calculate allocation</button>
+        <div id="inputStatus" class="status" role="status" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section id="results" class="results hidden" aria-live="polite">
+      <div class="results-head">
+        <div><p class="eyebrow">Recommended allocation</p><h2 id="resultHeading">Allocation summary</h2></div>
+      </div>
+      <div id="allocationMetrics" class="metrics"></div>
+      <div id="allocationWarning" class="allocation-warning hidden" role="status"></div>
+      <article class="panel allocation-results-panel">
+        <div class="panel-head">
+          <div><h2>Target-by-target plan</h2><p class="hint">Gross debris includes debris from destroyed Zeus. Carmanor counts are per successful plunder wave and are cargo guidance, not part of the optimization.</p></div>
+        </div>
+        <div id="allocationTable" class="table-wrap"></div>
+      </article>
+      <article class="panel notes allocation-model-notes">
+        <h2>How to read these estimates</h2>
+        <p>DSP and debris use the existing deterministic, six-round combat model. Because it retains fractional expected survivors instead of discrete ship counts, full-win probability is approximated as exp(−expected remaining non-Hephaestus defenders) × the estimated chance that at least one Zeus survives. For raid objectives, expected plunder is this estimated win probability times the conditional raid amount; DSP and gross debris remain expected combat outputs. This is not an exact in-game battle-winner calculation.</p>
+        <p>As elsewhere in this browser-only model, arithmetic uses JavaScript numbers, so individual counts above 2<sup>53</sup> are approximate. The parsed preview preserves the pasted count text to make it easier to verify what the report said.</p>
+        <p>On a successful attack against a report with no defenses, the tool applies the supplied rule of 7/8 of reported resources across the first wave and two effective follow-up waves (1/2, 1/4, and 1/8). Otherwise, it counts at most one 1/2-resource raid. Carmanor totals are calculated per wave at 125,000 cargo each, without making cargo capacity a solver constraint.</p>
+      </article>
+    </section>
+
+    <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
+  </main>
+  <script src="../../js/units.js?v=units-carmanor-cargo-1"></script>
+  <script src="../../js/battle-report-parser.js?v=allocation-parser-1"></script>
+  <script src="../../js/combat.js?v=net-points-2"></script>
+  <script src="../../js/plunder.js?v=allocation-plunder-1"></script>
+  <script src="../../js/fleet-allocation.js?v=allocation-solver-1"></script>
+  <script src="../../js/allocation-app.js?v=allocation-ui-1"></script>
+</body>
+</html>

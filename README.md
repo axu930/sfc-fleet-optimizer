@@ -2,7 +2,8 @@
 
 This repository hosts a dependency-free browser toolkit for Starfleet
 Commander planning. The root landing page links to individual tools under
-`/tools/`; the current production tool is the **Zeus Fleet Optimizer**.
+`/tools/`; currently available tools are the **Zeus Fleet Optimizer** and the
+**Fleet Allocation Optimizer**.
 
 ## Zeus Fleet Optimizer
 
@@ -21,6 +22,38 @@ The goal is not “how many Zeus fully wipe the NPC?” The app estimates the tr
 The UI compares expected and conservative rapid-fire scenarios over the same
 Zeus commitment range. A report importer can fill the canonical unit table
 directly from copied combat or espionage text.
+
+## Fleet Allocation Optimizer
+
+The fleet allocator is available at `tools/fleet-allocation/`. Add one target
+card per unique `[Galaxy:System:Planet]` location and paste that planet's
+espionage report. The tool parses supported ship/defense counts, technology,
+and resource values, then distributes the available Zeus fleet across targets
+without revisiting any target.
+
+Choose one objective at a time: ship DSP destroyed, Hydrogen raided, or
+resources raided plus gross debris. A single expected-loss limit applies to
+the full allocation and defaults to 0.1% of available Zeus if left blank.
+DSP can accrue from partial destruction; resource objectives require an
+attacker win and weight each conditional raid by the model's deterministic
+full-win probability estimate. This estimate treats expected remaining
+non-Hephaestus defenders as Poisson counts (`exp(-expected remaining)`) and
+multiplies by the estimated chance at least one Zeus survives; it is not an
+exact in-game battle-winner calculation.
+
+When a target report shows no defenses and the initial attack wins, the tool
+uses the supplied deterministic 7/8 plunder total across three waves (1/2,
+1/4, and 1/8). Otherwise it models one half-resource wave. Carmanor needs are
+reported per successful wave at 125,000 cargo each and are not part of the
+solver constraints. Gross debris includes destroyed Zeus. Expected Zeus losses
+are shown as both an absolute count and a percentage; losses above 0.1% are
+flagged for review.
+
+The allocation search samples deterministic Zeus commitment candidates per
+target and combines them with a bounded Pareto dynamic program. If the browser
+performance bound is reached, results explicitly say the search was bounded;
+treat them as a practical best allocation found, not a proof of global
+optimality.
 
 ## What the UI provides
 
@@ -102,22 +135,30 @@ scripts so it works from GitHub Pages and when pages are opened directly:
 
 - `index.html` is the landing page and tool directory.
 - `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
+- `tools/fleet-allocation/index.html` is the multi-target Zeus allocator.
 - `css/app.css` owns the canonical theme, shared shell, and Zeus
-  optimizer-specific presentation.
+  optimizer/allocation-specific presentation.
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
 - `js/combat.js` owns the deterministic six-round combat simulation, DSP, debris, and threat metrics.
 - `js/optimizer.js` owns range selection, sweeps, breakpoints, the matrix, and knee detection.
 - `js/app.js` owns DOM events, rendering, chart generation, importing, and CSV export.
+- `js/plunder.js` owns full-win probability approximation, plunder wave shares,
+  and Carmanor requirements.
+- `js/fleet-allocation.js` owns per-target commitment candidates and the
+  bounded cross-target allocation search.
+- `js/allocation-app.js` owns target cards, report parsing, input validation,
+  allocation rendering, warnings, and copy controls.
 
-The four model modules expose browser globals and CommonJS exports. The browser
-loads them in dependency order; Node tests import the same production files.
+Model modules expose browser globals and CommonJS exports. The browser loads
+them in dependency order; Node tests import the same production files.
 
 ## GitHub Pages
 
 1. In **Settings → Pages**, choose **Deploy from a branch**.
 2. Select the branch (usually `main`) and `/ (root)`.
-3. Open the landing page at `/` and the optimizer at `/tools/zeus-optimizer/`.
+3. Open the landing page at `/`, the optimizer at `/tools/zeus-optimizer/`, and
+   the allocator at `/tools/fleet-allocation/`.
 
 The included `.nojekyll` file keeps GitHub Pages from applying Jekyll processing.
 
@@ -185,6 +226,8 @@ The model has a zero-dependency Node test suite:
 node tests/parser.test.js
 node tests/combat.test.js
 node tests/units.test.js
+node tests/plunder.test.js
+node tests/fleet-allocation.test.js
 ```
 
 The tests cover count parsing, manual roster parsing, row-style and copied-table

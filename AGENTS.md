@@ -6,9 +6,12 @@ This repository is a zero-build, GitHub Pages-compatible static tool hub.
 
 - `/index.html` is the public landing page.
 - `/tools/zeus-optimizer/index.html` is the Zeus fleet optimizer.
+- `/tools/fleet-allocation/index.html` allocates a fixed Zeus fleet across
+  distinct NPC targets.
 - `/css/app.css` is the canonical theme and contains shared shell styles plus
   Zeus optimizer-specific styles.
-- `/js/` contains shared model and parser modules loaded by the optimizer.
+- `/js/` contains shared model, parser, plunder, and allocation modules loaded
+  by the tools.
 - `/tests/` contains the zero-dependency Node regression tests.
 
 GitHub Pages deploys from the repository root. New tools should live in their
@@ -103,6 +106,29 @@ than per-ship Monte Carlo.
 5. GitHub Pages compatibility
 
 Do not introduce a server/backend unless necessary.
+
+## Fleet Allocation Optimizer
+
+- Each target is a unique `[Galaxy:System:Planet]` location with one pasted
+  espionage report. Do not allocate multiple Zeus waves to the same target.
+- Respect one shared available-Zeus cap and one total expected-Zeus-loss cap.
+  The UI defaults the loss cap to 0.1% when left blank.
+- The first release offers one objective at a time: NPC ship DSP destroyed,
+  Hydrogen raided, or resources raided plus gross debris.
+- DSP can be earned from partial destruction. Plunder objectives require an
+  attacker win; explain the deterministic full-win probability approximation
+  wherever resource estimates are presented.
+- For successful attacks on targets with no defenses, apply the supplied
+  deterministic 7/8 resource rule over one initial raid and two effective
+  follow-up waves. Otherwise count at most one half-resource raid.
+- Report gross debris, including destroyed Zeus, and expected Zeus losses in
+  both absolute count and percentage. Warn visibly above 0.1% even if a user
+  chooses a higher explicit loss cap; never silently tighten that cap.
+- Show Carmanor cargo requirements per successful wave at 125,000 capacity;
+  cargo capacity is output guidance, not an optimization constraint.
+- Keep the target search deterministic and browser-only. Clearly flag bounded
+  search results, and do not represent the sampled allocation frontier as an
+  exact proof of optimality.
 
 ## Adding a tool
 
