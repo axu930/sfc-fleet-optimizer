@@ -72,24 +72,39 @@
     </div><p class="allocation-preview-tech">NPC tech used: ${escapeHtml(tech)}${Object.keys(target.parsed.tech).length ? ' (from report)' : ' (default inputs)'}</p>${unknown}`;
   }
 
+  function targetSummary(target) {
+    if (target.model) {
+      const unitTypes = Object.keys(target.model.composition).length;
+      const resourceTypes = target.model.availableResourceKeys.size;
+      return `Parsed ${target.model.location} · ${unitTypes} unit types · ${resourceTypes} resource fields`;
+    }
+    if (target.status.startsWith('Error:')) return target.status.slice(7);
+    return target.location ? `${target.location} · report not parsed` : 'Paste a report to parse it automatically';
+  }
+
   function renderTargets() {
     targetList.innerHTML = targets.map((target, index) => `
-      <article class="allocation-target panel" data-target-id="${target.id}">
+      <article class="allocation-target panel${target.collapsed ? ' is-collapsed' : ''}" data-target-id="${target.id}">
         <div class="allocation-target-head">
-          <h3>Target ${index + 1}</h3>
-          <button class="ghost compact-button remove-target" type="button" data-action="remove" data-target-id="${target.id}" aria-label="Remove target ${index + 1}" ${targets.length <= 1 ? 'disabled' : ''}>Remove</button>
+          <h3><span>Target ${index + 1}</span><small class="allocation-target-summary">${escapeHtml(targetSummary(target))}</small></h3>
+          <div class="allocation-target-head-actions">
+            <button class="ghost compact-button" type="button" data-action="toggle-collapse" data-target-id="${target.id}" aria-expanded="${!target.collapsed}" aria-controls="target-details-${target.id}">${target.collapsed ? 'Expand' : 'Collapse'}</button>
+            <button class="ghost compact-button remove-target" type="button" data-action="remove" data-target-id="${target.id}" aria-label="Remove target ${index + 1}" ${targets.length <= 1 ? 'disabled' : ''}>Remove</button>
+          </div>
         </div>
-        <label class="location-input">Planet location
-          <input data-field="location" value="${escapeHtml(target.location)}" placeholder="[8:115:3]" autocomplete="off" spellcheck="false">
-        </label>
-        <label>Espionage report
-          <textarea data-field="report" class="allocation-report" spellcheck="false" placeholder="Paste this planet's ship, defense, tech, and resource report here…">${escapeHtml(target.report)}</textarea>
-        </label>
-        <div class="allocation-target-actions">
-          <button class="ghost compact-button" type="button" data-action="parse" data-target-id="${target.id}">Parse report</button>
-          <span class="status target-status" data-target-status="${target.id}" role="status" aria-live="polite">${escapeHtml(target.status || 'Paste one report for this target.')}</span>
+        <div id="target-details-${target.id}" class="allocation-target-details">
+          <label class="location-input">Planet location
+            <input data-field="location" value="${escapeHtml(target.location)}" placeholder="[8:115:3]" autocomplete="off" spellcheck="false">
+          </label>
+          <label>Espionage report
+            <textarea data-field="report" class="allocation-report" spellcheck="false" placeholder="Paste this planet's ship, defense, tech, and resource report here…">${escapeHtml(target.report)}</textarea>
+          </label>
+          <div class="allocation-target-actions">
+            <button class="ghost compact-button" type="button" data-action="parse" data-target-id="${target.id}">Parse report</button>
+            <span class="status target-status" data-target-status="${target.id}" role="status" aria-live="polite">${escapeHtml(target.status || 'Paste one report for this target.')}</span>
+          </div>
+          <div class="allocation-preview ${target.model ? '' : 'hidden'}">${parsedPreview(target)}</div>
         </div>
-        <div class="allocation-preview ${target.model ? '' : 'hidden'}">${parsedPreview(target)}</div>
       </article>`).join('');
   }
 
@@ -303,6 +318,17 @@
   function handleTargetAction(action, id) {
     const target = targetById(id);
     if (!target) return;
+    if (action === 'toggle-collapse') {
+      target.collapsed = !target.collapsed;
+      const card = targetList.querySelector(`[data-target-id="${target.id}"]`);
+      const button = card?.querySelector('[data-action="toggle-collapse"]');
+      card?.classList.toggle('is-collapsed', target.collapsed);
+      if (button) {
+        button.setAttribute('aria-expanded', String(!target.collapsed));
+        button.textContent = target.collapsed ? 'Expand' : 'Collapse';
+      }
+      return;
+    }
     if (action === 'remove') {
       if (targets.length > 1) targets.splice(targets.indexOf(target), 1);
       invalidateResults();
@@ -385,6 +411,26 @@
     }
   });
 
+  targetList.addEventListener('paste', event => {
+    if (!event.target.matches('[data-field="report"]')) return;
+    const card = event.target.closest('[data-target-id]');
+    const target = targetById(card?.dataset.targetId);
+    if (!target) return;
+    window.setTimeout(() => {
+      try {
+        const model = parseTarget(target);
+        target.model = model;
+        target.collapsed = true;
+        setTargetStatus(target, target.status.replace(/^Error: /, ''), 'success');
+        $('inputStatus').textContent = '';
+      } catch (error) {
+        target.collapsed = false;
+        setTargetStatus(target, error.message, 'error');
+      }
+      renderTargets();
+    }, 0);
+  });
+
   targetList.addEventListener('click', event => {
     const button = event.target.closest('[data-action]');
     if (button) handleTargetAction(button.dataset.action, button.dataset.targetId);
@@ -411,7 +457,7 @@
 
   $('addTargetBtn').addEventListener('click', () => {
     invalidateResults();
-    targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:''});
+    targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:'', collapsed:false});
     renderTargets();
     targetList.lastElementChild?.querySelector('[data-field="location"]')?.focus();
   });
@@ -423,6 +469,6 @@
   document.querySelector('.allocation-controls').addEventListener('change', invalidateResults);
   $('solveBtn').addEventListener('click', solve);
   $('availableZeus').addEventListener('input', () => { $('availableZeus').classList.remove('invalid'); });
-  targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:''});
+  targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:'', collapsed:false});
   renderTargets();
 })(typeof globalThis !== 'undefined' ? globalThis : this);
