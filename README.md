@@ -36,7 +36,9 @@ Choose Objective X to optimize ship DSP destroyed, Hydrogen raided, or
 resources raided plus gross debris. Objective Y is optional: leave it blank to
 show only the best allocation for Objective X, or select a secondary objective
 to view a Pareto frontier. Secondary choices include the three metrics above
-and expected Zeus lost (minimized). The default pair is DSP and Hydrogen.
+and expected Zeus lost (minimized). By default, Objective X is DSP destroyed
+and Objective Y is None, so the allocator initially shows a single optimal
+allocation rather than a Pareto frontier.
 Hover, focus, or click a frontier point to see its exact per-target Zeus
 attack mix, stacked vertically, and copy individual counts. A single
 expected-loss limit applies to the full allocation and defaults to 0.1% of
