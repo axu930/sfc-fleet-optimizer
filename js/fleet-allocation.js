@@ -20,13 +20,23 @@
   // Treat survival at 99.999% or better as equivalent to 100% in comparisons.
   const SURVIVAL_SATURATION = 0.99999;
   const OBJECTIVES = Object.freeze({
-    dsp:{label:'DSP destroyed', value:outcome => outcome.dspDestroyed},
-    hydrogen:{label:'Hydrogen raided', value:outcome => outcome.resourcesRaided.hydrogen},
-    resourcesDebris:{label:'Resources raided + gross debris', value:outcome => outcome.resourcesRaided.total + outcome.debrisGenerated}
+    dsp:{label:'DSP destroyed', direction:'maximize', value:outcome => outcome.dspDestroyed},
+    hydrogen:{label:'Hydrogen raided', direction:'maximize', value:outcome => outcome.resourcesRaided.hydrogen},
+    resourcesDebris:{label:'Resources raided + gross debris', direction:'maximize', value:outcome => outcome.resourcesRaided.total + outcome.debrisGenerated},
+    zeusLosses:{label:'Expected Zeus lost', direction:'minimize', value:outcome => outcome.zeusLosses}
   });
 
   function objectiveValues(outcome) {
     return Object.fromEntries(Object.entries(OBJECTIVES).map(([key, objective]) => [key, objective.value(outcome)]));
+  }
+
+  function objectiveScores(outcome) {
+    return Object.fromEntries(Object.entries(OBJECTIVES).map(([key, objective]) => [
+      key,
+      objective.direction === 'minimize'
+        ? -objective.value(outcome)
+        : objective.value(outcome)
+    ]));
   }
 
   function chosenObjectives(config) {
@@ -44,6 +54,22 @@
     const planet = Number(match[3]);
     if (galaxy < 1 || galaxy > 100 || system < 1 || system > 500 || planet < 1 || planet > 15) return null;
     return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}]`};
+  }
+
+  function summarizeFleet(composition={}) {
+    const totals = {ships:0, defenses:0, dsp:0, invalidShips:false, invalidDefenses:false};
+    for (const [name, count] of Object.entries(composition)) {
+      const unit = units.UNITS[name];
+      if (!unit) continue;
+      const category = unit.kind === 'defense' ? 'defenses' : 'ships';
+      if (!Number.isFinite(count) || count < 0) {
+        totals[category === 'ships' ? 'invalidShips' : 'invalidDefenses'] = true;
+        continue;
+      }
+      totals[category] += count;
+      if (unit.kind === 'ship') totals.dsp += count * unit.cost / 1000;
+    }
+    return totals;
   }
 
   function expectedLossLimit(availableZeus, enteredPercent) {
@@ -102,7 +128,8 @@
         battle:null
       };
       outcome.objectiveValues = objectiveValues(outcome);
-      outcome.objectiveValue = outcome.objectiveValues[config.objective] ?? outcome.objectiveValues.dsp;
+      outcome.objectiveScores = objectiveScores(outcome);
+      outcome.objectiveValue = outcome.objectiveScores[config.objective] ?? outcome.objectiveScores.dsp;
       return outcome;
     }
 
@@ -117,15 +144,17 @@
     const noDefenses = !plunder.hasDefenses(target.composition);
     const calculatedPlunder = plunder.expectedPlunder(target.resources, winProbability, noDefenses);
     const resourcesRaided = calculatedPlunder.resources;
+    const zeusLosses = Math.max(0, battle.zeusLosses);
+    const zeusLossFraction = zeusCount > 0 ? Math.min(1, zeusLosses / zeusCount) : 0;
     resourcesRaided.total = resourcesRaided.ore + resourcesRaided.crystal + resourcesRaided.hydrogen;
     const objective = OBJECTIVES[config.objective] || OBJECTIVES.dsp;
     const outcome = {
       targetId:target.id,
       location:target.location,
       zeusCount,
-      zeusLosses:battle.zeusLosses,
-      zeusLossFraction:battle.zeusLossFraction,
-      zeusSurvival:battle.zeusSurvival,
+      zeusLosses,
+      zeusLossFraction,
+      zeusSurvival:Math.max(0, Math.min(1, battle.zeusSurvival)),
       winProbability,
       definiteWin:isAttackerWin(battle),
       noDefenses,
@@ -146,7 +175,8 @@
       battle
     };
     outcome.objectiveValues = objectiveValues(outcome);
-    outcome.objectiveValue = outcome.objectiveValues[config.objective] ?? objective.value(outcome);
+    outcome.objectiveScores = objectiveScores(outcome);
+    outcome.objectiveValue = outcome.objectiveScores[config.objective] ?? objective.value(outcome);
     return outcome;
   }
 
@@ -225,13 +255,13 @@
   function dominates(left, right, objectiveKeys=['dsp']) {
     const noMoreZeus = left.zeusCount <= right.zeusCount;
     const noMoreLosses = left.zeusLosses <= right.zeusLosses + 1e-10;
-    const noLessValue = objectiveKeys.every(key => left.objectiveValues[key]
-      >= right.objectiveValues[key] - 1e-10 * Math.max(1, Math.abs(right.objectiveValues[key])));
+    const noLessValue = objectiveKeys.every(key => left.objectiveScores[key]
+      >= right.objectiveScores[key] - 1e-10 * Math.max(1, Math.abs(right.objectiveScores[key])));
     const leftSurvival = survivalForComparison(left.zeusSurvival);
     const rightSurvival = survivalForComparison(right.zeusSurvival);
     const noLessSurvival = leftSurvival >= rightSurvival - 1e-12;
-    const strictValue = objectiveKeys.some(key => left.objectiveValues[key]
-      > right.objectiveValues[key] + 1e-10 * Math.max(1, Math.abs(right.objectiveValues[key])));
+    const strictValue = objectiveKeys.some(key => left.objectiveScores[key]
+      > right.objectiveScores[key] + 1e-10 * Math.max(1, Math.abs(right.objectiveScores[key])));
     const strict = left.zeusCount < right.zeusCount || left.zeusLosses < right.zeusLosses - 1e-10
       || strictValue
       || leftSurvival > rightSurvival + 1e-12;
@@ -617,7 +647,8 @@
       expectedZeusLosses:best.losses,
       expectedLossFraction:availableZeus > 0 ? best.losses / availableZeus : 0,
       maxExpectedLosses,
-      totalObjectiveValue:best.value,
+      totalObjectiveValue:allocations.reduce((sum, allocation) => sum + allocation.outcome.objectiveValues[config.objective], 0),
+      totalObjectiveScore:best.value,
       allocations,
       candidateCounts:optionsByTarget.map(options => options.length),
       searchTruncated
@@ -632,6 +663,9 @@
       || objectiveKeys.some(key => !OBJECTIVES[key])) {
       throw new Error('Choose two different supported objectives for the frontier.');
     }
+    if (OBJECTIVES[objectiveKeys[0]].direction !== 'maximize') {
+      throw new Error('Objective X must be maximized; minimizing objectives are supported as Objective Y.');
+    }
 
     const availableZeus = Math.max(1, Math.floor(Number(input.availableZeus)));
     const maxExpectedLosses = Math.max(0, Number(input.maxExpectedLosses) || 0);
@@ -645,7 +679,7 @@
       rfSigma:Number(input.rfSigma) || 0
     };
     const optionsByTarget = targets.map(target => targetOptions(target, config));
-    let states = [{zeus:0, losses:0, values:[0, 0], choices:[]}];
+    let states = [{zeus:0, losses:0, values:[0, 0], rawValues:[0, 0], choices:[]}];
     let searchTruncated = false;
     for (let index = 0; index < targets.length; index++) {
       const next = [];
@@ -658,8 +692,12 @@
             zeus,
             losses,
             values:[
-              state.values[0] + option.objectiveValues[objectiveKeys[0]],
-              state.values[1] + option.objectiveValues[objectiveKeys[1]]
+              state.values[0] + option.objectiveScores[objectiveKeys[0]],
+              state.values[1] + option.objectiveScores[objectiveKeys[1]]
+            ],
+            rawValues:[
+              state.rawValues[0] + option.objectiveValues[objectiveKeys[0]],
+              state.rawValues[1] + option.objectiveValues[objectiveKeys[1]]
             ],
             choices:[...state.choices, option]
           });
@@ -680,7 +718,7 @@
     const scalarOptionsByObjective = Object.fromEntries(objectiveKeys.map(objective => [objective,
       optionsByTarget.map(options => options.map(option => ({
         ...option,
-        objectiveValue:option.objectiveValues[objective]
+        objectiveValue:option.objectiveScores[objective]
       })))
     ]));
     const seeds = new Set();
@@ -714,11 +752,12 @@
           value:seed.values[objectiveIndex],
           choices:seed.choices.map(outcome => ({
             ...outcome,
-            objectiveValue:outcome.objectiveValues[objective]
+            objectiveValue:outcome.objectiveScores[objective]
           }))
         };
         const refined = refineUnusedZeus(scalarSeed, targets, scalarOptionsByObjective[objective], {...config, objective});
-        refined.values = objectiveKeys.map(key => refined.choices.reduce((sum, outcome) => sum + outcome.objectiveValues[key], 0));
+        refined.values = objectiveKeys.map(key => refined.choices.reduce((sum, outcome) => sum + outcome.objectiveScores[key], 0));
+        refined.rawValues = objectiveKeys.map(key => refined.choices.reduce((sum, outcome) => sum + outcome.objectiveValues[key], 0));
         refinedStates.push(refined);
       }
     }
@@ -727,7 +766,8 @@
     const finalFrontier = paretoObjectiveFrontier(states);
     const points = finalFrontier.map((state, index) => ({
       index,
-      objectiveValues:Object.fromEntries(objectiveKeys.map((key, objectiveIndex) => [key, state.values[objectiveIndex]])),
+      objectiveValues:Object.fromEntries(objectiveKeys.map((key, objectiveIndex) => [key, state.rawValues[objectiveIndex]])),
+      objectiveScores:Object.fromEntries(objectiveKeys.map((key, objectiveIndex) => [key, state.values[objectiveIndex]])),
       zeusCommitted:state.zeus,
       unusedZeus:Math.max(0, availableZeus - state.zeus),
       expectedZeusLosses:state.losses,
@@ -746,5 +786,5 @@
     };
   }
 
-  return {OBJECTIVES, REFINEMENT_TARGETS, MIN_ATTACK_SURVIVAL, parseLocation, expectedLossLimit, survivalForComparison, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, refineUnusedZeus, solve, solveFrontier};
+  return {OBJECTIVES, REFINEMENT_TARGETS, MIN_ATTACK_SURVIVAL, parseLocation, summarizeFleet, expectedLossLimit, survivalForComparison, candidateCounts, expectedWinProbability:plunder.expectedWinProbability, evaluateTarget, targetOptions, refineUnusedZeus, solve, solveFrontier};
 });

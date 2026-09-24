@@ -11,6 +11,7 @@
   let nextId = 1;
   let displayFormat = 'abbrev';
   let lastFrontier = null;
+  let lastSingleResult = null;
   let lastModels = null;
   let selectedFrontierIndex = 0;
 
@@ -38,8 +39,9 @@
   }
 
   function invalidateResults() {
-    const hadResult = Boolean(lastFrontier);
+    const hadResult = Boolean(lastFrontier || lastSingleResult);
     lastFrontier = null;
+    lastSingleResult = null;
     lastModels = null;
     $('results').classList.add('hidden');
     if (hadResult) {
@@ -77,13 +79,89 @@
   }
 
   function targetSummary(target) {
+    const location = target.location || target.model?.location || 'Location not set';
     if (target.model) {
-      const unitTypes = Object.keys(target.model.composition).length;
-      const resourceTypes = target.model.availableResourceKeys.size;
-      return `Parsed ${target.model.location} · ${unitTypes} unit types · ${resourceTypes} resource fields`;
+      const totals = A.summarizeFleet(target.model.composition);
+      const ships = totals.invalidShips ? 'check counts' : format(totals.ships);
+      const defenses = totals.invalidDefenses ? 'check counts' : format(totals.defenses);
+      const dsp = totals.invalidShips ? 'check counts' : format(totals.dsp);
+      const hydrogen = !target.model.availableResourceKeys.has('hydrogen')
+        ? 'not reported'
+        : Number.isFinite(target.model.resources.hydrogen) && target.model.resources.hydrogen >= 0
+          ? format(target.model.resources.hydrogen)
+          : 'check amount';
+      const zeusEstimate = targetZeusEstimate(target, target.collapsed);
+      return `${location} · ${ships} ships · ${defenses} defenses · ${dsp} DSP available · ${hydrogen} Hydrogen available${zeusEstimate ? ` · ${zeusEstimate}` : ''}`;
     }
-    if (target.status.startsWith('Error:')) return target.status.slice(7);
-    return target.location ? `${target.location} · report not parsed` : 'Paste a report to parse it automatically';
+    if (target.status.startsWith('Error:')) return `${location} · ${target.status.slice(7)}`;
+    return `${location} · Ships — · Defenses — · Not parsed`;
+  }
+
+  function refreshTargetSummary(target) {
+    const summary = targetList.querySelector(`[data-target-id="${target.id}"] .allocation-target-summary`);
+    if (summary) summary.textContent = targetSummary(target);
+  }
+
+  function targetZeusEstimate(target, shouldCalculate=false) {
+    if (!target.model) return '';
+    const totals = A.summarizeFleet(target.model.composition);
+    if (totals.invalidShips || totals.invalidDefenses) return shouldCalculate ? '90% DSP estimate: check counts' : '';
+    let availableZeus;
+    let maxExpectedLosses;
+    let attackerTech;
+    let fallbackDefenderTech;
+    try {
+      availableZeus = readAvailableZeus();
+      maxExpectedLosses = A.expectedLossLimit(availableZeus, readLossLimitPercent());
+      attackerTech = {
+        weapons:readTech('attackerWeapons'),
+        shield:readTech('attackerShield'),
+        armor:readTech('attackerArmor')
+      };
+      fallbackDefenderTech = defaultDefenderTech();
+    } catch (error) {
+      return shouldCalculate ? '90% DSP estimate: check fleet and tech inputs' : '';
+    }
+    const defenderTech = {...fallbackDefenderTech, ...(target.parsed?.tech || {})};
+    const rfSigma = $('conservativeEstimates').checked ? 2 : 0;
+    const key = JSON.stringify([target.model.composition, availableZeus, maxExpectedLosses, attackerTech, defenderTech, rfSigma]);
+    if (target.zeusEstimate?.key === key) {
+      if (target.zeusEstimate.message) return target.zeusEstimate.message;
+      return target.zeusEstimate.zeusCount === null
+        ? '90% DSP / 99.9% survival: not reached'
+        : `90% DSP / 99.9% survival: ~${format(target.zeusEstimate.zeusCount)} Zeus`;
+    }
+    if (!shouldCalculate) return '';
+    if (!(totals.dsp > 0)) {
+      target.zeusEstimate = {key, zeusCount:null, message:'No ship DSP to destroy'};
+      return target.zeusEstimate.message;
+    }
+    const model = {
+      ...target.model,
+      defenderTech
+    };
+    let options;
+    try {
+      options = A.targetOptions(model, {
+        availableZeus,
+        maxExpectedLosses,
+        objective:'dsp',
+        objectiveKeys:['dsp'],
+        attackerTech,
+        defaultDefenderTech:fallbackDefenderTech,
+        rfSigma
+      });
+    } catch (error) {
+      target.zeusEstimate = {key, zeusCount:null, message:'90% DSP estimate unavailable'};
+      return target.zeusEstimate.message;
+    }
+    const breakpoint = options.find(option => option.zeusCount > 0
+      && option.dspDestroyedFraction >= 0.9 - 1e-12
+      && option.zeusSurvival >= A.MIN_ATTACK_SURVIVAL - 1e-12);
+    target.zeusEstimate = {key, zeusCount:breakpoint ? breakpoint.zeusCount : null};
+    return breakpoint
+      ? `90% DSP / 99.9% survival: ~${format(breakpoint.zeusCount)} Zeus`
+      : '90% DSP / 99.9% survival: not reached';
   }
 
   function renderTargets() {
@@ -219,16 +297,18 @@
     return ({
       dsp:'NPC ship DSP destroyed',
       hydrogen:'Hydrogen raided',
-      resourcesDebris:'Resources raided + gross debris'
+      resourcesDebris:'Resources raided + gross debris',
+      zeusLosses:'Expected Zeus lost'
     })[key] || key;
   }
 
-  function renderAllocationTable(frontier, point) {
-    const [objectiveX, objectiveY] = frontier.objectiveKeys;
-    const rows = point.allocations.map(({target, outcome}) => {
+  function renderAllocationTable(allocations, objectiveKeys) {
+    const objectiveHeaders = objectiveKeys.map(key => `<th>${escapeHtml(objectiveLabel(key))}${A.OBJECTIVES[key]?.direction === 'minimize' ? ' <small>(minimize)</small>' : ''}</th>`).join('');
+    const rows = allocations.map(({target, outcome}) => {
       const model = target;
       const totalDSP = outcome.battle ? outcome.battle.initialDSP : 0;
       const dspPercent = totalDSP > 0 ? outcome.dspDestroyed / totalDSP : 0;
+      const objectiveCells = objectiveKeys.map(key => `<td>${format(outcome.objectiveValues[key])}</td>`).join('');
       return `<tr>
         <td><strong>${escapeHtml(model.location)}</strong></td>
         <td><span class="allocation-copy"><code>${escapeHtml(plainCount(outcome.zeusCount))}</code><button class="copy-count-button" type="button" data-copy-value="${escapeHtml(plainCount(outcome.zeusCount))}" aria-label="Copy Zeus count for ${escapeHtml(model.location)}" title="Copy Zeus count"><span aria-hidden="true">▢</span></button></span></td>
@@ -238,12 +318,11 @@
         <td>${groupedDebris(outcome)}</td>
         <td>${groupedResources(outcome.resourcesRaided)}</td>
         <td>${waveOutput(outcome.waves)}</td>
-        <td>${format(outcome.objectiveValues[objectiveX])}</td>
-        <td>${format(outcome.objectiveValues[objectiveY])}</td>
+        ${objectiveCells}
       </tr>`;
     }).join('');
     $('allocationTable').innerHTML = `<table class="allocation-table">
-      <thead><tr><th>Target</th><th>Zeus to send</th><th>Expected Zeus lost</th><th>Estimated full-win chance</th><th>Expected DSP destroyed</th><th>Gross debris</th><th>Expected resources raided</th><th>Carmanors per wave</th><th>${escapeHtml(objectiveLabel(objectiveX))}</th><th>${escapeHtml(objectiveLabel(objectiveY))}</th></tr></thead>
+      <thead><tr><th>Target</th><th>Zeus to send</th><th>Expected Zeus lost</th><th>Estimated full-win chance</th><th>Expected DSP destroyed</th><th>Gross debris</th><th>Expected resources raided</th><th>Carmanors per wave</th>${objectiveHeaders}</tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
@@ -297,7 +376,7 @@
     selectedFrontierIndex = pointIndex;
     renderFrontierMetrics(frontier, point);
     renderFrontierPointDetails(frontier, point, pointIndex);
-    renderAllocationTable(frontier, point);
+    renderAllocationTable(point.allocations, frontier.objectiveKeys);
 
     const warning = $('allocationWarning');
     const lossPercent = point.expectedLossFraction * 100;
@@ -322,7 +401,8 @@
     const valuesX = frontier.points.map(point => point.objectiveValues[objectiveX]);
     const valuesY = frontier.points.map(point => point.objectiveValues[objectiveY]);
     const xScale = C.createScale([0, Math.max(0, ...valuesX)], [margin.l, width - margin.r], 'log1p');
-    const yScale = C.createScale([0, Math.max(0, ...valuesY)], [height - margin.b, margin.t], 'log1p');
+    const yMinimizes = A.OBJECTIVES[objectiveY]?.direction === 'minimize';
+    const yScale = C.createScale([0, Math.max(0, ...valuesY)], yMinimizes ? [margin.t, height - margin.b] : [height - margin.b, margin.t], 'log1p');
     const plotWidth = width - margin.l - margin.r;
     const plotHeight = height - margin.t - margin.b;
     let grid = '';
@@ -343,7 +423,8 @@
     const dots = frontier.points.map((point, index) => {
       const xValue = point.objectiveValues[objectiveX];
       const yValue = point.objectiveValues[objectiveY];
-      const label = `Frontier point ${index + 1}: ${objectiveLabel(objectiveX)} ${format(xValue)}, ${objectiveLabel(objectiveY)} ${format(yValue)}, ${format(point.zeusCommitted)} Zeus committed, ${format(point.expectedZeusLosses)} expected losses`;
+      const yGoal = yMinimizes ? ' (lower is better)' : '';
+      const label = `Frontier point ${index + 1}: ${objectiveLabel(objectiveX)} ${format(xValue)}, ${objectiveLabel(objectiveY)} ${format(yValue)}${yGoal}, ${format(point.zeusCommitted)} Zeus committed, ${format(point.expectedZeusLosses)} expected losses`;
       return C.circle({
         cx:xScale(xValue), cy:yScale(yValue), r:5,
         className:'chart-dot frontier-dot',
@@ -358,7 +439,7 @@
     const centerX = margin.l + plotWidth / 2;
     const centerY = margin.t + plotHeight / 2;
     const chart = $('allocationFrontierChart');
-    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Pareto frontier of ${escapeHtml(objectiveLabel(objectiveX))} versus ${escapeHtml(objectiveLabel(objectiveY))}">${grid}${C.path(frontierPath, 'curve pareto-frontier')}${dots}${C.text({x:centerX, y:height - 12, className:'label', value:`${objectiveLabel(objectiveX)} (log scale)`})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:`${objectiveLabel(objectiveY)} (log scale)`})}</svg>`;
+    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Pareto frontier of ${escapeHtml(objectiveLabel(objectiveX))} versus ${escapeHtml(objectiveLabel(objectiveY))}">${grid}${C.path(frontierPath, 'curve pareto-frontier')}${dots}${C.text({x:centerX, y:height - 12, className:'label', value:`${objectiveLabel(objectiveX)} (log scale)`})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:`${objectiveLabel(objectiveY)}${yMinimizes ? ' (fewer is better)' : ''} (log scale)`})}</svg>`;
     C.bindPointInteractions(chart, {
       selector:'.frontier-dot',
       onPoint:dot => {
@@ -372,15 +453,15 @@
     let maxX = 1;
     let maxY = 1;
     for (const point of frontier.points) {
-      maxX = Math.max(maxX, point.objectiveValues[frontier.objectiveKeys[0]]);
-      maxY = Math.max(maxY, point.objectiveValues[frontier.objectiveKeys[1]]);
+      maxX = Math.max(maxX, point.objectiveScores[frontier.objectiveKeys[0]]);
+      maxY = Math.max(maxY, point.objectiveScores[frontier.objectiveKeys[1]]);
     }
     return frontier.points.reduce((bestIndex, point, index) => {
       const best = frontier.points[bestIndex];
-      const score = point.objectiveValues[frontier.objectiveKeys[0]] / maxX
-        + point.objectiveValues[frontier.objectiveKeys[1]] / maxY;
-      const bestScore = best.objectiveValues[frontier.objectiveKeys[0]] / maxX
-        + best.objectiveValues[frontier.objectiveKeys[1]] / maxY;
+      const score = point.objectiveScores[frontier.objectiveKeys[0]] / maxX
+        + point.objectiveScores[frontier.objectiveKeys[1]] / maxY;
+      const bestScore = best.objectiveScores[frontier.objectiveKeys[0]] / maxX
+        + best.objectiveScores[frontier.objectiveKeys[1]] / maxY;
       return score > bestScore ? index : bestIndex;
     }, 0);
   }
@@ -389,11 +470,45 @@
     const scenario = frontier.rfSigma > 0 ? 'Conservative RF (2σ)' : 'Expected RF';
     $('resultScenario').textContent = `${scenario} · Two-objective Pareto frontier`;
     $('resultHeading').textContent = `${objectiveLabel(frontier.objectiveKeys[0])} vs ${objectiveLabel(frontier.objectiveKeys[1])} across ${models.length} target${models.length === 1 ? '' : 's'}`;
+    document.querySelector('.allocation-frontier-point-panel').classList.remove('hidden');
+    document.querySelector('.allocation-frontier-panel').classList.remove('hidden');
+    document.querySelector('.allocation-results-panel h2').textContent = 'Selected frontier point · detailed plan';
     $('results').classList.remove('hidden');
     const pointIndex = preferredIndex === null ? initialFrontierPoint(frontier) : Math.min(preferredIndex, frontier.points.length - 1);
     selectedFrontierIndex = pointIndex;
     renderFrontierChart(frontier);
     renderFrontierPoint(frontier, pointIndex);
+  }
+
+  function renderSingleResults(result, models) {
+    const scenario = result.rfSigma > 0 ? 'Conservative RF (2σ)' : 'Expected RF';
+    $('resultScenario').textContent = `${scenario} · Single-objective optimum`;
+    $('resultHeading').textContent = `Best allocation for ${objectiveLabel(result.objective)} across ${models.length} target${models.length === 1 ? '' : 's'}`;
+    document.querySelector('.allocation-frontier-point-panel').classList.add('hidden');
+    document.querySelector('.allocation-frontier-panel').classList.add('hidden');
+    document.querySelector('.allocation-results-panel h2').textContent = 'Optimal allocation · detailed plan';
+    $('results').classList.remove('hidden');
+    const totalDSP = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.dspDestroyed, 0);
+    const totalDebris = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.debrisGenerated, 0);
+    const totalResources = result.allocations.reduce((sum, allocation) => sum + allocation.outcome.resourcesRaided.total, 0);
+    const tiles = [
+      [objectiveLabel(result.objective), format(result.totalObjectiveValue)],
+      ['Zeus committed', `${format(result.zeusCommitted)} <small>of ${format(result.availableZeus)} available</small>`],
+      ['Zeus left unused', format(result.unusedZeus)],
+      ['Expected Zeus lost', `${format(result.expectedZeusLosses)} <small>${percent(result.expectedLossFraction)} of available fleet</small>`],
+      ['Expected DSP destroyed', format(totalDSP)],
+      ['Expected gross debris', format(totalDebris)],
+      ['Expected resources raided', format(totalResources)]
+    ];
+    $('allocationMetrics').innerHTML = tiles.map(([label, value]) => `<div class="metric"><span class="k">${escapeHtml(label)}</span><span class="v">${value}</span></div>`).join('');
+    renderAllocationTable(result.allocations, [result.objective]);
+    const warning = $('allocationWarning');
+    const lossPercent = result.expectedLossFraction * 100;
+    const messages = [];
+    if (lossPercent > 0.1 + 1e-9) messages.push(`Caution: expected losses are ${lossPercent.toLocaleString('en-US', {maximumFractionDigits:3})}% of the available Zeus fleet. This exceeds the 0.1% warning threshold.`);
+    if (result.searchTruncated) messages.push('The target-combination search was bounded for browser performance; this single-objective result is an approximation.');
+    warning.textContent = messages.join(' ');
+    warning.classList.toggle('hidden', messages.length === 0);
   }
 
   function solve() {
@@ -405,8 +520,9 @@
       const models = targets.map(parseTarget);
       const locations = models.map(target => target.location);
       if (new Set(locations).size !== locations.length) throw new Error('Each location can only appear once; Zeus attacks are not repeated on a target.');
-      const objectives = [$('objectiveX').value, $('objectiveY').value];
-      if (objectives[0] === objectives[1]) throw new Error('Choose two different objectives for the Pareto frontier.');
+      const objectiveX = $('objectiveX').value;
+      const objectiveY = $('objectiveY').value;
+      const objectives = [objectiveX, objectiveY].filter(Boolean);
       validateObjectiveReports(models, objectives);
       const availableZeus = readAvailableZeus();
       const lossPercent = readLossLimitPercent();
@@ -414,19 +530,29 @@
       const config = {
         availableZeus,
         maxExpectedLosses,
+        objective:objectiveX,
         objectives,
         rfSigma:$('conservativeEstimates').checked ? 2 : 0,
         attackerTech:{weapons:readTech('attackerWeapons'), shield:readTech('attackerShield'), armor:readTech('attackerArmor')},
         defaultDefenderTech:defaultDefenderTech()
       };
-      const result = A.solveFrontier({...config, targets:models});
       renderTargets();
-      lastFrontier = result;
       lastModels = models;
-      renderResults(result, models);
+      if (objectiveY) {
+        if (objectiveX === objectiveY) throw new Error('Choose a different Objective Y, or leave it blank for a single-objective optimum.');
+        const result = A.solveFrontier({...config, targets:models});
+        lastFrontier = result;
+        lastSingleResult = null;
+        renderResults(result, models);
+      } else {
+        const result = A.solve({...config, targets:models});
+        lastSingleResult = result;
+        lastFrontier = null;
+        renderSingleResults(result, models);
+      }
       status.className = 'status success';
       const rfScenario = config.rfSigma > 0 ? 'Conservative RF (2σ)' : 'Expected RF';
-      status.textContent = `Pareto frontier calculated using ${rfScenario} for ${models.length} distinct target${models.length === 1 ? '' : 's'}. Check each location and parsed report above before using the recommendations.`;
+      status.textContent = `${objectiveY ? 'Pareto frontier' : 'Optimal allocation'} calculated using ${rfScenario} for ${models.length} distinct target${models.length === 1 ? '' : 's'}. Check each location and parsed report above before using the recommendations.`;
       $('results').scrollIntoView({behavior:'smooth', block:'start'});
     } catch (error) {
       status.className = 'status error';
@@ -444,6 +570,7 @@
       status.classList.toggle('error', state === 'error');
       status.classList.toggle('success', state === 'success');
     }
+    refreshTargetSummary(target);
   }
 
   function handleTargetAction(action, id) {
@@ -458,6 +585,7 @@
         button.setAttribute('aria-expanded', String(!target.collapsed));
         button.textContent = target.collapsed ? 'Expand' : 'Collapse';
       }
+      refreshTargetSummary(target);
       return;
     }
     if (action === 'remove') {
@@ -512,6 +640,7 @@
         else target.model.availableResourceKeys.delete(key);
       }
       invalidateResults();
+      refreshTargetSummary(target);
       const valid = Number.isFinite(parsedValue) && parsedValue >= 0;
       event.target.classList.toggle('invalid', !valid);
       setTargetStatus(target, valid ? 'Edited values will be used in the next calculation.' : `Enter a valid nonnegative ${kind === 'unit' ? 'ship count' : 'resource amount'}.`, valid ? 'neutral' : 'error');
@@ -520,6 +649,7 @@
     if (!event.target.dataset.field) return;
     target[event.target.dataset.field === 'report' ? 'report' : 'location'] = event.target.value;
     invalidateResults();
+    refreshTargetSummary(target);
     if (event.target.dataset.field === 'location') {
       target.locationSource = event.target.value.trim() ? 'manual' : 'report';
       target.detectedLocation = false;
@@ -593,10 +723,15 @@
   });
   $('displayFormat').addEventListener('change', event => {
     displayFormat = event.target.value;
+    targets.forEach(refreshTargetSummary);
     if (lastFrontier && lastModels) renderResults(lastFrontier, lastModels, selectedFrontierIndex);
+    else if (lastSingleResult && lastModels) renderSingleResults(lastSingleResult, lastModels);
   });
   document.querySelector('.allocation-controls').addEventListener('input', invalidateResults);
-  document.querySelector('.allocation-controls').addEventListener('change', invalidateResults);
+  document.querySelector('.allocation-controls').addEventListener('change', () => {
+    invalidateResults();
+    targets.filter(target => target.collapsed).forEach(refreshTargetSummary);
+  });
   $('solveBtn').addEventListener('click', solve);
   $('availableZeus').addEventListener('input', () => { $('availableZeus').classList.remove('invalid'); });
   targets.push({id:nextId++, location:'', locationSource:'report', report:'', status:'', collapsed:false});

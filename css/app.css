@@ -311,7 +311,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .allocation-frontier-facts { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
 .allocation-mix-heading { margin: 15px 0 7px; font-size: .9rem; }
 .allocation-mix-heading small { color: var(--muted); font-size: .72rem; font-weight: 450; }
-.allocation-mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 5px 14px; margin: 0; padding: 0; list-style: none; }
+.allocation-mix { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px 14px; margin: 0; padding: 0; list-style: none; }
 .allocation-mix li { display: grid; grid-template-columns: minmax(72px, .7fr) minmax(115px, 1fr) auto; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border-subtle); font-size: .76rem; }
 .allocation-mix li > strong { color: var(--text); }
 .allocation-mix li > span:nth-child(2) { color: var(--muted); }

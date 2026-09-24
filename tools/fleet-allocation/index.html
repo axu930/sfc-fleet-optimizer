@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Allocate a fixed Zeus fleet across multiple Starfleet Commander NPC targets.">
   <title>Fleet Allocation Optimizer | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=allocation-pareto-charts-1">
+  <link rel="stylesheet" href="../../css/app.css?v=allocation-optional-objective-1">
 </head>
 <body class="allocation-page">
   <main class="wrap">
@@ -58,12 +58,15 @@
           </label>
           <label>Objective Y
             <select id="objectiveY">
+              <option value="">None — optimize Objective X only</option>
               <option value="dsp">NPC ship DSP destroyed</option>
               <option value="hydrogen" selected>Hydrogen raided</option>
               <option value="resourcesDebris">Resources raided + gross debris</option>
+              <option value="zeusLosses">Expected Zeus lost (minimize)</option>
             </select>
           </label>
         </div>
+        <p class="hint">Leave Objective Y blank for a single best allocation. Choose a second objective to see a Pareto frontier; expected Zeus losses can be minimized.</p>
         <label class="recommendation-toggle allocation-conservative-toggle">
           <input id="conservativeEstimates" type="checkbox" checked>
           <span>Use conservative RF (2σ) estimates</span>
@@ -101,7 +104,7 @@
 
     <section id="results" class="results hidden" aria-live="polite">
       <div class="results-head">
-        <div><p class="eyebrow" id="resultScenario">Conservative RF (2σ) · Pareto frontier</p><h2 id="resultHeading">Allocation frontier</h2></div>
+        <div><p class="eyebrow" id="resultScenario">Conservative RF (2σ) · Pareto frontier</p><h2 id="resultHeading">Allocation results</h2></div>
       </div>
       <div id="allocationMetrics" class="metrics"></div>
       <div id="allocationWarning" class="allocation-warning hidden" role="status"></div>
@@ -110,7 +113,7 @@
       </article>
       <article class="panel allocation-frontier-panel">
         <div class="panel-head">
-          <div><h2>Two-objective Pareto frontier</h2><p class="hint">Each point is non-dominated for the selected objectives. Both axes use shifted log scales so zero remains visible. Hover, focus, or click a point to inspect its exact Zeus attack mix above.</p></div>
+          <div><h2>Two-objective Pareto frontier</h2><p class="hint">Each point is non-dominated for the selected objectives. Both axes use shifted log scales so zero remains visible. A minimizing objective is oriented so better values appear higher. Hover, focus, or click a point to inspect its exact Zeus attack mix above.</p></div>
         </div>
         <div id="allocationFrontierChart" class="chart" role="group" aria-label="Interactive allocation Pareto frontier"></div>
       </article>
@@ -122,7 +125,7 @@
       </article>
       <article class="panel notes allocation-model-notes">
         <h2>How to read these estimates</h2>
-        <p>Each Pareto point is non-dominated for the two selected objective values, subject to the available-Zeus limit, total expected-loss limit, and 99.9% minimum survival for every nonzero attack. DSP and debris use the existing deterministic, six-round combat model. Because it retains fractional expected survivors instead of discrete ship counts, full-win probability is approximated as exp(−expected remaining non-Hephaestus defenders) × the estimated chance that at least one Zeus survives. For raid objectives, expected plunder is this estimated win probability times the conditional raid amount; DSP and gross debris remain expected combat outputs. This is not an exact in-game battle-winner calculation.</p>
+        <p>When Objective Y is selected, each Pareto point is non-dominated for the two selected objectives. Leave it blank to calculate one optimal allocation for Objective X only. Results are subject to the available-Zeus limit, total expected-loss limit, and 99.9% minimum survival for every nonzero attack. Expected Zeus lost can be selected as a minimizing secondary objective. DSP and debris use the existing deterministic, six-round combat model. Because it retains fractional expected survivors instead of discrete ship counts, full-win probability is approximated as exp(−expected remaining non-Hephaestus defenders) × the estimated chance that at least one Zeus survives. For raid objectives, expected plunder is this estimated win probability times the conditional raid amount; DSP and gross debris remain expected combat outputs. This is not an exact in-game battle-winner calculation.</p>
         <p>As elsewhere in this browser-only model, arithmetic uses JavaScript numbers, so individual counts above 2<sup>53</sup> are approximate. The parsed preview preserves the pasted count text to make it easier to verify what the report said.</p>
         <p>On a successful attack against a report with no defenses, the tool applies the supplied rule of 7/8 of reported resources across the first wave and two effective follow-up waves (1/2, 1/4, and 1/8). Otherwise, it counts at most one 1/2-resource raid. Carmanor totals are calculated per wave at 125,000 cargo each, without making cargo capacity a solver constraint.</p>
       </article>
@@ -134,8 +137,8 @@
   <script src="../../js/battle-report-parser.js?v=count-suffixes-1"></script>
   <script src="../../js/combat.js?v=net-points-2"></script>
   <script src="../../js/plunder.js?v=allocation-plunder-1"></script>
-  <script src="../../js/fleet-allocation.js?v=allocation-pareto-frontier-2"></script>
+  <script src="../../js/fleet-allocation.js?v=allocation-optional-objective-1"></script>
   <script src="../../js/svg-charts.js?v=reusable-chart-primitives-3"></script>
-  <script src="../../js/allocation-app.js?v=allocation-pareto-ui-3"></script>
+  <script src="../../js/allocation-app.js?v=allocation-optional-objective-1"></script>
 </body>
 </html>

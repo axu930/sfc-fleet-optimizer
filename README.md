@@ -32,12 +32,18 @@ espionage report. The tool parses supported ship/defense counts, technology,
 and resource values, then distributes the available Zeus fleet across targets
 without revisiting any target.
 
-Choose two distinct objectives to view a Pareto frontier: ship DSP destroyed,
-Hydrogen raided, or resources raided plus gross debris. The default pair is
-DSP and Hydrogen. Hover, focus, or click a frontier point to see its exact
-per-target Zeus attack mix and copy individual counts. A single expected-loss
-limit applies to the full allocation and defaults to 0.1% of available Zeus if
-left blank.
+Choose Objective X to optimize ship DSP destroyed, Hydrogen raided, or
+resources raided plus gross debris. Objective Y is optional: leave it blank to
+show only the best allocation for Objective X, or select a secondary objective
+to view a Pareto frontier. Secondary choices include the three metrics above
+and expected Zeus lost (minimized). The default pair is DSP and Hydrogen.
+Hover, focus, or click a frontier point to see its exact per-target Zeus
+attack mix, stacked vertically, and copy individual counts. A single
+expected-loss limit applies to the full allocation and defaults to 0.1% of
+available Zeus if left blank.
+Collapsed target cards retain the location, summed ship and defense counts,
+available ship DSP and Hydrogen, plus an estimated single-target Zeus count for
+90% DSP destruction while preserving at least 99.9% survival.
 DSP can accrue from partial destruction; resource objectives require an
 attacker win and weight each conditional raid by the model's deterministic
 full-win probability estimate. This estimate treats expected remaining

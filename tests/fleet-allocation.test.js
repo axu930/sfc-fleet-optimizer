@@ -10,7 +10,10 @@ const allocationPage = fs.readFileSync(path.join(__dirname, '../tools/fleet-allo
 assert.match(allocationPage, /id="conservativeEstimates" type="checkbox" checked/);
 assert.match(allocationPage, /id="objectiveX"[\s\S]*?<option value="dsp" selected>/);
 assert.match(allocationPage, /id="objectiveY"[\s\S]*?<option value="hydrogen" selected>/);
+assert.match(allocationPage, /id="objectiveY"[\s\S]*?<option value="">None — optimize Objective X only<\/option>/);
+assert.match(allocationPage, /<option value="zeusLosses">Expected Zeus lost \(minimize\)<\/option>/);
 assert.match(allocationPage, /id="frontierPointDetails"[\s\S]*?id="allocationFrontierChart"/);
+assert.match(fs.readFileSync(path.join(__dirname, '../css/app.css'), 'utf8'), /\.allocation-mix\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 
 assert.deepStrictEqual(allocation.parseLocation('[8:115:3]'), {galaxy:8, system:115, planet:3, normalized:'[8:115:3]'});
 assert.deepStrictEqual(allocation.parseLocation('[ 001 : 500 : 15 ]'), {galaxy:1, system:500, planet:15, normalized:'[1:500:15]'});
@@ -21,6 +24,16 @@ for (const location of ['[0:1:1]', '[101:1:1]', '[1:0:1]', '[1:501:1]', '[1:1:0]
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, undefined), 1_000);
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, 0.25), 2_500);
 assert.strictEqual(allocation.expectedLossLimit(1_000_000, 200), 1_000_000);
+assert.deepStrictEqual(allocation.summarizeFleet({
+  Artemis:12,
+  Athena:3,
+  'Missile Battery':4,
+  'Large Decoy':2,
+  Unsupported:100
+}), {ships:15, defenses:6, dsp:228, invalidShips:false, invalidDefenses:false});
+assert.deepStrictEqual(allocation.summarizeFleet({Artemis:NaN, 'Missile Battery':-1}), {
+  ships:0, defenses:0, dsp:0, invalidShips:true, invalidDefenses:true
+});
 assert.strictEqual(allocation.survivalForComparison(0.999989), 0.999989);
 assert.strictEqual(allocation.survivalForComparison(0.99999), 1);
 assert.strictEqual(allocation.survivalForComparison(1), 1);
@@ -89,15 +102,17 @@ const firstSafeAttack = safeAttackOptions.filter(option => option.zeusCount > 0)
   .sort((left, right) => left.zeusCount - right.zeusCount)[0];
 assert(allocation.evaluateTarget(highRiskTarget, firstSafeAttack.zeusCount - 1, highRiskConfig).zeusSurvival
   < allocation.MIN_ATTACK_SURVIVAL);
-const sevenZeusOutcome = allocation.evaluateTarget(highRiskTarget, 7, highRiskConfig);
+const sevenZeusOutcome = allocation.evaluateTarget(refinementTarget, 7, refinementConfig);
+const topOffOptions = allocation.targetOptions(refinementTarget, refinementConfig);
 const toppedOffState = allocation.refineUnusedZeus({
   zeus:7,
   losses:sevenZeusOutcome.zeusLosses,
   value:sevenZeusOutcome.objectiveValue,
   choices:[sevenZeusOutcome]
-}, [highRiskTarget], [safeAttackOptions], highRiskConfig);
+}, [refinementTarget], [topOffOptions], refinementConfig);
 assert(toppedOffState.zeus > 7);
-assert(toppedOffState.losses < sevenZeusOutcome.zeusLosses);
+assert(toppedOffState.value > sevenZeusOutcome.objectiveValue);
+assert(toppedOffState.losses <= sevenZeusOutcome.zeusLosses);
 assert(toppedOffState.choices.every(option => option.zeusCount === 0
   || option.zeusSurvival >= allocation.MIN_ATTACK_SURVIVAL - 1e-12));
 
@@ -107,6 +122,14 @@ for (const threshold of allocation.REFINEMENT_TARGETS.dspDestroyed) {
     && (option.zeusCount === 1 || allocation.evaluateTarget(refinementTarget, option.zeusCount - 1, refinementConfig).dspDestroyedFraction < threshold));
   assert(crossing, `DSP refinement should include the first Zeus count reaching ${threshold * 100}% destruction`);
 }
+const survivalQualified90Options = allocation.targetOptions(refinementTarget, {
+  ...refinementConfig,
+  objectiveKeys:['dsp'],
+  rfSigma:2
+});
+const survivalQualified90 = survivalQualified90Options.find(option => option.dspDestroyedFraction >= 0.9
+  && option.zeusSurvival >= 0.999);
+assert(survivalQualified90, 'target options should expose an attack reaching 90% DSP destruction with at least 99.9% Zeus survival');
 const raidConfig = {...refinementConfig, objective:'hydrogen'};
 const raidOptions = allocation.targetOptions(refinementTarget, raidConfig);
 for (const threshold of allocation.REFINEMENT_TARGETS.winProbability) {
@@ -263,5 +286,31 @@ const conservativeFrontier = allocation.solveFrontier({...frontierConfig, rfSigm
 assert.strictEqual(conservativeFrontier.rfSigma, 2);
 assert(conservativeFrontier.points.length > 0);
 assert.throws(() => allocation.solveFrontier({...frontierConfig, objectives:['dsp', 'dsp'], targets:frontierTargets}), /two different supported objectives/);
+assert.throws(() => allocation.solveFrontier({...frontierConfig, objectives:['zeusLosses', 'dsp'], targets:frontierTargets}), /Objective X must be maximized/);
+
+const zeusLossTarget = {
+  id:22,
+  location:'[2:10:3]',
+  composition:{Zeus:1_000_000_000},
+  defenderTech:{weapons:200, shield:0, armor:0},
+  resources:{ore:0, crystal:0, hydrogen:0}
+};
+const lossFrontier = allocation.solveFrontier({
+  availableZeus:10_000_000_000_000,
+  maxExpectedLosses:1_000_000_000,
+  attackerTech:{weapons:200, shield:20, armor:20},
+  defaultDefenderTech:{weapons:200, shield:0, armor:0},
+  objectives:['dsp', 'zeusLosses'],
+  targets:[zeusLossTarget]
+});
+assert(lossFrontier.points.length >= 2, 'DSP and expected Zeus lost should expose a trade-off');
+assert.strictEqual(allocation.OBJECTIVES.zeusLosses.direction, 'minimize');
+for (const point of lossFrontier.points) {
+  const summedLosses = point.allocations.reduce((sum, attack) => sum + attack.outcome.objectiveValues.zeusLosses, 0);
+  assert(Math.abs(point.objectiveValues.zeusLosses - summedLosses) < 1e-6);
+  assert(Math.abs(point.objectiveScores.zeusLosses + summedLosses) < 1e-6);
+}
+assert(lossFrontier.points[0].objectiveValues.zeusLosses < lossFrontier.points.at(-1).objectiveValues.zeusLosses,
+  'frontier points should retain the lower-loss allocation as the better secondary-objective end');
 
 console.log('fleet allocation tests passed');
