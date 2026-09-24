@@ -21,7 +21,7 @@
     'Hercules': {kind:'ship', hull:1200, shield:25, weapon:5, ore:6_000, crystal:6_000, cost:12_000, zeusRF:250},
     'Dionysus': {kind:'ship', hull:1600, shield:10, weapon:1, ore:10_000, crystal:6_000, cost:18_000, cargo:20_000, zeusRF:250},
     'Gaia': {kind:'ship', hull:3000, shield:100, weapon:50, ore:10_000, crystal:20_000, cost:40_000, zeusRF:250},
-    'Carmanor': {kind:'ship', hull:3600, shield:100, weapon:10, ore:18_000, crystal:18_000, cost:36_000, zeusRF:125},
+    'Carmanor': {kind:'ship', hull:3600, shield:100, weapon:10, ore:18_000, crystal:18_000, cost:36_000, cargo:125_000, zeusRF:125},
     'Poseidon': {kind:'ship', hull:2700, shield:50, weapon:400, ore:20_000, crystal:7_000, cost:29_000, zeusRF:33},
     'Athena': {kind:'ship', hull:6000, shield:200, weapon:1000, ore:45_000, crystal:15_000, cost:60_000, zeusRF:30},
     'Ares': {kind:'ship', hull:7500, shield:500, weapon:1000, ore:50_000, crystal:25_000, cost:90_000, zeusRF:25},

@@ -199,6 +199,11 @@
     for (let index = 0; index < lines.length; index++) {
       const line = String(lines[index] || '').replace(/\u00a0/g, ' ').trim();
       if (!line) continue;
+      // Espionage headers may use a unit name as the planet title, followed by
+      // the planet coordinate and "has:". Coordinate digits are not a count.
+      if (/\d{1,3}\s*:\s*\d{1,3}\s*:\s*\d{1,2}/.test(line)
+        && /\bhas\s*:\s*$/i.test(line)
+        && reportUnitMatches(line).length) continue;
       if (/^(?:[-•]\s*)?techs?\s*:?$/i.test(line)) {
         inTechSection = true;
         continue;
@@ -300,5 +305,93 @@
     return result;
   }
 
-  return {parseCount, parseRoster, parseBattleReport};
+  function parseEspionageResourceDetails(text) {
+    const resources = {};
+    const rawResources = {};
+    const lines = String(text || '').replace(/\r/g, '').split('\n');
+    const number = '(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:e[+-]?\\d+)?(?:\\s*(?:quadrillion|quintillion|sextillion|septillion|Qi|Qa|Sx|Sp|[KMBTQ]))?';
+    const labels = '(ore|metal|crystal|hydrogen)';
+    const tableHeader = /^\s*(?:[-•|]\s*)?(?:ore|metal)\s*[|\t ]+crystal\s*[|\t ]+hydrogen\s*(?:[|]\s*)?$/i;
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index].replace(/\u00a0/g, ' ').trim();
+      if (!line) continue;
+      if (tableHeader.test(line)) {
+        const next = lines.slice(index + 1).find(candidate => candidate.trim());
+        const values = String(next || '').match(new RegExp(number, 'ig')) || [];
+        if (values.length >= 3) {
+          if (resources.ore === undefined) { resources.ore = parseCount(values[0]); rawResources.ore = values[0]; }
+          if (resources.crystal === undefined) { resources.crystal = parseCount(values[1]); rawResources.crystal = values[1]; }
+          if (resources.hydrogen === undefined) { resources.hydrogen = parseCount(values[2]); rawResources.hydrogen = values[2]; }
+        }
+        continue;
+      }
+
+      const labelFirst = new RegExp('(?:^|[-•|\\s])' + labels + '\\s*[:=]?\\s*(' + number + ')', 'ig');
+      let match;
+      while ((match = labelFirst.exec(line))) {
+        const key = match[1].toLowerCase() === 'metal' ? 'ore' : match[1].toLowerCase();
+        if (resources[key] === undefined) { resources[key] = parseCount(match[2]); rawResources[key] = match[2].trim(); }
+      }
+      const valueFirst = new RegExp('(' + number + ')\\s*' + labels + '(?=$|[\\s|,])', 'ig');
+      while ((match = valueFirst.exec(line))) {
+        const key = match[2].toLowerCase() === 'metal' ? 'ore' : match[2].toLowerCase();
+        if (resources[key] === undefined) { resources[key] = parseCount(match[1]); rawResources[key] = match[1].trim(); }
+      }
+    }
+    return {resources, rawResources};
+  }
+
+  function parseEspionageResources(text) {
+    return parseEspionageResourceDetails(text).resources;
+  }
+
+  function parseEspionageLocation(text) {
+    const expression = /\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})\s*\]/g;
+    const source = String(text || '');
+    let match;
+    while ((match = expression.exec(source))) {
+      const galaxy = Number(match[1]);
+      const system = Number(match[2]);
+      const planet = Number(match[3]);
+      if (galaxy < 1 || galaxy > 100 || system < 1 || system > 500 || planet < 1 || planet > 15) continue;
+      return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}]`};
+    }
+    return null;
+  }
+
+  function unparsedCountLines(text) {
+    const unknown = [];
+    let inTechSection = false;
+    for (const raw of String(text || '').replace(/\r/g, '').split('\n')) {
+      const line = raw.replace(/\u00a0/g, ' ').trim();
+      if (!line) continue;
+      if (/^(?:[-•]\s*)?techs?\s*:?$/i.test(line)) { inTechSection = true; continue; }
+      if (/^(?:[-•]\s*)?.+?\s+ships\s*:?$/i.test(line)) { inTechSection = false; continue; }
+      if (inTechSection || /^round\s+\d+\b/i.test(line)) continue;
+      if (/^(?:attacker|defender|attacking\s+fleet|defending\s+fleet)\b/i.test(line)) continue;
+      if (/^\[\s*\d+\s*:\s*\d+\s*:\s*\d+\s*\]/.test(line)) continue;
+      if (/\b(?:weapons?|shields?|armou?r|ore|metal|crystal|hydrogen)\b/i.test(line)) continue;
+      if (/^\s*(?:[-•]\s*)?(?:\d[\d,]*(?:\.\d+)?(?:e[+-]?\d+)?\s*)$/i.test(line)) continue;
+      if (/\d/.test(line) && !reportUnitMatches(line).length) unknown.push(line);
+    }
+    return unknown;
+  }
+
+  function parseEspionageReport(text) {
+    const parsed = parseBattleReport(text);
+    const fleet = parsed.unassigned || parsed.defender || parsed.attacker || {composition:{}, rawCounts:{}, tech:{}};
+    const resourceDetails = parseEspionageResourceDetails(text);
+    const resources = resourceDetails.resources;
+    return {
+      composition:{...(fleet.composition || {})},
+      rawCounts:{...(fleet.rawCounts || {})},
+      tech:{...(fleet.tech || {})},
+      resources,
+      rawResources:resourceDetails.rawResources,
+      hasResources:Object.keys(resources).length > 0,
+      unknown:unparsedCountLines(text)
+    };
+  }
+
+  return {parseCount, parseRoster, parseBattleReport, parseEspionageResources, parseEspionageLocation, parseEspionageReport};
 });
