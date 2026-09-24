@@ -29,10 +29,11 @@ assert.deepStrictEqual(allocation.summarizeFleet({
   'Missile Battery':4,
   'Large Decoy':2,
   Unsupported:100
-}), {ships:15, defenses:6, dsp:228, invalidShips:false, invalidDefenses:false});
+}), {ships:15, defenses:6, dsp:228, defenseRSP:208, invalidShips:false, invalidDefenses:false});
 assert.deepStrictEqual(allocation.summarizeFleet({Artemis:NaN, 'Missile Battery':-1}), {
-  ships:0, defenses:0, dsp:0, invalidShips:true, invalidDefenses:true
+  ships:0, defenses:0, dsp:0, defenseRSP:0, invalidShips:true, invalidDefenses:true
 });
+assert.match(fs.readFileSync(path.join(__dirname, '../js/allocation-app.js'), 'utf8'), /\$\{dsp\} DSP · \$\{hydrogen\} Hydrogen · \$\{defenseRSP\} Defense RSP/);
 assert.strictEqual(allocation.survivalForComparison(0.999989), 0.999989);
 assert.strictEqual(allocation.survivalForComparison(0.99999), 1);
 assert.strictEqual(allocation.survivalForComparison(1), 1);

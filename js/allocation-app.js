@@ -85,13 +85,14 @@
       const ships = totals.invalidShips ? 'check counts' : format(totals.ships);
       const defenses = totals.invalidDefenses ? 'check counts' : format(totals.defenses);
       const dsp = totals.invalidShips ? 'check counts' : format(totals.dsp);
+      const defenseRSP = totals.invalidDefenses ? 'check counts' : format(totals.defenseRSP);
       const hydrogen = !target.model.availableResourceKeys.has('hydrogen')
         ? 'not reported'
         : Number.isFinite(target.model.resources.hydrogen) && target.model.resources.hydrogen >= 0
           ? format(target.model.resources.hydrogen)
           : 'check amount';
       const zeusEstimate = targetZeusEstimate(target, target.collapsed);
-      return `${location} · ${ships} ships · ${defenses} defenses · ${dsp} DSP available · ${hydrogen} Hydrogen available${zeusEstimate ? ` · ${zeusEstimate}` : ''}`;
+      return `${location} · ${ships} ships · ${defenses} defenses · ${dsp} DSP · ${hydrogen} Hydrogen · ${defenseRSP} Defense RSP${zeusEstimate ? ` · ${zeusEstimate}` : ''}`;
     }
     if (target.status.startsWith('Error:')) return `${location} · ${target.status.slice(7)}`;
     return `${location} · Ships — · Defenses — · Not parsed`;

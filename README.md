@@ -44,7 +44,7 @@ attack mix, stacked vertically, and copy individual counts. A single
 expected-loss limit applies to the full allocation and defaults to 0.1% of
 available Zeus if left blank.
 Collapsed target cards retain the location, summed ship and defense counts,
-available ship DSP and Hydrogen, plus an estimated single-target Zeus count for
+ship DSP, Hydrogen, defense RSP, plus an estimated single-target Zeus count for
 90% DSP destruction while preserving at least 99.9% survival.
 DSP can accrue from partial destruction; resource objectives require an
 attacker win and weight each conditional raid by the model's deterministic

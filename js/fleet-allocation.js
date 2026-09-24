@@ -57,7 +57,7 @@
   }
 
   function summarizeFleet(composition={}) {
-    const totals = {ships:0, defenses:0, dsp:0, invalidShips:false, invalidDefenses:false};
+    const totals = {ships:0, defenses:0, dsp:0, defenseRSP:0, invalidShips:false, invalidDefenses:false};
     for (const [name, count] of Object.entries(composition)) {
       const unit = units.UNITS[name];
       if (!unit) continue;
@@ -68,6 +68,7 @@
       }
       totals[category] += count;
       if (unit.kind === 'ship') totals.dsp += count * unit.cost / 1000;
+      else totals.defenseRSP += count * unit.cost / 1000;
     }
     return totals;
   }
