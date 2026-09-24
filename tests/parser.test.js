@@ -177,6 +177,7 @@ TECHS:
 assert.strictEqual(parser.parseEspionageLocation(`Hephaestus Class Attack Platform Hummer’ [ [7:283:5] ](planet) has:`).normalized, '[7:283:5]');
 assert.strictEqual(planetHeadingReport.composition.Hephaestus, 1);
 assert.strictEqual(planetHeadingReport.rawCounts.Hephaestus, '1');
+assert.deepStrictEqual(planetHeadingReport.tech, {armor:24, weapons:24, shield:24});
 
 const unsupportedAllocationLine = parser.parseEspionageReport(`Target's Ships:
 Artemis Class Fighter: 2,000

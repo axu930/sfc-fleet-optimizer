@@ -60,16 +60,18 @@
     const addUnitControl = missingUnits.length
       ? `<div class="allocation-add-unit"><select data-add-unit-select aria-label="Unit type to add"><option value="">Add an unlisted unit…</option>${missingUnits.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}</select><button class="ghost compact-button" type="button" data-action="add-unit" data-target-id="${target.id}">Add unit</button></div>`
       : '';
-    const tech = ['weapons', 'shield', 'armor'].map(key =>
-      `${key[0].toUpperCase()}${key.slice(1)} ${target.model.defenderTech[key]}`
-    ).join(' · ');
+    const tech = ['weapons', 'shield', 'armor'].map(key => {
+      const value = target.model.defenderTech[key];
+      const source = target.parsed.tech[key] === undefined ? 'default' : 'report';
+      return `<span>${key[0].toUpperCase()}${key.slice(1)} ${escapeHtml(value)} <small>(${source})</small></span>`;
+    }).join('');
     const unknown = target.parsed.unknown.length
       ? `<section class="allocation-unparsed"><h4>Review unparsed count lines</h4><ul>${target.parsed.unknown.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul></section>`
       : '';
     return `<div class="allocation-preview-grid">
       <section><h4>Parsed ships and defenses · editable</h4><ul>${unitRows}</ul>${addUnitControl}</section>
       <section><h4>Report resources · editable</h4><ul>${resources}</ul></section>
-    </div><p class="allocation-preview-tech">NPC tech used: ${escapeHtml(tech)}${Object.keys(target.parsed.tech).length ? ' (from report)' : ' (default inputs)'}</p>${unknown}`;
+    </div><p class="allocation-preview-tech"><strong>Combat tech levels:</strong>${tech}</p>${unknown}`;
   }
 
   function targetSummary(target) {
@@ -420,7 +422,6 @@
       try {
         const model = parseTarget(target);
         target.model = model;
-        target.collapsed = true;
         setTargetStatus(target, target.status.replace(/^Error: /, ''), 'success');
         $('inputStatus').textContent = '';
       } catch (error) {

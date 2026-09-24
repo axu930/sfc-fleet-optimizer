@@ -297,7 +297,9 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .allocation-edit-count.invalid { border-color: var(--bad); background: #211216; }
 .allocation-add-unit { display: flex; gap: 7px; margin-top: 9px; }
 .allocation-add-unit select { flex: 1; min-width: 0; }
-.allocation-preview-tech { margin: 9px 0 0; color: var(--muted); font-size: .76rem; }
+.allocation-preview-tech { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 12px; margin: 9px 0 0; color: var(--muted); font-size: .76rem; }
+.allocation-preview-tech strong { color: var(--text); }
+.allocation-preview-tech small { color: var(--muted); font-size: .68rem; }
 .allocation-unparsed { margin-top: 10px; padding: 8px 10px; border-left: 2px solid var(--conservative); background: var(--surface-warning); }
 .allocation-unparsed h4 { color: var(--conservative); }
 .allocation-unparsed li { display: block; text-align: left; overflow-wrap: anywhere; }
