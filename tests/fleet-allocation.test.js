@@ -7,11 +7,16 @@ const units = require('../js/units.js');
 const allocation = require('../js/fleet-allocation.js');
 
 const allocationPage = fs.readFileSync(path.join(__dirname, '../tools/fleet-allocation/index.html'), 'utf8');
+const allocationApp = fs.readFileSync(path.join(__dirname, '../js/allocation-app.js'), 'utf8');
 assert.match(allocationPage, /id="conservativeEstimates" type="checkbox" checked/);
 assert.match(allocationPage, /id="objectiveX"[\s\S]*?<option value="dsp" selected>/);
 assert.match(allocationPage, /id="objectiveY"[\s\S]*?<option value="" selected>None — optimize Objective X only<\/option>/);
 assert.match(allocationPage, /<option value="zeusLosses">Expected Zeus lost \(minimize\)<\/option>/);
 assert.match(allocationPage, /id="frontierPointDetails"[\s\S]*?id="allocationFrontierChart"/);
+assert.match(allocationPage, /Both axes use linear scales/);
+assert.match(allocationApp, /C\.createScale\(\[0, Math\.max\(0, \.\.\.valuesX\)\], \[margin\.l, width - margin\.r\]\)/);
+assert.match(allocationApp, /C\.createScale\(\[0, Math\.max\(0, \.\.\.valuesY\)\], yMinimizes \? \[margin\.t, height - margin\.b\] : \[height - margin\.b, margin\.t\]\)/);
+assert.doesNotMatch(allocationApp, /objectiveLabel\(objective[XY]\) \(log scale\)/);
 assert.match(fs.readFileSync(path.join(__dirname, '../css/app.css'), 'utf8'), /\.allocation-mix\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 
 assert.deepStrictEqual(allocation.parseLocation('[8:115:3]'), {galaxy:8, system:115, planet:3, normalized:'[8:115:3]'});

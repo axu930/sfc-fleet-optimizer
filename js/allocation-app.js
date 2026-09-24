@@ -401,9 +401,9 @@
     const [objectiveX, objectiveY] = frontier.objectiveKeys;
     const valuesX = frontier.points.map(point => point.objectiveValues[objectiveX]);
     const valuesY = frontier.points.map(point => point.objectiveValues[objectiveY]);
-    const xScale = C.createScale([0, Math.max(0, ...valuesX)], [margin.l, width - margin.r], 'log1p');
+    const xScale = C.createScale([0, Math.max(0, ...valuesX)], [margin.l, width - margin.r]);
     const yMinimizes = A.OBJECTIVES[objectiveY]?.direction === 'minimize';
-    const yScale = C.createScale([0, Math.max(0, ...valuesY)], yMinimizes ? [margin.t, height - margin.b] : [height - margin.b, margin.t], 'log1p');
+    const yScale = C.createScale([0, Math.max(0, ...valuesY)], yMinimizes ? [margin.t, height - margin.b] : [height - margin.b, margin.t]);
     const plotWidth = width - margin.l - margin.r;
     const plotHeight = height - margin.t - margin.b;
     let grid = '';
@@ -440,7 +440,7 @@
     const centerX = margin.l + plotWidth / 2;
     const centerY = margin.t + plotHeight / 2;
     const chart = $('allocationFrontierChart');
-    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Pareto frontier of ${escapeHtml(objectiveLabel(objectiveX))} versus ${escapeHtml(objectiveLabel(objectiveY))}">${grid}${C.path(frontierPath, 'curve pareto-frontier')}${dots}${C.text({x:centerX, y:height - 12, className:'label', value:`${objectiveLabel(objectiveX)} (log scale)`})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:`${objectiveLabel(objectiveY)}${yMinimizes ? ' (fewer is better)' : ''} (log scale)`})}</svg>`;
+    chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Pareto frontier of ${escapeHtml(objectiveLabel(objectiveX))} versus ${escapeHtml(objectiveLabel(objectiveY))}">${grid}${C.path(frontierPath, 'curve pareto-frontier')}${dots}${C.text({x:centerX, y:height - 12, className:'label', value:objectiveLabel(objectiveX)})}${C.text({x:18, y:centerY, className:'label', transform:`rotate(-90 18 ${centerY})`, value:`${objectiveLabel(objectiveY)}${yMinimizes ? ' (fewer is better)' : ''}`})}</svg>`;
     C.bindPointInteractions(chart, {
       selector:'.frontier-dot',
       onPoint:dot => {
