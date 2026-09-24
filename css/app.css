@@ -71,6 +71,35 @@ body {
 .optimizer-page .format-control > span { color: var(--text); font-weight: 750; }
 .optimizer-page .format-control select { max-width: 310px; min-height: 36px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-control); color: var(--text); padding: 0 9px; }
 
+.shipyard-calculator-page header { margin-bottom: 24px; }
+.shipyard-calculator-page h1 { margin: .15rem 0 .7rem; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.02; letter-spacing: -.045em; }
+.shipyard-calculator-page h2 { margin: 0 0 .4rem; font-size: 1.05rem; }
+.shipyard-calculator-page .build-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.shipyard-calculator-page .build-form { display: grid; gap: 14px; }
+.shipyard-calculator-page .build-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.shipyard-calculator-page .build-field { display: grid; gap: 5px; color: #c5d7e2; font-size: .86rem; font-weight: 650; }
+.shipyard-calculator-page .build-field input,
+.shipyard-calculator-page .build-field select,
+.shipyard-calculator-page .count-output { width: 100%; min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
+.shipyard-calculator-page .build-field select { background: var(--surface-control); }
+.shipyard-calculator-page .field-hint { color: var(--muted); font-size: .75rem; font-weight: 400; }
+.shipyard-calculator-page .build-summary { display: grid; gap: 12px; }
+.shipyard-calculator-page .build-time-card { padding: 18px; border: 1px solid var(--border-feature); border-radius: var(--radius-xl); background: var(--surface-summary); }
+.shipyard-calculator-page .build-time-label { display: block; color: var(--muted); font-size: .82rem; }
+.shipyard-calculator-page .build-time-value { display: block; margin-top: 4px; font-size: clamp(1.35rem, 3vw, 2rem); font-weight: 800; line-height: 1.2; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.shipyard-calculator-page .build-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.shipyard-calculator-page .build-fact { min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--panel-2); }
+.shipyard-calculator-page .build-fact span { display: block; color: var(--muted); font-size: .75rem; }
+.shipyard-calculator-page .build-fact strong { display: block; margin-top: 2px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.shipyard-calculator-page .count-copy-card { padding: 14px; border: 1px solid var(--border-point); border-radius: var(--radius-xl); background: var(--surface-subpanel); }
+.shipyard-calculator-page .count-copy-card h3 { margin: 0 0 4px; color: var(--text); font-size: .95rem; }
+.shipyard-calculator-page .count-copy-row { display: flex; align-items: stretch; gap: 8px; margin-top: 9px; }
+.shipyard-calculator-page .count-output { font: 700 .86rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+.shipyard-calculator-page .copy-count-button { width: 42px; min-width: 42px; height: 42px; }
+.shipyard-calculator-page .count-review { margin: 8px 0 0; color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+.shipyard-calculator-page .formula-note { margin: 0; color: var(--muted); font-size: .78rem; }
+.shipyard-calculator-page .formula-note a { color: var(--accent); }
+
 /* Landing page structure uses the same optimizer theme without calculator-specific styling. */
 .landing-header { max-width: 720px; margin-bottom: 36px; }
 .landing-header h1 { margin: 0 0 16px; font-size: clamp(1.9rem, 4vw, 2.7rem); line-height: 1.1; letter-spacing: -.035em; }
@@ -212,6 +241,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .optimizer-page .header-tools { justify-items: start; margin-top: 14px; }
   .optimizer-page .badge { display: inline-block; margin-top: 16px; }
   .grid { grid-template-columns: 1fr; }
+  .shipyard-calculator-page .build-layout { grid-template-columns: 1fr; }
   .point-facts { grid-template-columns: repeat(3, minmax(100px, 1fr)); }
 }
 
@@ -232,6 +262,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .optimizer-page .format-control select { width: 100%; max-width: none; }
   .head-actions { justify-content: flex-start; margin-top: 10px; }
   .unit-input-grid, .tech-grid { grid-template-columns: 1fr; }
+  .shipyard-calculator-page .build-field-grid { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .metric { padding: 11px; }
   .metric .k, .point-facts small { overflow-wrap: anywhere; }

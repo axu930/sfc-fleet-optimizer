@@ -2,7 +2,7 @@
 
 This repository hosts a dependency-free browser toolkit for Starfleet
 Commander planning. The root landing page links to individual tools under
-`/tools/`; the current production tool is the **Zeus Fleet Optimizer**.
+`/tools/`; current tools include the **Zeus Fleet Optimizer** and **Ship Build Time Calculator**.
 
 ## Zeus Fleet Optimizer
 
@@ -83,6 +83,31 @@ fleet. It:
 
 If only one fleet block is pasted and no Attacker/Defender heading is present, it is offered as a single **Detected fleet**. Only unit classes currently supported by the model are imported.
 
+## Ship Build Time Calculator
+
+The ship build calculator estimates the total queue time for a single ship
+type and a large order quantity in a Foundry-based universe. It reuses the
+ship Ore and Crystal costs from `js/units.js`; Hydrogen does not contribute to
+build time. The displayed estimate rounds to the nearest second and uses a
+365-day year when expressing very long durations.
+
+The calculator applies the Shipyard wiki formula:
+
+```text
+(Ore + Crystal) × ship count
+÷ (2,500 × (Shipyard level + 1) × 2^Foundry level)
+```
+
+Each Build Droid assigned to the Shipyard adds 2% build speed. Available
+worker slots are calculated as `1 + floor(Shipyard level / 3)`. This page
+targets Foundry-based universes; it does not model Hired Guns Construction,
+human Builder bonuses, or time already present in another queue entry.
+
+Count input preserves integers through `BigInt`, accepts decimal digits,
+comma-grouping, scientific notation, and supported suffixes through
+septillion, and rejects fractional ship quantities. The grouped preview is
+for checking; the copy button writes the exact plain-decimal digits.
+
 ## Run locally
 
 No build system or dependencies are needed:
@@ -102,22 +127,27 @@ scripts so it works from GitHub Pages and when pages are opened directly:
 
 - `index.html` is the landing page and tool directory.
 - `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
+- `tools/shipyard-calculator/index.html` is the ship build-time calculator.
 - `css/app.css` owns the canonical theme, shared shell, and Zeus
-  optimizer-specific presentation.
+  optimizer-specific presentation plus scoped ship calculator styles.
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
+- `js/shipyard-calculator.js` owns exact ship-count parsing, Foundry build-time
+  calculations, and large-duration formatting.
+- `tools/shipyard-calculator/app.js` owns the calculator form and copy action.
 - `js/combat.js` owns the deterministic six-round combat simulation, DSP, debris, and threat metrics.
 - `js/optimizer.js` owns range selection, sweeps, breakpoints, the matrix, and knee detection.
 - `js/app.js` owns DOM events, rendering, chart generation, importing, and CSV export.
 
-The four model modules expose browser globals and CommonJS exports. The browser
+The model modules expose browser globals and CommonJS exports. The browser
 loads them in dependency order; Node tests import the same production files.
 
 ## GitHub Pages
 
 1. In **Settings → Pages**, choose **Deploy from a branch**.
 2. Select the branch (usually `main`) and `/ (root)`.
-3. Open the landing page at `/` and the optimizer at `/tools/zeus-optimizer/`.
+3. Open the landing page at `/`, the optimizer at `/tools/zeus-optimizer/`, or
+   the calculator at `/tools/shipyard-calculator/`.
 
 The included `.nojekyll` file keeps GitHub Pages from applying Jekyll processing.
 
@@ -147,6 +177,11 @@ full magnitude words, or abbreviations (`k`, `m`, `b`, `t`, `q`, `Q`, `s`, `S`,
 `o`, `n`). Displayed decimal quantities are rounded to two significant
 figures, while copy-ready Zeus recommendations remain exact plain integers
 without commas in every display mode.
+
+The Ship Build Time Calculator uses a separate exact integer path for order
+quantities. For example, entering `1 septillion` copies
+`1000000000000000000000000` exactly, while showing grouped digits and the
+magnitude name for visual verification.
 
 ## Model
 
@@ -185,6 +220,7 @@ The model has a zero-dependency Node test suite:
 node tests/parser.test.js
 node tests/combat.test.js
 node tests/units.test.js
+node tests/shipyard-calculator.test.js
 ```
 
 The tests cover count parsing, manual roster parsing, row-style and copied-table
