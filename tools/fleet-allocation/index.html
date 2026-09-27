@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Allocate a fixed Zeus fleet across multiple Starfleet Commander NPC targets.">
   <title>Fleet Allocation Optimizer | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=allocation-optional-objective-1">
+  <link rel="stylesheet" href="../../css/app.css?v=report-inbox-1">
 </head>
 <body class="allocation-page">
   <main class="wrap">
@@ -96,6 +96,7 @@
           <div><h2 id="targetsHeading">Targets</h2><p class="hint">Each card is one target and accepts one espionage report.</p></div>
           <button id="addTargetBtn" class="ghost" type="button">Add target</button>
         </div>
+        <div class="report-inbox-mount" data-report-inbox data-mode="multiple"></div>
         <div id="targetList" class="allocation-target-list"></div>
         <button id="solveBtn" class="primary" type="button">Calculate allocation</button>
         <div id="inputStatus" class="status" role="status" aria-live="polite"></div>
@@ -134,11 +135,12 @@
     <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
   </main>
   <script src="../../js/units.js?v=count-suffixes-1"></script>
-  <script src="../../js/battle-report-parser.js?v=location-suffixes-1"></script>
+  <script src="../../js/battle-report-parser.js?v=report-header-metadata-1"></script>
   <script src="../../js/combat.js?v=net-points-2"></script>
   <script src="../../js/plunder.js?v=allocation-plunder-1"></script>
   <script src="../../js/fleet-allocation.js?v=location-suffixes-1"></script>
   <script src="../../js/svg-charts.js?v=reusable-chart-primitives-3"></script>
-  <script src="../../js/allocation-app.js?v=frontier-linear-scale-1"></script>
+  <script src="../../js/report-inbox.js?v=report-inbox-1"></script>
+  <script src="../../js/allocation-app.js?v=report-inbox-1"></script>
 </body>
 </html>

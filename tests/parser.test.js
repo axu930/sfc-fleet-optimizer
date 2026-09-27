@@ -176,6 +176,26 @@ assert.deepStrictEqual(parser.parseEspionageLocation('NPC at [8:240:1e]'), {
 });
 assert.strictEqual(parser.parseEspionageLocation('No coordinates here'), null);
 
+const encounterReport = parser.parseEspionageReport(`To: TestPlayer
+Date: 2025-01-01 00:00:00 UTC
+Encounter Floating Colony [8:240:6e] has:
+NPC'S SHIPS:
+* Artemis Class Fighter: 185,993,047,486,216,480
+* Hercules Class Cargo: 193,817,188,189,280,352
+TECHS:
+* Armor Tech: 24
+* Shield Tech: 24
+* Weapons Tech: 24
+The chance of your probes being intercepted is 100%`);
+assert.deepStrictEqual(parser.parseEspionageLocation(`Encounter Floating Colony [8:240:6e] has:`), {
+  galaxy:8, system:240, planet:6, normalized:'[8:240:6e]'
+});
+assert.deepStrictEqual(encounterReport.unknown, []);
+assert.deepStrictEqual(encounterReport.tech, {armor:24, weapons:24, shield:24});
+assert.strictEqual(encounterReport.composition.Artemis, 185993047486216480);
+assert.strictEqual(encounterReport.composition.Hercules, 193817188189280352);
+assert.strictEqual(encounterReport.rawCounts.Artemis, '185,993,047,486,216,480');
+
 const planetHeadingReport = parser.parseEspionageReport(`Hephaestus Class Attack Platform Hummer’ [ [7:283:5] ](https://playstarfleet.com/galaxy/show?galaxy=7&solar_system=283) has:
 RESOURCES:
 * ore: 86,096,264,882,284,135,537,368,786

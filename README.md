@@ -132,6 +132,22 @@ fleet. It:
 
 If only one fleet block is pasted and no Attacker/Defender heading is present, it is offered as a single **Detected fleet**. Only unit classes currently supported by the model are imported.
 
+## Espionage report userscript
+
+The SFC Tools userscript adds a **Save for SFC Tools** button to visible
+espionage reports on Starfleet Commander pages. Saved report snapshots are kept
+in the userscript manager's local storage for this browser. They are not sent
+to a server or placed in a URL. On either the Zeus Optimizer or Fleet
+Allocation page, use **Saved reports** to import one report into Zeus or append
+selected reports as allocation targets. Reports stay in the inbox until you
+delete them.
+
+Install the [SFC Tools Espionage Inbox userscript](https://raw.githubusercontent.com/axu930/sfc-fleet-optimizer/main/userscripts/sfc-tools.user.js)
+with current Greasemonkey, Tampermonkey, or Violentmonkey. Enable the script on
+both `playstarfleet.com` and `axu930.github.io`, then reload the game or tool
+page. The report save button appears when a supported espionage report is
+visible; the tool inbox button reports if the userscript is not enabled.
+
 ## Ship and Defense Build Time Calculator
 
 The build calculator estimates the total queue time for one ship or defense

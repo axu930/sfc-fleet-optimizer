@@ -599,6 +599,21 @@
     const button = event.target.closest('[data-report-side]');
     if (button) applyReportSide(button.dataset.reportSide);
   });
+  document.addEventListener('sfctools:report-inbox:import', event => {
+    let payload = event.detail || {};
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch (error) { payload = {}; }
+    }
+    const reports = Array.isArray(payload.reports) ? payload.reports : [];
+    if (payload.mode !== 'single' || reports.length !== 1 || typeof reports[0].text !== 'string') {
+      $('reportStatus').textContent = 'Choose one saved espionage report to import.';
+      $('reportStatus').className = 'status error';
+      return;
+    }
+    $('reportText').value = reports[0].text;
+    parseReport();
+    $('reportText').scrollIntoView({behavior:'smooth', block:'center'});
+  });
   $('runBtn').addEventListener('click', run);
   $('exportBtn').addEventListener('click', exportCSV);
   $('recommendations').addEventListener('click', event => {

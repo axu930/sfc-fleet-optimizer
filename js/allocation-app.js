@@ -620,6 +620,84 @@
     }
   }
 
+  function importSavedReports(event) {
+    let payload = event.detail || {};
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch (error) { payload = {}; }
+    }
+    if (payload.mode !== 'multiple' || !Array.isArray(payload.reports) || !payload.reports.length) return;
+
+    const locationFromReport = report => {
+      const textLocation = P.parseEspionageLocation(report.text || '');
+      if (textLocation) return textLocation.normalized;
+      const storedLocation = A.parseLocation(report.location);
+      return storedLocation ? storedLocation.normalized : '';
+    };
+    const locations = new Set();
+    for (const target of targets) {
+      const location = A.parseLocation(target.location || target.model?.location);
+      if (location) locations.add(location.normalized);
+    }
+
+    const blankPlaceholder = targets.length === 1
+      && !targets[0].report.trim()
+      && !targets[0].location.trim()
+      && !targets[0].model;
+    let placeholderAvailable = blankPlaceholder;
+    let imported = 0;
+    const duplicateLocations = [];
+    const failedReports = [];
+
+    for (const report of payload.reports) {
+      if (!report || typeof report.text !== 'string' || !report.text.trim()) continue;
+      const location = locationFromReport(report);
+      if (location && locations.has(location)) {
+        duplicateLocations.push(location);
+        continue;
+      }
+
+      let target;
+      if (placeholderAvailable) {
+        target = targets[0];
+        placeholderAvailable = false;
+      } else {
+        target = {id:nextId++, location:'', locationSource:'report', report:'', status:'', collapsed:false};
+        targets.push(target);
+      }
+      target.location = location;
+      target.locationSource = location && !P.parseEspionageLocation(report.text) ? 'manual' : 'report';
+      target.report = report.text;
+      target.parsed = null;
+      target.model = null;
+      target.detectedLocation = false;
+      if (location) locations.add(location);
+      target.collapsed = false;
+      try {
+        target.model = parseTarget(target);
+        if (target.model.location) locations.add(target.model.location);
+      } catch (error) {
+        target.status = `Error: ${error.message || 'Unable to parse this report.'}`;
+        failedReports.push(target.location || `Report ${imported + 1}`);
+      }
+      imported++;
+    }
+
+    if (imported) {
+      invalidateResults();
+      renderTargets();
+    }
+    const messages = [];
+    if (imported) messages.push(`Added ${imported} saved report${imported === 1 ? '' : 's'} as target${imported === 1 ? '' : 's'}; review each target before calculating.`);
+    if (duplicateLocations.length) messages.push(`Skipped duplicate location${duplicateLocations.length === 1 ? '' : 's'}: ${Array.from(new Set(duplicateLocations)).join(', ')}.`);
+    if (failedReports.length) messages.push(`${failedReports.length} report${failedReports.length === 1 ? '' : 's'} need attention; review the target cards.`);
+    if (!imported && !duplicateLocations.length) messages.push('No valid saved reports were selected.');
+    $('inputStatus').textContent = messages.join(' ');
+    $('inputStatus').className = duplicateLocations.length || failedReports.length || !imported ? 'status error' : 'status success';
+    if (imported) targetList.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  document.addEventListener('sfctools:report-inbox:import', importSavedReports);
+
   targetList.addEventListener('input', event => {
     const card = event.target.closest('[data-target-id]');
     if (!card) return;

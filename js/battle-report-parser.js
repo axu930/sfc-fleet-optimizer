@@ -364,7 +364,10 @@
       if (/^(?:[-•]\s*)?.+?\s+ships\s*:?$/i.test(line)) { inTechSection = false; continue; }
       if (inTechSection || /^round\s+\d+\b/i.test(line)) continue;
       if (/^(?:attacker|defender|attacking\s+fleet|defending\s+fleet)\b/i.test(line)) continue;
-      if (/^\[\s*\d+\s*:\s*\d+\s*:\s*\d+\s*\]/.test(line)) continue;
+      if (/^(?:to|date)\s*:/i.test(line)) continue;
+      if (/\bprobes?\b.*\bintercepted\b/i.test(line)) continue;
+      if (/\[\s*\d{1,3}\s*:\s*\d{1,3}\s*:\s*\d{1,2}[me]?\s*\].*\bhas\s*:?\s*$/i.test(line)) continue;
+      if (/^\[\s*\d+\s*:\s*\d+\s*:\s*\d+[me]?\s*\]/i.test(line)) continue;
       if (/\b(?:weapons?|shields?|armou?r|ore|metal|crystal|hydrogen)\b/i.test(line)) continue;
       if (/^\s*(?:[-•]\s*)?(?:\d[\d,]*(?:\.\d+)?(?:e[+-]?\d+)?\s*)$/i.test(line)) continue;
       if (/\d/.test(line) && !reportUnitMatches(line).length) unknown.push(line);
