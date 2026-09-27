@@ -8,11 +8,12 @@
 
   const {UNITS, ZEUS_COST, scaled, rfContinue} = units;
   const RESOLUTION = 20;
+  const POISSON_MAX_LAMBDA = 20;
   const MAX_ROUNDS = 6;
 
   function makeState(count, hullMax, shieldMax) {
-    const bins = Array.from({length:RESOLUTION + 1}, () => ({count:0, hullSum:0, shieldSum:0, hitWeight:0}));
-    bins[RESOLUTION] = {count, hullSum:count, shieldSum:count * shieldMax, hitWeight:0};
+    const bins = Array.from({length:RESOLUTION + 1}, () => ({count:0, shieldSum:0, hitWeight:0}));
+    bins[RESOLUTION] = {count, shieldSum:count * shieldMax, hitWeight:0};
     return {bins, hullMax, shieldMax};
   }
 
@@ -47,7 +48,7 @@
     if (killHits === 1) return [{k:0, p:Math.exp(-lambda)}, {k:1, p:1-Math.exp(-lambda), tail:true}];
 
     const output = [];
-    if (lambda <= 30) {
+    if (lambda <= POISSON_MAX_LAMBDA) {
       let probability = Math.exp(-lambda);
       let sum = 0;
       const maxUseful = Math.min(killHits - 1, Math.max(8, Math.ceil(lambda + 9*Math.sqrt(lambda) + 8)), 300);
@@ -91,6 +92,12 @@
     return renorm(output);
   }
 
+  function bucketHullFraction(index) {
+    if (!(index > 0)) return 0;
+    // Live bucket i covers ((i - 1) / RESOLUTION, i / RESOLUTION]; use its midpoint.
+    return Math.max(0, Math.min(1, (index - 0.5) / RESOLUTION));
+  }
+
   function binIndex(hullFraction) {
     if (!(hullFraction > 0)) return 0;
     return Math.max(1, Math.min(RESOLUTION, Math.ceil(hullFraction * RESOLUTION - 1e-12)));
@@ -100,15 +107,16 @@
     const total = stateCount(state);
     if (!(total > 0) || !(totalShots > 0) || !(damage > 0)) return;
     const lambda = totalShots / total;
-    const next = Array.from({length:RESOLUTION + 1}, () => ({count:0, hullSum:0, shieldSum:0, hitWeight:0}));
+    const next = Array.from({length:RESOLUTION + 1}, () => ({count:0, shieldSum:0, hitWeight:0}));
 
     for (let index = 1; index <= RESOLUTION; index++) {
       const bin = state.bins[index];
       if (!(bin.count > 0)) continue;
-      const averageHullFraction = Math.min(1, Math.max(0, bin.hullSum / bin.count));
+      const bucketHull = bucketHullFraction(index);
+      // Hull is bucketed; shields remain the expected shield value in that hull bucket.
       const averageShield = Math.max(0, bin.shieldSum / bin.count);
       const oldHitProbability = Math.min(1, Math.max(0, bin.hitWeight / bin.count));
-      const durability = averageHullFraction * state.hullMax + (bypassShield ? 0 : averageShield);
+      const durability = bucketHull * state.hullMax + (bypassShield ? 0 : averageShield);
       const killHits = Math.max(1, Math.ceil(durability / damage - 1e-12));
       const distribution = hitDistribution(lambda, killHits);
 
@@ -116,7 +124,7 @@
         const mass = bin.count * outcome.p;
         if (!(mass > 0)) continue;
         const hits = outcome.k;
-        let hullFraction = averageHullFraction;
+        let hullFraction = bucketHull;
         let shield = averageShield;
         if (outcome.tail && hits >= killHits) {
           next[0].count += mass;
@@ -137,7 +145,6 @@
         const nextIndex = binIndex(hullFraction);
         const newHitProbability = hits > 0 ? 1 : oldHitProbability;
         next[nextIndex].count += mass;
-        next[nextIndex].hullSum += mass * hullFraction;
         next[nextIndex].shieldSum += mass * shield;
         next[nextIndex].hitWeight += mass * newHitProbability;
       }
@@ -146,17 +153,16 @@
   }
 
   function explodeAndReset(state) {
-    const output = Array.from({length:RESOLUTION + 1}, () => ({count:0, hullSum:0, shieldSum:0, hitWeight:0}));
+    const output = Array.from({length:RESOLUTION + 1}, () => ({count:0, shieldSum:0, hitWeight:0}));
     for (let index = 1; index <= RESOLUTION; index++) {
       const bin = state.bins[index];
       if (!(bin.count > 0)) continue;
-      const hullFraction = Math.min(1, Math.max(0, bin.hullSum / bin.count));
+      const hullFraction = bucketHullFraction(index);
       const hitProbability = Math.min(1, Math.max(0, bin.hitWeight / bin.count));
       const explosionProbability = hullFraction < 0.70 ? hitProbability * (1 - hullFraction) : 0;
       const survivors = bin.count * (1 - explosionProbability);
       if (!(survivors > 0)) continue;
       output[index].count = survivors;
-      output[index].hullSum = survivors * hullFraction;
       output[index].shieldSum = survivors * state.shieldMax;
       output[index].hitWeight = 0;
     }
