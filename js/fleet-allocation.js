@@ -47,13 +47,14 @@
   }
 
   function parseLocation(value) {
-    const match = String(value || '').trim().match(/^\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})\s*\]$/);
+    const match = String(value || '').trim().match(/^\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})([me]?)\s*\]$/i);
     if (!match) return null;
     const galaxy = Number(match[1]);
     const system = Number(match[2]);
     const planet = Number(match[3]);
     if (galaxy < 1 || galaxy > 100 || system < 1 || system > 500 || planet < 1 || planet > 15) return null;
-    return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}]`};
+    const suffix = match[4].toLowerCase();
+    return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}${suffix}]`};
   }
 
   function summarizeFleet(composition={}) {

@@ -340,7 +340,7 @@
   }
 
   function parseEspionageLocation(text) {
-    const expression = /\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})\s*\]/g;
+    const expression = /\[\s*(\d{1,3})\s*:\s*(\d{1,3})\s*:\s*(\d{1,2})([me]?)\s*\]/gi;
     const source = String(text || '');
     let match;
     while ((match = expression.exec(source))) {
@@ -348,7 +348,8 @@
       const system = Number(match[2]);
       const planet = Number(match[3]);
       if (galaxy < 1 || galaxy > 100 || system < 1 || system > 500 || planet < 1 || planet > 15) continue;
-      return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}]`};
+      const suffix = match[4].toLowerCase();
+      return {galaxy, system, planet, normalized:`[${galaxy}:${system}:${planet}${suffix}]`};
     }
     return null;
   }

@@ -168,6 +168,12 @@ assert.deepStrictEqual(abbreviatedReport.resources, {ore:1e15, crystal:1e18, hyd
 assert.deepStrictEqual(parser.parseEspionageLocation(`Coordinates: [101:1:1], then [8:115:3] and [9:2:4]`), {
   galaxy:8, system:115, planet:3, normalized:'[8:115:3]'
 });
+assert.deepStrictEqual(parser.parseEspionageLocation('Moon at [8:240:1m]'), {
+  galaxy:8, system:240, planet:1, normalized:'[8:240:1m]'
+});
+assert.deepStrictEqual(parser.parseEspionageLocation('NPC at [8:240:1e]'), {
+  galaxy:8, system:240, planet:1, normalized:'[8:240:1e]'
+});
 assert.strictEqual(parser.parseEspionageLocation('No coordinates here'), null);
 
 const planetHeadingReport = parser.parseEspionageReport(`Hephaestus Class Attack Platform Hummer’ [ [7:283:5] ](https://playstarfleet.com/galaxy/show?galaxy=7&solar_system=283) has:

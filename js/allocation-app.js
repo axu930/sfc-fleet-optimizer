@@ -200,7 +200,7 @@
       target.detectedLocation = true;
     }
     const location = A.parseLocation(target.location);
-    if (!location) throw new Error(`${target.location || 'This target'} needs a location like [8:115:3] (galaxy 1–100, system 1–500, planet 1–15).`);
+    if (!location) throw new Error(`${target.location || 'This target'} needs a location like [8:115:3], [8:115:3m], or [8:115:3e] (galaxy 1–100, system 1–500, position 1–15).`);
 
     if (!target.parsed || !target.model) {
       const parsed = P.parseEspionageReport(target.report);

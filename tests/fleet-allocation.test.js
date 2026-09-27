@@ -21,6 +21,8 @@ assert.match(fs.readFileSync(path.join(__dirname, '../css/app.css'), 'utf8'), /\
 
 assert.deepStrictEqual(allocation.parseLocation('[8:115:3]'), {galaxy:8, system:115, planet:3, normalized:'[8:115:3]'});
 assert.deepStrictEqual(allocation.parseLocation('[ 001 : 500 : 15 ]'), {galaxy:1, system:500, planet:15, normalized:'[1:500:15]'});
+assert.deepStrictEqual(allocation.parseLocation('[8:240:1m]'), {galaxy:8, system:240, planet:1, normalized:'[8:240:1m]'});
+assert.deepStrictEqual(allocation.parseLocation('[8:240:1e]'), {galaxy:8, system:240, planet:1, normalized:'[8:240:1e]'});
 for (const location of ['[0:1:1]', '[101:1:1]', '[1:0:1]', '[1:501:1]', '[1:1:0]', '[1:1:16]', '8:115:3']) {
   assert.strictEqual(allocation.parseLocation(location), null, location);
 }
