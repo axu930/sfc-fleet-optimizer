@@ -35,17 +35,28 @@
     return 0.5 * (1 + erf(value / Math.SQRT2));
   }
 
-  function renorm(distribution) {
+  function addResidualToMode(distribution, lambda, killHits) {
     const sum = distribution.reduce((total, item) => total + item.p, 0);
     if (!(sum > 0)) return [{k:0, p:1}];
-    for (const item of distribution) item.p /= sum;
+    const untruncatedMode = lambda <= POISSON_MAX_LAMBDA
+      ? Math.floor(lambda)
+      : Math.floor(lambda + 0.5);
+    const modeHits = Math.min(killHits, untruncatedMode);
+    const mode = distribution.find(item => item.k === modeHits) ||
+      distribution.reduce((largest, item) => item.p > largest.p ? item : largest);
+    mode.p += 1 - sum;
     return distribution;
   }
 
   function hitDistribution(lambda, killHits) {
     if (!(lambda > 0)) return [{k:0, p:1}];
     killHits = Math.max(1, Math.ceil(killHits));
-    if (killHits === 1) return [{k:0, p:Math.exp(-lambda)}, {k:1, p:1-Math.exp(-lambda), tail:true}];
+    if (killHits === 1) {
+      return addResidualToMode([
+        {k:0, p:Math.exp(-lambda)},
+        {k:1, p:1-Math.exp(-lambda), tail:true}
+      ], lambda, killHits);
+    }
 
     const output = [];
     if (lambda <= POISSON_MAX_LAMBDA) {
@@ -62,7 +73,7 @@
         if (maxUseful >= killHits - 1) output.push({k:killHits, p:tail, tail:true});
         else output.push({k:maxUseful + 1, p:tail, approx:true});
       }
-      return renorm(output);
+      return addResidualToMode(output, lambda, killHits);
     }
 
     const standardDeviation = Math.sqrt(lambda);
@@ -89,7 +100,7 @@
     }
     const tail = Math.max(0, 1 - sum);
     if (tail > 1e-14) output.push({k:killHits, p:tail, tail:true, approx:true});
-    return renorm(output);
+    return addResidualToMode(output, lambda, killHits);
   }
 
   function bucketHullFraction(index) {
