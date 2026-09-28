@@ -17,13 +17,14 @@ const config = {
   rfSigma:0
 };
 
-// Locks down pre-refactor behavior for a mixed ship/defense fixture.
+// Locks down current behavior for a mixed ship/defense fixture.
 const representative = combat.simulate({...config, zeusCount:5e5});
-near(representative.zeusSurvival, 0.9999999986994975, 1e-12);
-near(representative.dspDestroyedFraction, 0.7747700191663955, 1e-12);
-near(representative.threatDestroyedFraction, 0.7747700191663954, 1e-12);
+near(representative.zeusSurvival, 1, 1e-12);
+near(representative.zeusLosses, 0, 1e-8);
+near(representative.dspDestroyedFraction, 0.774770019696274, 1e-12);
+near(representative.threatDestroyedFraction, 0.774770019696274, 1e-12);
 near(representative.initialDefenseRSP, 1_000_000_000);
-near(representative.remainingTargets, 8558739.271676973, 1e-6);
+near(representative.remainingTargets, 8558739.251541588, 1e-6);
 assert.strictEqual(representative.roundDetails.length, combat.MAX_ROUNDS);
 near(combat.netPoints(representative), representative.destroyedDSP +
   (representative.debrisGenerated - representative.zeusLosses * units.ZEUS_COST) / 1000);
@@ -91,6 +92,18 @@ const ineffectiveFire = combat.simulate({
 });
 near(ineffectiveFire.zeusSurvival, 1);
 near(ineffectiveFire.initialThreat, 0);
+
+// At lambda=21 the Normal approximation's tiny probability below zero hits
+// must be mode-bin residual, not fabricated lethal-hit mass.
+const normalTailRegression = combat.simulate({
+  composition:{Athena:21e15},
+  zeusCount:1e15,
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  rfSigma:0
+});
+assert(normalTailRegression.zeusLosses >= 0 && normalTailRegression.zeusLosses < 1e6,
+  `lambda=21 should not invent lethal hits: ${normalTailRegression.zeusLosses} Zeus lost`);
 
 const debris = combat.simulate({
   composition:{Artemis:1},

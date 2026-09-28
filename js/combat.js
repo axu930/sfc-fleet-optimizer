@@ -21,18 +21,31 @@
     return state.bins.reduce((sum, bin) => sum + bin.count, 0);
   }
 
-  // Abramowitz-Stegun erf approximation, enough for PMF tail work here.
-  function erf(value) {
-    const sign = value < 0 ? -1 : 1;
-    const x = Math.abs(value);
+  // Stable normal survival function: a continued fraction in the upper tail
+  // avoids losing small probabilities to 1 - CDF.
+  function normalSurvival(value) {
+    if (value < 0) return 1 - normalSurvival(-value);
+    if (value >= 2) {
+      // Laplace's continued fraction gives a much more accurate relative tail
+      // than subtracting an erf approximation from one.
+      let denominator = value;
+      for (let term = 19; term >= 1; term--) denominator = value + term / denominator;
+      return Math.exp(-0.5 * value * value) / Math.sqrt(2 * Math.PI) / denominator;
+    }
+    const x = value / Math.SQRT2;
     const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
     const t = 1 / (1 + p * x);
-    const y = 1 - (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
-    return sign * y;
+    const erfc = (((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x);
+    return 0.5 * erfc;
   }
 
   function normalCDF(value) {
-    return 0.5 * (1 + erf(value / Math.SQRT2));
+    return value < 0 ? normalSurvival(-value) : 1 - normalSurvival(value);
+  }
+
+  function normalIntervalProbability(lower, upper) {
+    if (lower >= 0) return Math.max(0, normalSurvival(lower) - normalSurvival(upper));
+    return Math.max(0, normalCDF(upper) - normalCDF(lower));
   }
 
   function addResidualToMode(distribution, lambda, killHits) {
@@ -81,25 +94,25 @@
     if (killHits < lambda - 9 * standardDeviation) return [{k:killHits, p:1, tail:true}];
     const start = Math.max(0, Math.floor(lambda - 8 * standardDeviation));
     const end = Math.min(killHits - 1, Math.ceil(lambda + 8 * standardDeviation), 2000);
-    let sum = 0;
     if (start > 0) {
       const lowProbability = normalCDF((start - 0.5 - lambda) / standardDeviation);
       if (lowProbability > 1e-14) {
         output.push({k:start, p:lowProbability, approx:true});
-        sum += lowProbability;
       }
     }
     for (let hits = start; hits <= end; hits++) {
-      const high = normalCDF((hits + 0.5 - lambda) / standardDeviation);
-      const low = normalCDF((hits - 0.5 - lambda) / standardDeviation);
-      const probability = Math.max(0, high - low);
-      if (probability > 1e-14) {
+      const lower = (hits - 0.5 - lambda) / standardDeviation;
+      const upper = (hits + 0.5 - lambda) / standardDeviation;
+      const probability = normalIntervalProbability(lower, upper);
+      if (probability > 0) {
         output.push({k:hits, p:probability, approx:true});
-        sum += probability;
       }
     }
-    const tail = Math.max(0, 1 - sum);
-    if (tail > 1e-14) output.push({k:killHits, p:tail, tail:true, approx:true});
+    // Only the upper tail beyond the lethal-hit boundary is lethal. Any
+    // omitted lower tail or floating-point residual is restored to the mode.
+    const lethalBoundary = (killHits - 0.5 - lambda) / standardDeviation;
+    const tail = normalSurvival(lethalBoundary);
+    if (tail > 0) output.push({k:killHits, p:tail, tail:true, approx:true});
     return addResidualToMode(output, lambda, killHits);
   }
 
@@ -400,12 +413,13 @@
     const destroyedDSP = Math.max(0, initialDSP - remainingDSP);
     const debris = generatedDebris(initialDebris, defenders, Math.max(0, initialZeus - aliveZeus));
     const survival = Math.max(0, Math.min(1, aliveZeus / initialZeus));
+    const zeusLosses = Math.max(0, initialZeus - aliveZeus);
     return {
       zeusCount:initialZeus,
       zeusSurvival:survival,
       zeusLossFraction:1 - survival,
-      zeusLosses:initialZeus - aliveZeus,
-      zeusResourcesLost:(initialZeus - aliveZeus) * ZEUS_COST,
+      zeusLosses,
+      zeusResourcesLost:zeusLosses * ZEUS_COST,
       initialDSP,
       initialDefenseRSP,
       destroyedDSP,
