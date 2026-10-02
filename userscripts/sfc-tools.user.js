@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         SFC Tools Espionage Inbox
 // @namespace    https://axu930.github.io/sfc-fleet-optimizer/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Save Starfleet Commander espionage reports locally and import them into SFC Tools.
 // @homepageURL  https://axu930.github.io/sfc-fleet-optimizer/
 // @downloadURL  https://raw.githubusercontent.com/axu930/sfc-fleet-optimizer/main/userscripts/sfc-tools.user.js
 // @updateURL    https://raw.githubusercontent.com/axu930/sfc-fleet-optimizer/main/userscripts/sfc-tools.user.js
-// @match        https://playstarfleet.com/*
-// @match        https://*.playstarfleet.com/*
+// @match        https://playstarfleet.com/messages*
+// @match        https://*.playstarfleet.com/messages*
 // @match        https://axu930.github.io/sfc-fleet-optimizer/*
 // @run-at       document-start
 // @grant        GM.getValue
@@ -32,6 +32,12 @@
   const UNIT_MARKER = /\b(?:Hermes|Artemis|Athena|Ares|Zeus|Hades|Poseidon|Atlas|Carmanor|Gaia|Hephaestus|Dionysus|Zagreus|Apollo|Prometheus|Charon|Hercules|Missile Battery|Laser Cannon|Pulse Cannon|Particle Cannon|Gauss Cannon|Plasma Cannon|Large Decoy|Decoy)\b/i;
   let writeQueue = Promise.resolve();
   let scanQueued = false;
+
+  function isGameMessagesPage() {
+    const host = location.hostname.toLowerCase();
+    const isGameHost = host === 'playstarfleet.com' || host.endsWith('.playstarfleet.com');
+    return isGameHost && /^\/messages(?:\/|$)/i.test(location.pathname);
+  }
 
   function parseDetail(event) {
     if (typeof event.detail !== 'string') return event.detail || {};
@@ -215,12 +221,12 @@
   }
 
   function queueScan() {
-    if (scanQueued || location.hostname === 'axu930.github.io') return;
+    if (scanQueued || !isGameMessagesPage()) return;
     scanQueued = true;
     window.requestAnimationFrame(scanReports);
   }
 
-  if (location.hostname !== 'axu930.github.io') {
+  if (isGameMessagesPage()) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', queueScan, {once:true});
     else queueScan();
     const observer = new MutationObserver(queueScan);

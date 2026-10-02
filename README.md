@@ -135,7 +135,7 @@ If only one fleet block is pasted and no Attacker/Defender heading is present, i
 ## Espionage report userscript
 
 The SFC Tools userscript adds a **Save for SFC Tools** button to visible
-espionage reports on Starfleet Commander pages. Saved report snapshots are kept
+espionage reports on Starfleet Commander message pages. Saved report snapshots are kept
 in the userscript manager's local storage for this browser. They are not sent
 to a server or placed in a URL. On either the Zeus Optimizer or Fleet
 Allocation page, use **Saved reports** to import one report into Zeus or append
