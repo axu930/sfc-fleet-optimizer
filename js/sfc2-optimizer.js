@@ -175,36 +175,13 @@
     };
   }
 
-  function protectWithResourceDen(resources, level) {
-    const remaining = {
+  function plunderPool(input={}) {
+    const resources = input.resources || {};
+    return {
       ore:Math.max(0, Number(resources.ore) || 0),
       crystal:Math.max(0, Number(resources.crystal) || 0),
       hydrogen:Math.max(0, Number(resources.hydrogen) || 0)
     };
-    let protection = level > 0 ? 30_000 + Math.max(0, level - 1) * 7_500 : 0;
-    const protectedResources = {ore:0, crystal:0, hydrogen:0};
-    while (protection > 1e-8) {
-      const active = Object.keys(remaining).filter(name => remaining[name] - protectedResources[name] > 1e-8);
-      if (!active.length) break;
-      const share = protection / active.length;
-      const smallestRoom = Math.min(...active.map(name => remaining[name] - protectedResources[name]));
-      const amount = Math.min(share, smallestRoom);
-      for (const name of active) protectedResources[name] += amount;
-      protection -= amount * active.length;
-    }
-    return Object.fromEntries(Object.keys(remaining).map(name => [name, Math.max(0, remaining[name] - protectedResources[name])]));
-  }
-
-  function plunderPool(input={}) {
-    const resources = input.valuesArePlunderable
-      ? {
-          ore:Math.max(0, Number(input.resources && input.resources.ore) || 0),
-          crystal:Math.max(0, Number(input.resources && input.resources.crystal) || 0),
-          hydrogen:Math.max(0, Number(input.resources && input.resources.hydrogen) || 0)
-        }
-      : protectWithResourceDen(input.resources || {}, Math.max(0, Math.trunc(Number(input.resourceDenLevel) || 0)));
-    const share = input.atWar ? 0.55 : 0.5;
-    return Object.fromEntries(Object.keys(resources).map(name => [name, resources[name] * share]));
   }
 
   function allocatePlunder(pool={}, cargoCapacity=0) {
@@ -301,11 +278,11 @@
       }];
       return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
     });
-    return {ratios, confidence, transportType, recommendations, ineffectiveTargets, plunderShare:input.atWar ? 0.55 : 0.5};
+    return {ratios, confidence, transportType, recommendations, ineffectiveTargets};
   }
 
   return {
     ROUND_LIMITS, TRANSPORTS, normalizeRatios, scaledFleet, costOfFleet,
-    protectWithResourceDen, plunderPool, allocatePlunder, analyze
+    plunderPool, allocatePlunder, analyze
   };
 });

@@ -386,7 +386,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-unit-row { display: grid; grid-template-columns: minmax(0, 1fr) 74px; align-items: center; gap: 8px; min-width: 0; padding: 8px 9px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-card); }
 .sfc2-unit-name { min-width: 0; font-size: .78rem; font-weight: 700; line-height: 1.25; }
 .sfc2-unit-name small { display: block; margin-top: 2px; color: var(--muted); font-size: .65rem; font-weight: 400; line-height: 1.35; }
-.sfc2-unit-row input, .sfc2-tech-grid input, .sfc2-resource-grid input, .sfc2-resource-options input[type="number"] { width: 100%; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font-variant-numeric: tabular-nums; }
+.sfc2-unit-row input, .sfc2-tech-grid input, .sfc2-resource-grid input { width: 100%; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font-variant-numeric: tabular-nums; }
 .sfc2-input-group { margin-top: 13px; }
 .sfc2-input-group summary { padding: 8px 10px; border: 1px solid var(--border-summary); border-radius: var(--radius-md); background: var(--surface-summary); color: var(--text); cursor: pointer; font-size: .84rem; font-weight: 750; }
 .sfc2-input-group[open] summary { margin-bottom: 8px; }
@@ -395,7 +395,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-roster-head { margin-top: 18px; }
 .sfc2-tech-grid fieldset { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; min-width: 0; padding: 9px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
 .sfc2-tech-grid legend { padding: 0 5px; color: var(--muted); font-size: .72rem; font-weight: 700; }
-.sfc2-tech-grid label, .sfc2-resource-grid label, .sfc2-resource-options > label:first-child { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: .7rem; }
+.sfc2-tech-grid label, .sfc2-resource-grid label { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: .7rem; }
 .sfc2-tech-grid input { min-height: 34px; }
 .sfc2-paste-box { margin-top: 4px; padding: 11px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
 .sfc2-paste-box > label { display: block; color: var(--text); font-size: .76rem; font-weight: 700; }
@@ -407,12 +407,6 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-page select { min-height: 38px; padding: 6px 10px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-control); color: var(--text); font: inherit; }
 .sfc2-resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sfc2-resource-grid input { min-height: 40px; }
-.sfc2-check { display: flex; align-items: flex-start; gap: 8px; margin-top: 11px; color: var(--text); font-size: .78rem; }
-.sfc2-check input { flex: 0 0 auto; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--accent); }
-.sfc2-resource-options { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-top: 10px; }
-.sfc2-resource-options .sfc2-check { margin: 0 0 8px; }
-.sfc2-resource-options input[type="number"] { max-width: 110px; }
-.sfc2-resource-options input:disabled { opacity: .55; cursor: not-allowed; }
 .sfc2-actions { display: flex; align-items: center; gap: 12px; margin: 14px 0 24px; }
 .sfc2-actions .primary { min-width: 210px; }
 .sfc2-actions .status { color: var(--muted); }
@@ -508,8 +502,6 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .sfc2-tech-grid { grid-template-columns: 1fr; }
   .sfc2-results > .results-head { display: block; }
   .sfc2-results .results-head .hint { margin-top: 6px; text-align: left; }
-  .sfc2-resource-options { align-items: flex-start; flex-direction: column; }
-  .sfc2-resource-options .sfc2-check { margin-top: 3px; }
   .sfc2-panel-actions { justify-content: flex-start; margin-top: 9px; }
   .sfc2-mix-ship-grid { grid-template-columns: 1fr; }
   .sfc2-mix-head { align-items: flex-start; }

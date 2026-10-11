@@ -162,6 +162,28 @@ assert.deepStrictEqual(allocationReport.resources, {ore:1.2e6, crystal:2.5e6, hy
 assert.deepStrictEqual(allocationReport.rawResources, {ore:'1,200,000', crystal:'2.5M', hydrogen:'9Qi'});
 assert.strictEqual(allocationReport.hasResources, true);
 assert.deepStrictEqual(allocationReport.unknown, []);
+const hugeResourceReport = parser.parseEspionageReport(`Seeker Infinity XII Armada (Seekers 073c) [1:1:14] has:
+RESOURCES:
+ * ore: 10,947,448,941,116,385,438,157,766,656
+ * crystal: 6,568,337,997,909,872,468,014,661,632
+ * hydrogen: 3,753,411,065,525,618,272,901,267,456
+SHIPS:
+ * Prometheus Class Destroyer: 110,901,488,839,070,027,087,872
+TECHS:
+ * Armor Tech: 18
+ * Weapons Tech: 18
+ * Shield Tech: 18`);
+assert.deepStrictEqual(hugeResourceReport.rawResources, {
+  ore:'10,947,448,941,116,385,438,157,766,656',
+  crystal:'6,568,337,997,909,872,468,014,661,632',
+  hydrogen:'3,753,411,065,525,618,272,901,267,456'
+});
+assert.strictEqual(hugeResourceReport.resources.ore, Number(hugeResourceReport.rawResources.ore.replace(/,/g, '')));
+assert.strictEqual(hugeResourceReport.resources.crystal, Number(hugeResourceReport.rawResources.crystal.replace(/,/g, '')));
+assert.strictEqual(hugeResourceReport.resources.hydrogen, Number(hugeResourceReport.rawResources.hydrogen.replace(/,/g, '')));
+assert.strictEqual(hugeResourceReport.composition.Prometheus, 1.1090148883907003e23);
+assert.deepStrictEqual(hugeResourceReport.tech, {armor:18, weapons:18, shield:18});
+assert.strictEqual(hugeResourceReport.hasResources, true);
 const abbreviatedReport = parser.parseEspionageReport(`NPC SHIPS:\n- Zeus Class: 1s\nRESOURCES:\n- ore: 1q\n- crystal: 1Q\n- hydrogen: 1S`);
 assert.strictEqual(abbreviatedReport.composition.Zeus, 1e21);
 assert.deepStrictEqual(abbreviatedReport.resources, {ore:1e15, crystal:1e18, hydrogen:1e24});

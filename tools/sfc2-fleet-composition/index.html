@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-input-tooltips-2">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-resource-import-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -93,16 +93,11 @@
           </fieldset>
         </div>
         <h3 class="sfc2-subhead">Resources to raid</h3>
-        <p class="hint">Enter visible plunderable amounts from an espionage report, or raw stockpile values and a Resource Den level.</p>
+        <p class="hint">Enter available Ore, Crystal, and Hydrogen. Pasting a report fills these counts when present.</p>
         <div class="sfc2-resource-grid">
           <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
           <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
           <label>Hydrogen <input id="resourceHydrogen" type="text" inputmode="decimal" value="0"></label>
-        </div>
-        <label class="sfc2-check"><input id="valuesArePlunderable" type="checkbox" checked> Values are already plunderable (espionage report)</label>
-        <div class="sfc2-resource-options">
-          <label>Resource Den level <input id="resourceDenLevel" type="number" min="0" step="1" value="0" disabled></label>
-          <label class="sfc2-check"><input id="atWar" type="checkbox"> Qualifying declared war (55% share)</label>
         </div>
         <div class="panel-head sfc2-roster-head">
           <div><h3>Defending roster</h3></div>
@@ -124,7 +119,7 @@
             <button id="parseDefenderBtn" class="ghost" type="button">Import defender fleet</button>
             <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
           </div>
-          <p class="hint">Import replaces defender counts and updates defender tech when present. Enter resources separately above.</p>
+          <p class="hint">Import replaces defender counts, fills resource counts when present, and updates defender tech.</p>
         </div>
       </article>
     </section>
@@ -153,7 +148,7 @@
   <script src="../../js/units.js?v=count-suffixes-1"></script>
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-4"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-6"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-5"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-7"></script>
 </body>
 </html>

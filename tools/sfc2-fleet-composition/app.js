@@ -202,8 +202,7 @@
       return `No modeled solution found for any fleet mix within ${roundLimit} rounds. Try different ratios or a lower clear-confidence threshold.`;
     }
     const confidence = comparisons[0].result.confidence;
-    const share = `${Math.round(comparisons[0].result.plunderShare * 100)}%`;
-    return `Clear threshold ${(confidence * 100).toFixed(1)}% · eligible plunder ${share} · selected transport estimate includes expected battle losses`;
+    return `Clear threshold ${(confidence * 100).toFixed(1)}% · selected transport estimate includes expected battle losses`;
   }
 
   function renderSelectedResults(comparisons) {
@@ -216,10 +215,6 @@
 
   function readInput() {
     const defenders = readUnitInputs('defender');
-    const resourceDenLevel = Number($('#resourceDenLevel').value);
-    if (!$('#valuesArePlunderable').checked && (!Number.isInteger(resourceDenLevel) || resourceDenLevel < 0 || resourceDenLevel > 1_000_000)) {
-      throw new Error('Resource Den level must be a whole number from 0 to 1,000,000.');
-    }
     const resources = {
       ore:parseCount($('#resourceOre').value, 'Ore'),
       crystal:parseCount($('#resourceCrystal').value, 'Crystal'),
@@ -232,9 +227,6 @@
       confidence:Number($('#winConfidence').value),
       transportType:$('#transportType').value,
       resources,
-      valuesArePlunderable:$('#valuesArePlunderable').checked,
-      resourceDenLevel,
-      atWar:$('#atWar').checked
     };
   }
 
@@ -298,8 +290,9 @@
   function importDefenderFleet() {
     const text = $('#defenderPaste').value.trim();
     if (!text) throw new Error('Paste a defender roster or report first.');
-    const parsed = reportParser.parseBattleReport(text);
-    const roster = parsed.defender || (parsed.hasSideMarkers ? null : parsed.unassigned);
+    const battleReport = reportParser.parseBattleReport(text);
+    const espionageReport = reportParser.parseEspionageReport(text);
+    const roster = battleReport.defender || (battleReport.hasSideMarkers ? null : battleReport.unassigned);
     if (!roster || !Object.keys(roster.composition).length) {
       throw new Error('No defender fleet was found. Paste a defender section or an unmarked defender roster.');
     }
@@ -317,10 +310,19 @@
       $(`#defender${suffix}`).value = String(roster.tech[key]);
       importedTech.push(`${suffix} ${roster.tech[key]}`);
     }
+    if (espionageReport.hasResources) {
+      for (const key of ['ore', 'crystal', 'hydrogen']) {
+        const suffix = key[0].toUpperCase() + key.slice(1);
+        const value = espionageReport.rawResources[key] ||
+          (espionageReport.resources[key] === undefined ? '0' : String(espionageReport.resources[key]));
+        $(`#resource${suffix}`).value = value;
+      }
+    }
     const omittedNames = Object.keys(roster.composition).filter(name => !supportedNames.has(name));
-    const unknownLines = reportParser.parseEspionageReport(text).unknown;
+    const unknownLines = espionageReport.unknown;
     const notes = [`Imported ${supported.length} supported defender unit types.`];
     if (importedTech.length) notes.push(`Updated defender tech: ${importedTech.join(', ')}.`);
+    if (espionageReport.hasResources) notes.push('Updated Ore, Crystal, and Hydrogen from the report.');
     if (omittedNames.length) notes.push(`Omitted unsupported: ${omittedNames.join(', ')}.`);
     if (unknownLines.length) notes.push(`${unknownLines.length} unrecognized line${unknownLines.length === 1 ? '' : 's'} left out.`);
     $('#defenderPasteStatus').textContent = notes.join(' ');
@@ -351,9 +353,6 @@
       $('#defenderPasteStatus').textContent = error.message || 'Could not import the pasted defender roster.';
     }
   });
-  $('#valuesArePlunderable').addEventListener('change', event => {
-    $('#resourceDenLevel').disabled = event.target.checked;
-  });
   $('#clearBtn').addEventListener('click', () => {
     document.querySelectorAll('[data-role="defender"]').forEach(input => { input.value = '0'; });
     inputStatus.textContent = 'Defender counts cleared.';
@@ -374,8 +373,6 @@
     $('#resourceOre').value = '500k';
     $('#resourceCrystal').value = '350k';
     $('#resourceHydrogen').value = '250k';
-    $('#valuesArePlunderable').checked = true;
-    $('#resourceDenLevel').disabled = true;
     inputStatus.textContent = 'Sample roster loaded. Press Calculate fleet sizes.';
   });
 })();
