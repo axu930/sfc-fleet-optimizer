@@ -52,6 +52,12 @@
           <option value="0.99">99%</option>
           <option value="0.999">99.9%</option>
         </select>
+        <label class="sfc2-select-label" for="roundFilter">Look at victories within</label>
+        <select id="roundFilter">
+          <option value="4">4 rounds</option>
+          <option value="5" selected>5 rounds</option>
+          <option value="6">6 rounds</option>
+        </select>
         <label class="sfc2-select-label" for="transportType">Cargo transport</label>
         <select id="transportType">
           <option value="Atlas">Atlas (5,000 cargo)</option>
@@ -130,7 +136,7 @@
 
     <section id="results" class="sfc2-results hidden" aria-live="polite">
       <div class="results-head">
-        <div><p class="eyebrow">Recommendations</p><h2>Round-limit comparison</h2></div>
+        <div><p class="eyebrow">Recommendations</p><h2>Fleet mix results</h2></div>
         <p id="resultSummary" class="hint"></p>
       </div>
       <div id="recommendations" class="sfc2-table-wrap"></div>
@@ -148,6 +154,6 @@
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
   <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-4"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-5"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-6"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@
   const inputStatus = $('#inputStatus');
   const results = $('#results');
   const recommendations = $('#recommendations');
+  let currentComparisons = null;
   let mixSequence = 1;
   let mixes = [{id:mixSequence++, name:'Mix 1', ratios:{}}];
 
@@ -171,9 +172,11 @@
     </tr>`;
   }
 
-  function renderComparisonTable(comparisons) {
+  function renderComparisonTable(comparisons, roundLimit) {
     const rows = comparisons.flatMap(comparison =>
-      comparison.result.recommendations.map(recommendation => renderResultRow(comparison.mix, recommendation))
+      comparison.result.recommendations
+        .filter(recommendation => recommendation.roundLimit === roundLimit)
+        .map(recommendation => renderResultRow(comparison.mix, recommendation))
     ).join('');
     return `<table class="sfc2-results-table">
       <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Estimated result</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Selected transport after losses</th></tr></thead>
@@ -181,7 +184,7 @@
     </table>`;
   }
 
-  function renderSummary(comparisons) {
+  function renderSummary(comparisons, roundLimit) {
     const ineffective = comparisons
       .map(({mix, result}) => ({mix, targets:result.ineffectiveTargets}))
       .filter(item => item.targets.length);
@@ -191,13 +194,24 @@
     if (ineffective.length) {
       return `Ineffective mixes under the 1% shield rule: ${ineffective.map(item => `${item.mix.name} vs ${item.targets.join(', ')}`).join('; ')}. Adjust those mixes or attacker Weapons Tech.`;
     }
-    const noSolution = comparisons.filter(({result}) => result.recommendations.every(item => item.unavailable));
+    const noSolution = comparisons.filter(({result}) => {
+      const recommendation = result.recommendations.find(item => item.roundLimit === roundLimit);
+      return !recommendation || recommendation.unavailable;
+    });
     if (noSolution.length === comparisons.length) {
-      return `No modeled solution found for the selected fleet mixes. Try different ratios or a lower clear-confidence threshold.`;
+      return `No modeled solution found for any fleet mix within ${roundLimit} rounds. Try different ratios or a lower clear-confidence threshold.`;
     }
     const confidence = comparisons[0].result.confidence;
     const share = `${Math.round(comparisons[0].result.plunderShare * 100)}%`;
     return `Clear threshold ${(confidence * 100).toFixed(1)}% · eligible plunder ${share} · selected transport estimate includes expected battle losses`;
+  }
+
+  function renderSelectedResults(comparisons) {
+    const roundLimit = Number($('#roundFilter').value);
+    const hasIneffectiveMix = comparisons.some(item => item.result.ineffectiveTargets.length);
+    $('#resultSummary').classList.toggle('sfc2-ineffectiveness-summary', hasIneffectiveMix);
+    $('#resultSummary').textContent = renderSummary(comparisons, roundLimit);
+    recommendations.innerHTML = renderComparisonTable(comparisons, roundLimit);
   }
 
   function readInput() {
@@ -258,10 +272,8 @@
       window.setTimeout(() => {
         try {
           const comparisons = scenarios.map(mix => ({mix, result:optimizer.analyze({...input, ratios:mix.ratios})}));
-          const hasIneffectiveMix = comparisons.some(item => item.result.ineffectiveTargets.length);
-          $('#resultSummary').classList.toggle('sfc2-ineffectiveness-summary', hasIneffectiveMix);
-          $('#resultSummary').textContent = renderSummary(comparisons);
-          recommendations.innerHTML = renderComparisonTable(comparisons);
+          currentComparisons = comparisons;
+          renderSelectedResults(comparisons);
           results.classList.remove('hidden');
           inputStatus.textContent = 'Calculation complete.';
           results.scrollIntoView({behavior:'smooth', block:'start'});
@@ -315,6 +327,9 @@
   }
 
   $('#calculateBtn').addEventListener('click', calculate);
+  $('#roundFilter').addEventListener('change', () => {
+    if (currentComparisons) renderSelectedResults(currentComparisons);
+  });
   $('#addMixBtn').addEventListener('click', () => {
     mixes = snapshotMixes();
     if (mixes.length >= 3) return;
