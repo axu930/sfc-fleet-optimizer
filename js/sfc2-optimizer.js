@@ -1,0 +1,279 @@
+(function (root, factory) {
+  const combat = typeof module === 'object' && module.exports ? require('./sfc2-combat.js') : root.SFC2Combat;
+  const api = factory(combat);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (root) root.SFC2Optimizer = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (combat) {
+  'use strict';
+
+  const ROUND_LIMITS = Object.freeze([3, 4, 5, 6]);
+  const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
+  const MAX_SCALE = 1e12;
+
+  function integerGcd(left, right) {
+    let a = Math.abs(Math.trunc(left));
+    let b = Math.abs(Math.trunc(right));
+    while (b) [a, b] = [b, a % b];
+    return a || 1;
+  }
+
+  function normalizeRatios(ratios={}) {
+    const selected = Object.entries(ratios)
+      .map(([name, value]) => [name, Math.trunc(Number(value))])
+      .filter(([name, value]) => combat.ATTACKER_SHIPS.includes(name) && Number.isFinite(value) && value > 0);
+    if (!selected.length) throw new Error('Enter a positive ratio for at least one attacking ship.');
+    const divisor = selected.reduce((gcd, [, value]) => integerGcd(gcd, value), 0) || 1;
+    return Object.fromEntries(selected.map(([name, value]) => [name, value / divisor]));
+  }
+
+  function scaledFleet(ratios, scale) {
+    return Object.fromEntries(Object.entries(ratios).map(([name, ratio]) => [name, ratio * scale]));
+  }
+
+  function addCompositions(left={}, right={}) {
+    const combined = {...left};
+    for (const [name, count] of Object.entries(right)) combined[name] = (combined[name] || 0) + count;
+    return combined;
+  }
+
+  function sumCounts(counts={}) {
+    return Object.values(counts).reduce((sum, count) => sum + (Number(count) || 0), 0);
+  }
+
+  function sumResources(resources={}) {
+    return (Number(resources.ore) || 0) + (Number(resources.crystal) || 0) + (Number(resources.hydrogen) || 0);
+  }
+
+  function costOfFleet(composition={}) {
+    const total = {ore:0, crystal:0, hydrogen:0, credits:0};
+    for (const [name, count] of Object.entries(composition)) {
+      const cost = combat.buildCost(name);
+      if (!cost || !(count > 0)) continue;
+      total.ore += count * cost.ore;
+      total.crystal += count * cost.crystal;
+      total.hydrogen += count * cost.hydrogen;
+      total.credits += count * cost.credits;
+    }
+    return total;
+  }
+
+  function firstWinRound(simulation, roundLimit, confidence) {
+    const initialBlockingDefenders = sumCounts(simulation.initialDefenders);
+    if (!(initialBlockingDefenders > 0)) {
+      const attackers = sumCounts(simulation.initialAttackers);
+      return attackers > 0 ? {round:0, probability:1} : null;
+    }
+    for (const detail of simulation.roundDetails || []) {
+      if (detail.round > roundLimit) break;
+      if (detail.estimatedWinProbability >= confidence) {
+        return {round:detail.round, probability:detail.estimatedWinProbability};
+      }
+    }
+    return null;
+  }
+
+  function roundSnapshot(simulation, round) {
+    if (round === 0) {
+      return {
+        attackers:simulation.initialAttackers,
+        defenders:simulation.initialDefenders,
+        attackerLosses:Object.fromEntries(Object.keys(simulation.initialAttackers).map(name => [name, 0]))
+      };
+    }
+    const detail = (simulation.roundDetails || []).find(item => item.round === round);
+    return detail || {
+      attackers:simulation.remainingAttackers,
+      defenders:simulation.remainingDefenders,
+      attackerLosses:simulation.attackerLosses
+    };
+  }
+
+  function qualifies(simulation, limit, confidence) {
+    return Boolean(firstWinRound(simulation, limit, confidence));
+  }
+
+  function findFleetForRound(input, ratios, roundLimit, confidence, cache) {
+    function evaluate(scale) {
+      if (!cache.has(scale)) {
+        cache.set(scale, combat.simulate({
+          attackers:scaledFleet(ratios, scale),
+          defenders:input.defenders,
+          attackerTech:input.attackerTech,
+          defenderTech:input.defenderTech
+        }));
+      }
+      return cache.get(scale);
+    }
+
+    let high = 1;
+    let highSimulation = evaluate(high);
+    while (!qualifies(highSimulation, roundLimit, confidence) && high < MAX_SCALE) {
+      high = Math.min(MAX_SCALE, high * 2);
+      highSimulation = evaluate(high);
+    }
+    if (!qualifies(highSimulation, roundLimit, confidence)) return null;
+
+    let low = 0;
+    while (high - low > 1) {
+      const middle = Math.floor(low + (high - low) / 2);
+      const simulation = evaluate(middle);
+      if (qualifies(simulation, roundLimit, confidence)) high = middle;
+      else low = middle;
+    }
+
+    const fleet = scaledFleet(ratios, high);
+    const simulation = evaluate(high);
+    const win = firstWinRound(simulation, roundLimit, confidence);
+    const snapshot = roundSnapshot(simulation, win.round);
+    const rebuildCost = costOfFleet(snapshot.attackerLosses);
+    return {
+      roundLimit,
+      scale:high,
+      fleet,
+      totalShips:sumCounts(fleet),
+      buildCost:costOfFleet(fleet),
+      estimatedLosses:snapshot.attackerLosses,
+      rebuildCost,
+      winRound:win.round,
+      estimatedWinProbability:win.probability,
+      remainingAttackers:snapshot.attackers,
+      simulation
+    };
+  }
+
+  function protectWithResourceDen(resources, level) {
+    const remaining = {
+      ore:Math.max(0, Number(resources.ore) || 0),
+      crystal:Math.max(0, Number(resources.crystal) || 0),
+      hydrogen:Math.max(0, Number(resources.hydrogen) || 0)
+    };
+    let protection = level > 0 ? 30_000 + Math.max(0, level - 1) * 7_500 : 0;
+    const protectedResources = {ore:0, crystal:0, hydrogen:0};
+    while (protection > 1e-8) {
+      const active = Object.keys(remaining).filter(name => remaining[name] - protectedResources[name] > 1e-8);
+      if (!active.length) break;
+      const share = protection / active.length;
+      const smallestRoom = Math.min(...active.map(name => remaining[name] - protectedResources[name]));
+      const amount = Math.min(share, smallestRoom);
+      for (const name of active) protectedResources[name] += amount;
+      protection -= amount * active.length;
+    }
+    return Object.fromEntries(Object.keys(remaining).map(name => [name, Math.max(0, remaining[name] - protectedResources[name])]));
+  }
+
+  function plunderPool(input={}) {
+    const resources = input.valuesArePlunderable
+      ? {
+          ore:Math.max(0, Number(input.resources && input.resources.ore) || 0),
+          crystal:Math.max(0, Number(input.resources && input.resources.crystal) || 0),
+          hydrogen:Math.max(0, Number(input.resources && input.resources.hydrogen) || 0)
+        }
+      : protectWithResourceDen(input.resources || {}, Math.max(0, Math.trunc(Number(input.resourceDenLevel) || 0)));
+    const share = input.atWar ? 0.55 : 0.5;
+    return Object.fromEntries(Object.keys(resources).map(name => [name, resources[name] * share]));
+  }
+
+  function allocatePlunder(pool={}, cargoCapacity=0) {
+    const taken = {ore:0, crystal:0, hydrogen:0};
+    let available = Math.max(0, Number(cargoCapacity) || 0);
+    const remaining = Object.fromEntries(Object.keys(taken).map(name => [name, Math.max(0, Number(pool[name]) || 0)]));
+    const total = sumResources(remaining);
+    if (available >= total) return {...remaining};
+    let active = Object.keys(remaining).filter(name => remaining[name] > 0);
+    while (available > 1e-8 && active.length) {
+      const equalShare = available / active.length;
+      const smallest = active.reduce((best, name) => remaining[name] < remaining[best] ? name : best, active[0]);
+      const amount = Math.min(equalShare, remaining[smallest]);
+      for (const name of active) {
+        const take = Math.min(amount, remaining[name]);
+        taken[name] += take;
+        remaining[name] -= take;
+        available -= take;
+      }
+      active = active.filter(name => remaining[name] > 1e-8);
+      if (amount < equalShare && !active.length) break;
+    }
+    return taken;
+  }
+
+  function winningSnapshot(simulation, roundLimit, confidence) {
+    const win = firstWinRound(simulation, roundLimit, confidence);
+    const round = win ? win.round : roundLimit;
+    return {win, round, snapshot:roundSnapshot(simulation, round)};
+  }
+
+  function findTransportCount(input, recommendation, lockedFleet, type, pool, confidence) {
+    const neededCargo = sumResources(pool);
+    const roundLimit = recommendation.roundLimit;
+    const cache = new Map();
+    function evaluate(additional) {
+      if (!cache.has(additional)) {
+        const fleet = addCompositions(lockedFleet, additional > 0 ? {[type]:additional} : {});
+        const simulation = combat.simulate({
+          attackers:fleet,
+          defenders:input.defenders,
+          attackerTech:input.attackerTech,
+          defenderTech:input.defenderTech
+        });
+        const state = winningSnapshot(simulation, roundLimit, confidence);
+        const capacity = combat.cargoCapacityForSurvivors(state.snapshot.attackers);
+        cache.set(additional, {additional, fleet, simulation, capacity, win:state.win, round:state.round, snapshot:state.snapshot});
+      }
+      return cache.get(additional);
+    }
+
+    const baseline = evaluate(0);
+    if (baseline.capacity >= neededCargo - 1e-7) {
+      return {...baseline, cargoTaken:allocatePlunder(pool, baseline.capacity), fullyLoaded:true};
+    }
+    if (!(neededCargo > 0)) return {...baseline, cargoTaken:allocatePlunder(pool, baseline.capacity), fullyLoaded:true};
+
+    let low = 0;
+    let high = Math.max(1, Math.ceil((neededCargo - baseline.capacity) / combat.cargoCapacity(type)));
+    let highResult = evaluate(high);
+    while (highResult.capacity < neededCargo - 1e-7 && high < MAX_SCALE) {
+      low = high;
+      high = Math.min(MAX_SCALE, high * 2);
+      highResult = evaluate(high);
+    }
+    if (highResult.capacity < neededCargo - 1e-7) {
+      return {...highResult, fullyLoaded:false, cargoTaken:allocatePlunder(pool, highResult.capacity)};
+    }
+
+    while (high - low > 1) {
+      const middle = Math.floor(low + (high - low) / 2);
+      const result = evaluate(middle);
+      if (result.capacity >= neededCargo - 1e-7) high = middle;
+      else low = middle;
+    }
+    const final = evaluate(high);
+    return {
+      ...final,
+      fullyLoaded:final.capacity >= neededCargo - 1e-7,
+      cargoTaken:allocatePlunder(pool, final.capacity)
+    };
+  }
+
+  function analyze(input={}) {
+    const ratios = normalizeRatios(input.ratios);
+    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || 0.95));
+    const cache = new Map();
+    const recommendations = ROUND_LIMITS.map(roundLimit => {
+      const recommendation = findFleetForRound(input, ratios, roundLimit, confidence, cache);
+      if (!recommendation) return {roundLimit, unavailable:true};
+      const pool = plunderPool(input);
+      const cargo = TRANSPORTS.map(type => ({
+        type,
+        cargoPerShip:combat.cargoCapacity(type),
+        ...findTransportCount(input, recommendation, recommendation.fleet, type, pool, confidence)
+      }));
+      return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
+    });
+    return {ratios, confidence, recommendations, plunderShare:input.atWar ? 0.55 : 0.5};
+  }
+
+  return {
+    ROUND_LIMITS, TRANSPORTS, normalizeRatios, scaledFleet, costOfFleet,
+    protectWithResourceDen, plunderPool, allocatePlunder, analyze
+  };
+});

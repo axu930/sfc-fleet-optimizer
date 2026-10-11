@@ -2,9 +2,9 @@
 
 This repository hosts a dependency-free browser toolkit for Starfleet
 Commander planning. The root landing page links to individual tools under
-`/tools/`; currently available tools are the **Zeus Fleet Optimizer**, the
-**Fleet Allocation Optimizer**, and the **Ship and Defense Build Time
-Calculator**.
+`/tools/`; available tools include the **Zeus Fleet Optimizer**, the
+**Fleet Allocation Optimizer**, the **SFC2 Fleet Composition Analyzer**, and
+the **Ship and Defense Build Time Calculator**.
 
 ## Zeus Fleet Optimizer
 
@@ -66,6 +66,35 @@ target and combines them with a bounded Pareto dynamic program. If the browser
 performance bound is reached, results explicitly say the search was bounded;
 treat them as a practical best allocation found, not a proof of global
 optimality.
+
+## SFC2 Fleet Composition Analyzer
+
+The SFC2 analyzer is available at `tools/sfc2-fleet-composition/`. Enter
+integer ratio weights for attacking ships, the defending ship and defense
+counts, both sides' Weapons / Shield / Armor tech, and the target's resources.
+For round limits of 3, 4, 5, and 6, the tool finds the smallest scaled ratio
+bundle meeting the selected estimated clear-confidence threshold (95% by
+default). It reports the fleet's Ore / Crystal / Hydrogen build cost, expected
+attacker losses by ship type, and the expected rebuild cost.
+
+The shared `js/units.js` catalog supplies the common SFC ship and defense
+ratings and costs. `js/sfc2-combat.js` adds SFC2-only roster entries, SFC2
+cargo capacities, and directed rapid-fire relationships. Charon and
+Hephaestus are outside this analyzer's scope. Combat uses
+random-target, simultaneous-fire expected-value rounds, shield resets, hull
+damage, the 1% shield ineffectiveness rule, and the six-round cap. Clear
+confidence uses an independent per-ship survival approximation from each
+class's expected remaining fraction; results are estimates and can differ from
+a single live battle.
+
+After selecting each attack fleet, the cargo sweep keeps that fleet ratio and
+scale fixed. It tests Atlas, Hercules, and Carmanor additions separately,
+re-simulates the combined fleet to include expected transport losses, and
+estimates cargo capacity and loot by resource. Enter resource values directly
+from an espionage report as plunderable amounts, or enter raw stockpile values
+with a Resource Den level. The tool applies a 50% plunder share by default and
+55% when the qualifying war option is selected. It reports unit build costs;
+flight fuel is outside the model.
 
 Both the Zeus and fleet-allocation charts use the dependency-free SVG helpers in
 `js/svg-charts.js` for scales, paths, labels, points, and accessible hover/focus/
@@ -196,14 +225,15 @@ scripts so it works from GitHub Pages and when pages are opened directly:
 
 - `index.html` is the landing page and tool directory.
 - `tools/zeus-optimizer/index.html` is the Zeus optimizer entry point.
+- `tools/sfc2-fleet-composition/index.html` is the SFC2 fleet composition analyzer entry point.
 - `tools/shipyard-calculator/index.html` is the ship and defense build-time
   calculator.
-- `css/app.css` owns the canonical theme, shared shell, and Zeus
 - `tools/fleet-allocation/index.html` is the multi-target Zeus allocator.
-- `css/app.css` owns the canonical theme, shared shell, and Zeus
-  optimizer-specific presentation plus scoped Fleet Allocation and ship
-  calculator styles.
+- `css/app.css` owns the canonical theme, shared shell, and scoped tool styles.
 - `js/units.js` owns immutable unit statistics, aliases, and shared numeric helpers.
+- `js/sfc2-combat.js` owns the SFC2 roster metadata and expected combat model.
+- `js/sfc2-optimizer.js` owns ratio scaling, round-limit search, and transport sizing.
+- `tools/sfc2-fleet-composition/app.js` owns the analyzer inputs and result rendering.
 - `js/battle-report-parser.js` owns large-number, roster, and battle-report parsing.
 - `js/shipyard-calculator.js` owns exact ship-count parsing, Foundry build-time
   calculations, and large-duration formatting.

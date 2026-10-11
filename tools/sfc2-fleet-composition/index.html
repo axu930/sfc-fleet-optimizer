@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Estimate SFC2 fleet sizes for three to six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
+  <title>SFC2 Fleet Composition | Starfleet Commander Tools</title>
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-fleet-composition-1">
+</head>
+<body class="sfc2-page">
+  <main class="wrap">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="site-nav-brand" href="../../">SFC Tools</a>
+      <div class="site-nav-links">
+        <a href="../../">All tools</a>
+        <a href="../zeus-optimizer/">Zeus Optimizer</a>
+        <a href="../fleet-allocation/">Fleet Allocation</a>
+        <a href="./" aria-current="page">SFC2 Fleet Mix</a>
+      </div>
+    </nav>
+
+    <header class="sfc2-header">
+      <div>
+        <p class="eyebrow">SFC2 combat planner</p>
+        <h1>Fleet Composition Analyzer</h1>
+        <p class="lede">Find the smallest fleet in your chosen ratios that is estimated to clear a target within 3, 4, 5, or 6 rounds. Compare expected losses, rebuild costs, and the transports needed to bring home the plunder.</p>
+        <p class="intro-guide"><strong>How to use:</strong> Enter integer ratio weights for your attack fleet, the defender's ships and defenses, both sides' combat tech, and the target's resources. Calculate to compare four round limits. Each cargo estimate keeps that attack ratio fleet fixed and adds one transport type at a time.</p>
+      </div>
+      <div class="sfc2-badge">Deterministic expected-value model</div>
+    </header>
+
+    <section class="sfc2-input-grid" aria-label="Fleet and target inputs">
+      <article class="panel sfc2-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Attacking fleet ratios</h2>
+            <p class="hint">Enter relative whole-number weights. Zero leaves a ship out. The analyzer reduces common factors, then scales the ratio bundle.</p>
+          </div>
+          <button id="sampleBtn" class="ghost" type="button">Load sample</button>
+        </div>
+        <div id="attackerRatioInputs" class="sfc2-unit-grid"></div>
+      </article>
+
+      <article class="panel sfc2-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Defending roster</h2>
+          <p class="hint">Ships and defenses are all targets in the same pool. Enter zero for absent units. Hephaestus is outside this model.</p>
+          </div>
+          <button id="clearBtn" class="ghost" type="button">Clear counts</button>
+        </div>
+        <details class="sfc2-input-group" open>
+          <summary>Ships</summary>
+          <div id="defenderShipInputs" class="sfc2-unit-grid compact"></div>
+        </details>
+        <details class="sfc2-input-group" open>
+          <summary>Defenses</summary>
+          <div id="defenderDefenseInputs" class="sfc2-unit-grid compact"></div>
+        </details>
+        <p class="hint">Missile-silo ABMs and Interplanetary Ballistic Missiles are not listed because they do not take part in fleet battles.</p>
+      </article>
+
+      <article class="panel sfc2-panel">
+        <h2>Combat settings</h2>
+        <p class="hint">Tech adds 10% of each base rating per level.</p>
+        <div class="sfc2-tech-grid">
+          <fieldset>
+            <legend>Your fleet</legend>
+            <label>Weapons <input id="attackerWeapons" type="number" min="0" step="1" value="0"></label>
+            <label>Shield <input id="attackerShield" type="number" min="0" step="1" value="0"></label>
+            <label>Armor <input id="attackerArmor" type="number" min="0" step="1" value="0"></label>
+          </fieldset>
+          <fieldset>
+            <legend>Defender</legend>
+            <label>Weapons <input id="defenderWeapons" type="number" min="0" step="1" value="0"></label>
+            <label>Shield <input id="defenderShield" type="number" min="0" step="1" value="0"></label>
+            <label>Armor <input id="defenderArmor" type="number" min="0" step="1" value="0"></label>
+          </fieldset>
+        </div>
+        <label class="sfc2-select-label" for="winConfidence">Estimated clear confidence</label>
+        <select id="winConfidence">
+          <option value="0.9">90%</option>
+          <option value="0.95" selected>95%</option>
+          <option value="0.99">99%</option>
+          <option value="0.999">99.9%</option>
+        </select>
+      </article>
+
+      <article class="panel sfc2-panel">
+        <h2>Resources to raid</h2>
+        <p class="hint">Enter the visible plunderable amounts from an espionage report, or enter raw stockpile values and apply a Resource Den level.</p>
+        <div class="sfc2-resource-grid">
+          <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
+          <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
+          <label>Hydrogen <input id="resourceHydrogen" type="text" inputmode="decimal" value="0"></label>
+        </div>
+        <label class="sfc2-check"><input id="valuesArePlunderable" type="checkbox" checked> Values are already plunderable (espionage report)</label>
+        <div class="sfc2-resource-options">
+          <label>Resource Den level <input id="resourceDenLevel" type="number" min="0" step="1" value="0" disabled></label>
+          <label class="sfc2-check"><input id="atWar" type="checkbox"> Qualifying declared war (55% share)</label>
+        </div>
+      </article>
+    </section>
+
+    <div class="sfc2-actions">
+      <button id="calculateBtn" class="primary" type="button">Calculate fleet sizes</button>
+      <span id="inputStatus" class="status" aria-live="polite"></span>
+    </div>
+
+    <section id="results" class="sfc2-results hidden" aria-live="polite">
+      <div class="results-head">
+        <div><p class="eyebrow">Recommendations</p><h2>Round-limit comparison</h2></div>
+        <p id="resultSummary" class="hint"></p>
+      </div>
+      <div id="recommendations" class="sfc2-recommendations"></div>
+      <article class="panel sfc2-model-notes">
+        <h2>Model notes</h2>
+        <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. The clear-confidence estimate treats survival as independent per ship within each class, using each class's expected remaining fraction; actual battles can vary.</p>
+        <p>Transport counts are added after the round-limit fleet is selected. Each transport option is simulated with that fixed attack fleet, so the cargo estimate includes expected losses without changing the chosen combat ratio. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
+      </article>
+    </section>
+
+    <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
+  </main>
+  <script src="../../js/units.js?v=count-suffixes-1"></script>
+  <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-1"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-1"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-1"></script>
+</body>
+</html>
