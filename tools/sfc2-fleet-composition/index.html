@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>SFC2 Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-two-pane-layout-2">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-input-tooltips-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -33,8 +33,10 @@
 
     <section class="sfc2-input-grid" aria-label="Fleet and target inputs">
       <article class="panel sfc2-panel">
-        <h2>Attacker</h2>
-        <p class="hint">Tech adds 10% of each base rating per level. These values apply to every fleet mix.</p>
+        <h2>Attacker <span class="sfc2-help">
+          <button class="sfc2-help-trigger" type="button" aria-label="Attacker tech details" aria-describedby="attacker-tech-help">i</button>
+          <span id="attacker-tech-help" class="sfc2-help-popover" role="tooltip">Tech adds 10% of each base rating per level. These values apply to every fleet mix.</span>
+        </span></h2>
         <div class="sfc2-tech-grid">
           <fieldset>
             <legend>Your fleet</legend>
@@ -52,8 +54,10 @@
         </select>
         <div class="panel-head">
           <div>
-            <h2>Attacking fleet mixes</h2>
-            <p class="hint">Enter relative whole-number weights. Zero leaves a ship out. The analyzer reduces common factors, then scales each mix.</p>
+            <h2>Attacking fleet mixes <span class="sfc2-help">
+              <button class="sfc2-help-trigger" type="button" aria-label="Fleet mix details" aria-describedby="fleet-mix-help">i</button>
+              <span id="fleet-mix-help" class="sfc2-help-popover" role="tooltip">Enter relative whole-number weights. Zero leaves a ship out. The analyzer reduces common factors, then scales each mix.</span>
+            </span></h2>
           </div>
           <div class="sfc2-panel-actions">
             <button id="addMixBtn" class="ghost" type="button">Add mix</button>
@@ -64,8 +68,10 @@
       </article>
 
       <article class="panel sfc2-panel">
-        <h2>Defender</h2>
-        <p class="hint">Tech adds 10% of each base rating per level. Ships and defenses are targets in the same pool. Hephaestus is outside this model.</p>
+        <h2>Defender <span class="sfc2-help">
+          <button class="sfc2-help-trigger" type="button" aria-label="Defender roster details" aria-describedby="defender-roster-help">i</button>
+          <span id="defender-roster-help" class="sfc2-help-popover" role="tooltip">Ships and defenses are targets in the same pool. Hephaestus is outside this model.</span>
+        </span></h2>
         <div class="sfc2-tech-grid">
           <fieldset>
             <legend>Defender combat tech</legend>
