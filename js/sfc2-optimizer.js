@@ -8,7 +8,9 @@
 
   const ROUND_LIMITS = Object.freeze([4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
-  const MAX_SCALE = 1e12;
+  // Far beyond plausible in-game counts, while keeping expected-value
+  // arithmetic and the derived combat/cost values finite in JavaScript.
+  const MAX_SCALE = 1e100;
 
   function integerGcd(left, right) {
     let a = Math.abs(Math.trunc(left));
@@ -92,6 +94,47 @@
     return Boolean(firstWinRound(simulation, limit, confidence));
   }
 
+  function findMinimumCount(evaluate, qualifies, initialHigh=1) {
+    let high = Math.min(MAX_SCALE, Math.max(1, Math.ceil(Number(initialHigh) || 1)));
+    let low = 0;
+    let highResult = evaluate(high);
+
+    while (!qualifies(highResult) && high < MAX_SCALE) {
+      low = high;
+      const next = Math.min(MAX_SCALE, high * 2);
+      if (!(next > high)) break;
+      high = next;
+      highResult = evaluate(high);
+    }
+    if (!qualifies(highResult)) return null;
+
+    if (high <= Number.MAX_SAFE_INTEGER) {
+      let integerLow = Math.floor(low);
+      let integerHigh = Math.ceil(high);
+      while (integerHigh - integerLow > 1) {
+        const middle = Math.floor(integerLow + (integerHigh - integerLow) / 2);
+        if (qualifies(evaluate(middle))) integerHigh = middle;
+        else integerLow = middle;
+      }
+      return integerHigh;
+    }
+
+    // At very large counts, integer steps are smaller than Number precision.
+    // Bisect the bracket by its geometric midpoint, as the Zeus optimizer does.
+    if (low === 0) {
+      if (qualifies(evaluate(1))) return 1;
+      low = 1;
+    }
+    for (let iteration = 0; iteration < 128; iteration++) {
+      if (high / low <= 1 + 1e-12) break;
+      const middle = Math.exp((Math.log(low) + Math.log(high)) / 2);
+      if (!(middle > low && middle < high)) break;
+      if (qualifies(evaluate(middle))) high = middle;
+      else low = middle;
+    }
+    return Math.ceil(high);
+  }
+
   function findFleetForRound(input, ratios, roundLimit, confidence, cache) {
     function evaluate(scale) {
       if (!cache.has(scale)) {
@@ -105,30 +148,20 @@
       return cache.get(scale);
     }
 
-    let high = 1;
-    let highSimulation = evaluate(high);
-    while (!qualifies(highSimulation, roundLimit, confidence) && high < MAX_SCALE) {
-      high = Math.min(MAX_SCALE, high * 2);
-      highSimulation = evaluate(high);
-    }
-    if (!qualifies(highSimulation, roundLimit, confidence)) return null;
+    const scale = findMinimumCount(
+      evaluate,
+      simulation => qualifies(simulation, roundLimit, confidence)
+    );
+    if (scale == null) return null;
 
-    let low = 0;
-    while (high - low > 1) {
-      const middle = Math.floor(low + (high - low) / 2);
-      const simulation = evaluate(middle);
-      if (qualifies(simulation, roundLimit, confidence)) high = middle;
-      else low = middle;
-    }
-
-    const fleet = scaledFleet(ratios, high);
-    const simulation = evaluate(high);
+    const fleet = scaledFleet(ratios, scale);
+    const simulation = evaluate(scale);
     const win = firstWinRound(simulation, roundLimit, confidence);
     const snapshot = roundSnapshot(simulation, win.round);
     const rebuildCost = costOfFleet(snapshot.attackerLosses);
     return {
       roundLimit,
-      scale:high,
+      scale,
       fleet,
       totalShips:sumCounts(fleet),
       buildCost:costOfFleet(fleet),
@@ -228,28 +261,15 @@
     }
     if (!(neededCargo > 0)) return {...baseline, cargoTaken:allocatePlunder(pool, baseline.capacity), fullyLoaded:true};
 
-    let low = 0;
-    let high = Math.max(1, Math.ceil((neededCargo - baseline.capacity) / combat.cargoCapacity(type)));
-    let highResult = evaluate(high);
-    while (highResult.capacity < neededCargo - 1e-7 && high < MAX_SCALE) {
-      low = high;
-      high = Math.min(MAX_SCALE, high * 2);
-      highResult = evaluate(high);
-    }
-    if (highResult.capacity < neededCargo - 1e-7) {
-      return {...highResult, fullyLoaded:false, cargoTaken:allocatePlunder(pool, highResult.capacity)};
-    }
-
-    while (high - low > 1) {
-      const middle = Math.floor(low + (high - low) / 2);
-      const result = evaluate(middle);
-      if (result.capacity >= neededCargo - 1e-7) high = middle;
-      else low = middle;
-    }
-    const final = evaluate(high);
+    const additional = findMinimumCount(
+      evaluate,
+      result => result.capacity >= neededCargo - 1e-7,
+      Math.ceil((neededCargo - baseline.capacity) / combat.cargoCapacity(type))
+    );
+    const final = evaluate(additional == null ? MAX_SCALE : additional);
     return {
       ...final,
-      fullyLoaded:final.capacity >= neededCargo - 1e-7,
+      fullyLoaded:additional != null && final.capacity >= neededCargo - 1e-7,
       cargoTaken:allocatePlunder(pool, final.capacity)
     };
   }

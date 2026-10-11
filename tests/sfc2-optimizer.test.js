@@ -82,4 +82,18 @@ const effective = optimizer.analyze({
 assert.deepStrictEqual(effective.ineffectiveTargets, [],
   'a mix with a weapon above the 1% shield threshold can break through');
 
+const largeFleet = optimizer.analyze({
+  ratios:{Prometheus:1},
+  defenders:{'Laser Cannon':2_000_000_000_000_000_000},
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  confidence:0.95,
+  resources:{ore:0, crystal:0, hydrogen:0},
+  valuesArePlunderable:true
+});
+assert(largeFleet.recommendations.every(item => !item.unavailable && item.scale > Number.MAX_SAFE_INTEGER),
+  'logarithmic fleet search should find solutions beyond the previous 1T cap and safe-integer range');
+assert(largeFleet.recommendations.every(item => item.estimatedWinProbability >= 0.95),
+  'large-fleet recommendations should still satisfy the clear-confidence threshold');
+
 console.log('SFC2 optimizer tests passed');

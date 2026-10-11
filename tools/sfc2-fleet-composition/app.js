@@ -148,7 +148,7 @@
     const resultLabel = recommendation.unavailable
       ? ineffective
         ? `Ineffective vs ${recommendation.ineffectiveTargets.join(', ')} under the 1% shield rule`
-        : 'No modeled solution within the 1T search cap'
+        : 'No modeled solution found in the numeric search range'
       : formatWin(recommendation.winRound, recommendation.estimatedWinProbability);
     if (recommendation.unavailable) {
       return `<tr class="${ineffective ? 'sfc2-result-ineffective' : 'sfc2-result-unavailable'}">
@@ -193,7 +193,7 @@
     }
     const noSolution = comparisons.filter(({result}) => result.recommendations.every(item => item.unavailable));
     if (noSolution.length === comparisons.length) {
-      return `No modeled solution for any fleet mix within the 1T ratio-scale search cap. Try different ratios or a lower clear-confidence threshold.`;
+      return `No modeled solution found for the selected fleet mixes. Try different ratios or a lower clear-confidence threshold.`;
     }
     const confidence = comparisons[0].result.confidence;
     const share = `${Math.round(comparisons[0].result.plunderShare * 100)}%`;
