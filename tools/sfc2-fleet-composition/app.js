@@ -182,7 +182,13 @@
         <button class="copy-count-button" type="button" data-copy-count="${exact}" aria-label="Copy exact ${escapeHtml(name)} count" title="Copy exact ship count"><span aria-hidden="true">⧉</span></button>
       </span>`;
     }).join('');
-    return `<div class="sfc2-attack-fleet"><strong>${formatCount(recommendation.totalShips)} total</strong>${breakdown}</div>`;
+    const transport = recommendation.cargo?.[0];
+    const transportCount = Math.max(0, Number(transport?.additional) || 0);
+    const transportLine = transport ? `<span class="sfc2-attack-fleet-line">
+      <span>${escapeHtml(transport.type)} transport ${formatCount(transportCount)}</span>
+      <button class="copy-count-button" type="button" data-copy-count="${plainCount(transportCount)}" aria-label="Copy exact ${escapeHtml(transport.type)} transport count" title="Copy exact ship count"><span aria-hidden="true">⧉</span></button>
+    </span>` : '';
+    return `<div class="sfc2-attack-fleet"><strong>${formatCount(recommendation.totalShips + transportCount)} total</strong>${breakdown}${transportLine}</div>`;
   }
 
   function renderCargoCell(recommendation) {
@@ -209,14 +215,16 @@
         <td class="sfc2-attack-ships-cell">—</td><td>—</td><td>—</td><td>—</td><td>—</td>
       </tr>`;
     }
-    const losses = Object.values(recommendation.estimatedLosses).reduce((sum, count) => sum + count, 0);
+    const transportInclusiveLosses = recommendation.cargo?.[0]?.snapshot?.attackerLosses || recommendation.estimatedLosses;
+    const losses = Object.values(transportInclusiveLosses).reduce((sum, count) => sum + count, 0);
+    const rebuildCost = optimizer.costOfFleet(transportInclusiveLosses);
     return `<tr>
       <th scope="row"><strong>${escapeHtml(mix.name)}</strong></th>
       ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
       <td class="sfc2-attack-ships-cell">${renderAttackingFleetCell(recommendation)}</td>
       <td>${formatCost(recommendation.buildCost, true)}</td>
-      <td>${formatCount(losses)}<small>${formatComposition(recommendation.estimatedLosses)}</small></td>
-      <td>${formatCost(recommendation.rebuildCost, true)}</td>
+      <td>${formatCount(losses)}<small>${formatComposition(transportInclusiveLosses)}</small></td>
+      <td>${formatCost(rebuildCost, true)}</td>
       <td>${renderCargoCell(recommendation)}</td>
     </tr>`;
   }
