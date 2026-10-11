@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Compare rapid-fire attacks and tech-adjusted ship and defense stats against saved Starfleet Commander fleet ratios.">
+  <title>Rapid Fire Analyzer | Starfleet Commander Tools</title>
+  <link rel="stylesheet" href="../../css/app.css?v=rapid-fire-analyzer-1">
+</head>
+<body class="rapid-fire-page">
+  <main class="wrap">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="site-nav-brand" href="../../">SFC Tools</a>
+      <div class="site-nav-links">
+        <a href="../../">All tools</a>
+        <a href="../zeus-optimizer/">Zeus Optimizer</a>
+        <a href="../fleet-allocation/">Fleet Allocation</a>
+        <a href="../sfc2-fleet-composition/">SFC2 Fleet Mix</a>
+        <a href="./" aria-current="page">Rapid Fire</a>
+        <a href="../shipyard-calculator/">Build Time</a>
+      </div>
+    </nav>
+
+    <header class="rf-header">
+      <div>
+        <p class="eyebrow">Fleet matchup reference</p>
+        <h1>Rapid Fire Analyzer</h1>
+        <p class="lede">Compare how many shots each combat ship is expected to fire into different defending fleet ratios.</p>
+        <p class="intro-guide">Create named defender ratios using any supported ship or defense as a target. The estimate assumes every rapid-fire shot samples from the same ratio; it reports the initial shot plus expected bonus shots and does not simulate combat or target depletion.</p>
+      </div>
+    </header>
+
+    <section class="panel rf-tech-panel" aria-labelledby="techHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="techHeading">Combat technology</h2>
+          <p class="hint">Research levels scale weapon damage, shield, and hull by 10% per level. Rapid-fire ratings do not change with research.</p>
+        </div>
+      </div>
+      <div class="rf-tech-grid">
+        <label>Attacker Weapons Tech
+          <input id="weaponsTech" type="number" min="0" step="1" value="0">
+        </label>
+        <label>Defender Shield Tech
+          <input id="shieldTech" type="number" min="0" step="1" value="0">
+        </label>
+        <label>Defender Armor Tech
+          <input id="armorTech" type="number" min="0" step="1" value="0">
+        </label>
+      </div>
+      <div id="techStatus" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="rf-scenario-section" aria-labelledby="scenarioHeading">
+      <div class="rf-section-head">
+        <div>
+          <h2 id="scenarioHeading">Defending ratio bags</h2>
+          <p class="hint">Enter relative weights; only the proportions matter. Changes save in this browser automatically.</p>
+        </div>
+        <button id="addScenario" class="ghost" type="button">Add ratio bag</button>
+      </div>
+      <div id="scenarioList" class="rf-scenario-grid"></div>
+      <div id="scenarioStatus" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="results rf-results">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Expected attacks by composition</h2>
+            <p class="hint">Expected total shots include the initial shot. Bonus shots are the rapid-fire shots beyond it.</p>
+          </div>
+        </div>
+        <div id="scenarioResults" class="table-wrap rf-table-wrap"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Attacker vs. target stats</h2>
+            <p class="hint">Each row is one attacker-target pairing. Damage is per shot; this grid does not model shield depletion, target kills, or damage carrying between targets.</p>
+          </div>
+        </div>
+        <div id="matchupGrid" class="table-wrap rf-matchup-wrap"></div>
+      </article>
+    </section>
+
+    <article class="panel rf-notes">
+      <h2>Model notes</h2>
+      <p>Rapid-fire ratings are based on the <a href="https://playsfc2.com/wiki/rapid-fire">SFC2 Wiki Rapid Fire reference</a>. For rating R, the chance to continue after hitting that target is (R − 1) / R. The expected shot count is the geometric chain using the defender ratio as a fixed target probability.</p>
+      <p>Unlisted rapid-fire matchups are treated as rating ×1. Weapon damage, target hull, and target shield use the shared unit data and the selected tech levels. A shot at or below 1% of the target’s shield is marked ineffective under the existing combat rule.</p>
+    </article>
+
+    <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
+  </main>
+  <script src="../../js/units.js?v=count-suffixes-1"></script>
+  <script src="../../js/rapid-fire-analyzer.js?v=rf-composition-1"></script>
+  <script src="app.js?v=rf-composition-1"></script>
+</body>
+</html>
