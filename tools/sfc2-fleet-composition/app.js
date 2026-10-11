@@ -201,18 +201,17 @@
   }
 
   function renderResultRow(mix, recommendation, includeRoundLimit) {
-    const mixDescription = formatComposition(recommendation.fleet || mix.ratios);
     const ineffective = recommendation.reason === 'ineffective';
     if (recommendation.unavailable) {
       return `<tr class="${ineffective ? 'sfc2-result-ineffective' : 'sfc2-result-unavailable'}">
-        <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
+        <th scope="row"><strong>${escapeHtml(mix.name)}</strong></th>
         ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
         <td class="sfc2-attack-ships-cell">—</td><td>—</td><td>—</td><td>—</td><td>—</td>
       </tr>`;
     }
     const losses = Object.values(recommendation.estimatedLosses).reduce((sum, count) => sum + count, 0);
     return `<tr>
-      <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
+      <th scope="row"><strong>${escapeHtml(mix.name)}</strong></th>
       ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
       <td class="sfc2-attack-ships-cell">${renderAttackingFleetCell(recommendation)}</td>
       <td>${formatCost(recommendation.buildCost, true)}</td>
