@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (combat) {
   'use strict';
 
-  const ROUND_LIMITS = Object.freeze([3, 4, 5, 6]);
+  const ROUND_LIMITS = Object.freeze([4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
   const MAX_SCALE = 1e12;
 
@@ -258,9 +258,19 @@
     const ratios = normalizeRatios(input.ratios);
     const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || 0.95));
     const cache = new Map();
+    const ineffectiveTargets = combat.ineffectiveDefenderTargets(
+      scaledFleet(ratios, 1), input.defenders, input.attackerTech, input.defenderTech
+    );
     const recommendations = ROUND_LIMITS.map(roundLimit => {
-      const recommendation = findFleetForRound(input, ratios, roundLimit, confidence, cache);
-      if (!recommendation) return {roundLimit, unavailable:true};
+      const recommendation = ineffectiveTargets.length
+        ? null
+        : findFleetForRound(input, ratios, roundLimit, confidence, cache);
+      if (!recommendation) return {
+        roundLimit,
+        unavailable:true,
+        reason:ineffectiveTargets.length ? 'ineffective' : 'search-limit',
+        ineffectiveTargets
+      };
       const pool = plunderPool(input);
       const cargo = TRANSPORTS.map(type => ({
         type,
@@ -269,7 +279,7 @@
       }));
       return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
     });
-    return {ratios, confidence, recommendations, plunderShare:input.atWar ? 0.55 : 0.5};
+    return {ratios, confidence, recommendations, ineffectiveTargets, plunderShare:input.atWar ? 0.55 : 0.5};
   }
 
   return {

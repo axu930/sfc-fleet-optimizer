@@ -35,9 +35,9 @@
     'Hermes Probe', 'Shadow Probe',
     'Helios Class Solar Satellite', 'Genesis Solar Satellite'
   ]);
-  const ATTACKER_SHIPS = Object.freeze(Object.keys(UNITS).filter(name =>
-    UNITS[name].kind === 'ship' && !UNITS[name].stationary
-  ));
+  const ATTACKER_SHIPS = Object.freeze([
+    'Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus'
+  ]);
   const DEFENDER_SHIPS = Object.freeze(Object.keys(UNITS).filter(name =>
     UNITS[name].kind === 'ship'
   ));
@@ -89,6 +89,22 @@
       hydrogen:Number(unit.hydrogen != null ? unit.hydrogen : Math.max(0, (Number(unit.cost) || 0) - (Number(unit.ore) || 0) - (Number(unit.crystal) || 0))),
       credits:Number(unit.credits) || 0
     };
+  }
+
+  function ineffectiveDefenderTargets(attackers, defenders, attackerTech={}, defenderTech={}) {
+    const activeAttackers = Object.entries(attackers || {}).filter(([name, count]) =>
+      Number(count) > 0 && ATTACKER_SHIPS.includes(name)
+    );
+    return Object.entries(defenders || {})
+      .filter(([name, count]) => Number(count) > 0 && UNITS[name])
+      .filter(([targetName]) => !activeAttackers.some(([attackerName]) => {
+        const attacker = UNITS[attackerName];
+        const target = UNITS[targetName];
+        const weaponDamage = scaled(attacker.weapon, attackerTech.weapons);
+        const targetShield = scaled(target.shield, defenderTech.shield);
+        return weaponDamage > 0.01 * targetShield;
+      }))
+      .map(([name]) => name);
   }
 
   function makeState(count, hullMax, shieldMax) {
@@ -421,7 +437,7 @@
   return {
     UNITS, SFC2_ONLY_UNITS, ATTACKER_SHIPS, DEFENDER_SHIPS, DEFENSES,
     unitNames, rapidFireRating, cargoCapacity, canCarryPlunder, buildCost,
-    simulate, probabilityAnySurvives, battleWinProbability, cargoCapacityForSurvivors,
+    ineffectiveDefenderTargets, simulate, probabilityAnySurvives, battleWinProbability, cargoCapacityForSurvivors,
     MAX_ROUNDS
   };
 });

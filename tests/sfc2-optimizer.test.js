@@ -9,6 +9,9 @@ function near(actual, expected, tolerance=1e-8) {
 
 assert.deepStrictEqual(optimizer.normalizeRatios({Athena:5, Hades:10}), {Athena:1, Hades:2});
 assert.throws(() => optimizer.normalizeRatios({Charon:1}), /positive ratio/);
+assert.deepStrictEqual(combat.ATTACKER_SHIPS, ['Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus']);
+assert.deepStrictEqual(optimizer.normalizeRatios({Atlas:100, Artemis:2}), {Artemis:1},
+  'transport ships cannot be included in attacking fleet ratios');
 
 const denApplied = optimizer.protectWithResourceDen({ore:400_000, crystal:140_000, hydrogen:100_000}, 8);
 assert.deepStrictEqual(denApplied, {ore:372_500, crystal:112_500, hydrogen:72_500});
@@ -35,7 +38,7 @@ const result = optimizer.analyze({
   valuesArePlunderable:true,
   atWar:false
 });
-assert.deepStrictEqual(result.recommendations.map(item => item.roundLimit), [3, 4, 5, 6]);
+assert.deepStrictEqual(result.recommendations.map(item => item.roundLimit), [4, 5, 6]);
 for (const recommendation of result.recommendations) {
   assert.strictEqual(recommendation.scale, 1);
   assert.strictEqual(recommendation.winRound, 1);
@@ -52,5 +55,31 @@ for (const recommendation of result.recommendations) {
     assert.strictEqual(option.fleet.Athena, 1, 'cargo sizing keeps the original attacking fleet fixed');
   }
 }
+
+const ineffective = optimizer.analyze({
+  ratios:{Artemis:1},
+  defenders:{'Large Decoy':1},
+  attackerTech:{weapons:0},
+  defenderTech:{weapons:0, shield:15, armor:0},
+  confidence:0.95,
+  resources:{ore:0, crystal:0, hydrogen:0},
+  valuesArePlunderable:true
+});
+assert.deepStrictEqual(ineffective.ineffectiveTargets, ['Large Decoy'],
+  'equal weapon damage and 1% shield threshold is ineffective');
+assert(ineffective.recommendations.every(item => item.unavailable && item.reason === 'ineffective'),
+  'an ineffective ratio mix should be identified without a fleet-size search');
+
+const effective = optimizer.analyze({
+  ratios:{Prometheus:1},
+  defenders:{'Large Decoy':1},
+  attackerTech:{weapons:0},
+  defenderTech:{weapons:0, shield:15, armor:0},
+  confidence:0.95,
+  resources:{ore:0, crystal:0, hydrogen:0},
+  valuesArePlunderable:true
+});
+assert.deepStrictEqual(effective.ineffectiveTargets, [],
+  'a mix with a weapon above the 1% shield threshold can break through');
 
 console.log('SFC2 optimizer tests passed');

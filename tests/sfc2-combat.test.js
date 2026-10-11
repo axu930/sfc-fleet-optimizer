@@ -3,14 +3,16 @@
 const assert = require('assert');
 const combat = require('../js/sfc2-combat.js');
 
-assert(combat.ATTACKER_SHIPS.includes('Artemis'));
-assert(combat.ATTACKER_SHIPS.includes('Shadow Probe'));
+assert.deepStrictEqual(combat.ATTACKER_SHIPS, ['Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus']);
+assert(!combat.ATTACKER_SHIPS.includes('Shadow Probe'));
 assert(!combat.ATTACKER_SHIPS.includes('Charon'));
 assert(!combat.DEFENDER_SHIPS.includes('Charon'));
 assert(!combat.UNITS.Charon, 'ships absent from SFC2 are removed from the active catalog');
 assert(!combat.ATTACKER_SHIPS.includes('Hephaestus'));
 assert(!combat.DEFENDER_SHIPS.includes('Hephaestus'));
 assert(!combat.UNITS.Hephaestus, 'Hephaestus is outside the analyzer scope');
+assert.deepStrictEqual(combat.ineffectiveDefenderTargets({Artemis:1}, {'Large Decoy':1}), ['Large Decoy']);
+assert.deepStrictEqual(combat.ineffectiveDefenderTargets({Prometheus:1}, {'Large Decoy':1}), []);
 assert(combat.DEFENDER_SHIPS.includes('Helios Class Solar Satellite'));
 assert.strictEqual(combat.rapidFireRating('Hades', 'Athena'), 7);
 assert.strictEqual(combat.rapidFireRating('Poseidon', 'Artemis'), 6);

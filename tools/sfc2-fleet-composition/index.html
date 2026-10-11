@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Estimate SFC2 fleet sizes for three to six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
+  <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>SFC2 Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=rapid-fire-analyzer-1">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-results-table-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -25,46 +25,16 @@
       <div>
         <p class="eyebrow">SFC2 combat planner</p>
         <h1>Fleet Composition Analyzer</h1>
-        <p class="lede">Find the smallest fleet in your chosen ratios that is estimated to clear a target within 3, 4, 5, or 6 rounds. Compare expected losses, rebuild costs, and the transports needed to bring home the plunder.</p>
-        <p class="intro-guide"><strong>How to use:</strong> Enter integer ratio weights for your attack fleet, the defender's ships and defenses, both sides' combat tech, and the target's resources. Calculate to compare four round limits. Each cargo estimate keeps that attack ratio fleet fixed and adds one transport type at a time.</p>
+        <p class="lede">Find the smallest fleet in your chosen ratios that is estimated to clear a target within 4, 5, or 6 rounds. Compare up to three fleet mixes, expected losses, rebuild costs, and the transports needed to bring home the plunder.</p>
+        <p class="intro-guide"><strong>How to use:</strong> Set combat tech, enter or paste the defender's ships and defenses, and add one to three attacking fleet mixes. Each cargo estimate keeps its attack fleet fixed and simulates one transport type at a time.</p>
       </div>
       <div class="sfc2-badge">Deterministic expected-value model</div>
     </header>
 
     <section class="sfc2-input-grid" aria-label="Fleet and target inputs">
       <article class="panel sfc2-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Attacking fleet ratios</h2>
-            <p class="hint">Enter relative whole-number weights. Zero leaves a ship out. The analyzer reduces common factors, then scales the ratio bundle.</p>
-          </div>
-          <button id="sampleBtn" class="ghost" type="button">Load sample</button>
-        </div>
-        <div id="attackerRatioInputs" class="sfc2-unit-grid"></div>
-      </article>
-
-      <article class="panel sfc2-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Defending roster</h2>
-          <p class="hint">Ships and defenses are all targets in the same pool. Enter zero for absent units. Hephaestus is outside this model.</p>
-          </div>
-          <button id="clearBtn" class="ghost" type="button">Clear counts</button>
-        </div>
-        <details class="sfc2-input-group" open>
-          <summary>Ships</summary>
-          <div id="defenderShipInputs" class="sfc2-unit-grid compact"></div>
-        </details>
-        <details class="sfc2-input-group" open>
-          <summary>Defenses</summary>
-          <div id="defenderDefenseInputs" class="sfc2-unit-grid compact"></div>
-        </details>
-        <p class="hint">Missile-silo ABMs and Interplanetary Ballistic Missiles are not listed because they do not take part in fleet battles.</p>
-      </article>
-
-      <article class="panel sfc2-panel">
-        <h2>Combat settings</h2>
-        <p class="hint">Tech adds 10% of each base rating per level.</p>
+        <h2>Combat tech</h2>
+        <p class="hint">Tech adds 10% of each base rating per level. These values apply to every fleet mix.</p>
         <div class="sfc2-tech-grid">
           <fieldset>
             <legend>Your fleet</legend>
@@ -86,6 +56,48 @@
           <option value="0.99">99%</option>
           <option value="0.999">99.9%</option>
         </select>
+      </article>
+
+      <article class="panel sfc2-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Attacking fleet mixes</h2>
+            <p class="hint">Enter relative whole-number weights. Zero leaves a ship out. The analyzer reduces common factors, then scales each mix.</p>
+          </div>
+          <div class="sfc2-panel-actions">
+            <button id="addMixBtn" class="ghost" type="button">Add mix</button>
+            <button id="sampleBtn" class="ghost" type="button">Load sample</button>
+          </div>
+        </div>
+        <div id="fleetMixList" class="sfc2-mix-list"></div>
+      </article>
+
+      <article class="panel sfc2-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Defending roster</h2>
+            <p class="hint">Ships and defenses are all targets in the same pool. Hephaestus is outside this model.</p>
+          </div>
+          <button id="clearBtn" class="ghost" type="button">Clear counts</button>
+        </div>
+        <div class="sfc2-paste-box">
+          <label for="defenderPaste">Paste a defender roster, espionage report, or battle report</label>
+          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
+          <div class="sfc2-paste-actions">
+            <button id="parseDefenderBtn" class="ghost" type="button">Import defender fleet</button>
+            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">Import replaces defender counts and updates defender tech when present. Enter resources separately below.</p>
+        </div>
+        <details class="sfc2-input-group" open>
+          <summary>Ships</summary>
+          <div id="defenderShipInputs" class="sfc2-unit-grid compact"></div>
+        </details>
+        <details class="sfc2-input-group" open>
+          <summary>Defenses</summary>
+          <div id="defenderDefenseInputs" class="sfc2-unit-grid compact"></div>
+        </details>
+        <p class="hint">Missile-silo ABMs and Interplanetary Ballistic Missiles are not listed because they do not take part in fleet battles.</p>
       </article>
 
       <article class="panel sfc2-panel">
@@ -114,19 +126,21 @@
         <div><p class="eyebrow">Recommendations</p><h2>Round-limit comparison</h2></div>
         <p id="resultSummary" class="hint"></p>
       </div>
-      <div id="recommendations" class="sfc2-recommendations"></div>
+      <div id="recommendations" class="sfc2-table-wrap"></div>
       <article class="panel sfc2-model-notes">
         <h2>Model notes</h2>
         <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. The clear-confidence estimate treats survival as independent per ship within each class, using each class's expected remaining fraction; actual battles can vary.</p>
         <p>Transport counts are added after the round-limit fleet is selected. Each transport option is simulated with that fixed attack fleet, so the cargo estimate includes expected losses without changing the chosen combat ratio. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
+        <p>The 1% shield ineffectiveness rule is enforced. If an attacking mix cannot damage a defender class at the entered Weapons Tech, adding more ships in that same mix cannot clear the full roster.</p>
       </article>
     </section>
 
     <footer class="site-footer">Created by Alex Xu · Licensed under the <a href="../../LICENSE">Apache License 2.0</a>.</footer>
   </main>
   <script src="../../js/units.js?v=count-suffixes-1"></script>
-  <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-1"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-1"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-1"></script>
+  <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
+  <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-2"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-2"></script>
 </body>
 </html>

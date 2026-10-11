@@ -69,13 +69,15 @@ optimality.
 
 ## SFC2 Fleet Composition Analyzer
 
-The SFC2 analyzer is available at `tools/sfc2-fleet-composition/`. Enter
-integer ratio weights for attacking ships, the defending ship and defense
-counts, both sides' Weapons / Shield / Armor tech, and the target's resources.
-For round limits of 3, 4, 5, and 6, the tool finds the smallest scaled ratio
-bundle meeting the selected estimated clear-confidence threshold (95% by
-default). It reports the fleet's Ore / Crystal / Hydrogen build cost, expected
-attacker losses by ship type, and the expected rebuild cost.
+The SFC2 analyzer is available at `tools/sfc2-fleet-composition/`. Enter up to
+three attacking fleet mixes using Artemis, Apollo, Poseidon, Athena, Hades,
+Ares, Prometheus, and Zeus, plus the defender's ship and defense counts, shared
+combat tech, and target resources. Defender rosters and optional defender tech
+can be imported from pasted espionage or battle reports. For round limits of
+4, 5, and 6, the tool finds the smallest scaled ratio bundle meeting the
+selected estimated clear-confidence threshold (95% by default). A single
+comparison table reports fleet cost, expected attacker losses by ship type,
+and expected rebuild cost.
 
 The shared `js/units.js` catalog supplies the common SFC ship and defense
 ratings and costs. `js/sfc2-combat.js` adds SFC2-only roster entries, SFC2
@@ -85,7 +87,8 @@ random-target, simultaneous-fire expected-value rounds, shield resets, hull
 damage, the 1% shield ineffectiveness rule, and the six-round cap. Clear
 confidence uses an independent per-ship survival approximation from each
 class's expected remaining fraction; results are estimates and can differ from
-a single live battle.
+a single live battle. Mixes that cannot damage a defender class under the 1%
+shield rule are called out because scaling that mix cannot clear the roster.
 
 After selecting each attack fleet, the cargo sweep keeps that fleet ratio and
 scale fixed. It tests Atlas, Hercules, and Carmanor additions separately,
