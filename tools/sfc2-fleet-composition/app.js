@@ -126,7 +126,7 @@
     const rows = Object.entries(composition || {})
       .filter(([, count]) => includeZeros || count > 1e-8)
       .map(([name, count]) => `${escapeHtml(name)} ${formatCount(count)}`);
-    return rows.length ? rows.join(' · ') : 'None';
+    return rows.length ? rows.join('<br>') : 'None';
   }
 
   function plainCount(value) {
