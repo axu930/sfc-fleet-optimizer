@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-output-filters-1">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-fleet-output-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -25,8 +25,8 @@
       <div>
         <p class="eyebrow">SFC2 combat planner</p>
         <h1>Fleet Composition Analyzer</h1>
-        <p class="lede">Find the smallest fleet in your chosen ratios that is estimated to clear a target within 4, 5, or 6 rounds. Compare up to three fleet mixes, expected losses, rebuild costs, and the transports needed to bring home the plunder.</p>
-        <p class="intro-guide"><strong>How to use:</strong> Set combat tech, choose a cargo transport, enter or paste the defender's ships and defenses, and add one to three attacking fleet mixes.</p>
+        <p class="lede">Find the smallest fleet in your chosen ratios that targets a 99.9% clear within 4, 5, or 6 rounds. Compare attacking fleet mixes, expected losses, rebuild costs, and transports needed to bring home the plunder.</p>
+        <p class="intro-guide"><strong>How to use:</strong> Set combat tech, choose a cargo transport, enter or paste the defender's ships and defenses, and add attacking fleet mixes as needed.</p>
       </div>
       <div class="sfc2-badge">Deterministic expected-value model</div>
     </header>
@@ -116,14 +116,6 @@
         <p id="resultSummary" class="hint"></p>
       </div>
       <div class="sfc2-output-filters" aria-label="Recommendation filters">
-        <label for="winConfidence">Estimated clear confidence
-          <select id="winConfidence">
-            <option value="0.9">90%</option>
-            <option value="0.95" selected>95%</option>
-            <option value="0.99">99%</option>
-            <option value="0.999">99.9%</option>
-          </select>
-        </label>
         <label for="roundFilter">Look at victories within
           <select id="roundFilter">
             <option value="4">4 rounds</option>
@@ -143,8 +135,8 @@
       <div id="recommendations" class="sfc2-table-wrap"></div>
       <article class="panel sfc2-model-notes">
         <h2>Model notes</h2>
-        <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. The clear-confidence estimate treats survival as independent per ship within each class, using each class's expected remaining fraction; actual battles can vary.</p>
-        <p>Cargo estimates use 50% of each visible resource amount, keep the selected round-limit attack fleet fixed, and add only the selected transport type, including expected battle losses. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
+        <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. Fleet sizing targets 99.9% clear confidence; actual battles can vary.</p>
+        <p>Cargo estimates use 50% of each visible resource amount, credit cargo space from surviving attacking ships, then add only the selected transport type when needed. Added transports are simulated with expected battle losses. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
         <p>The 1% shield ineffectiveness rule is enforced. If an attacking mix cannot damage a defender class at the entered Weapons Tech, adding more ships in that same mix cannot clear the full roster.</p>
       </article>
     </section>
@@ -154,7 +146,7 @@
   <script src="../../js/units.js?v=count-suffixes-2"></script>
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-6"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-11"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-9"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-14"></script>
 </body>
 </html>

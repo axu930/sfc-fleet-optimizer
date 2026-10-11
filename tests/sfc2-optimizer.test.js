@@ -10,6 +10,7 @@ function near(actual, expected, tolerance=1e-8) {
 assert.deepStrictEqual(optimizer.normalizeRatios({Athena:5, Hades:10}), {Athena:1, Hades:2});
 assert.throws(() => optimizer.normalizeRatios({Charon:1}), /positive ratio/);
 assert.deepStrictEqual(combat.ATTACKER_SHIPS, ['Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus']);
+assert.strictEqual(optimizer.DEFAULT_CLEAR_CONFIDENCE, 0.999);
 assert.strictEqual(optimizer.PLUNDER_SHARE, 0.5);
 assert.deepStrictEqual(optimizer.normalizeRatios({Atlas:100, Artemis:2}), {Artemis:1},
   'transport ships cannot be included in attacking fleet ratios');
@@ -66,6 +67,20 @@ assert(atlasSelection.recommendations.every(item => item.cargo.length === 1 && i
   'the selected transport type should be the only cargo option in the results');
 assert(atlasSelection.recommendations.every(item => item.cargo[0].additional === 45),
   'transport cargo requirements should use the selected Atlas capacity');
+
+const attackerCargo = optimizer.analyze({
+  ratios:{Artemis:1},
+  defenders:{},
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  resources:{ore:80, crystal:0, hydrogen:0}
+});
+assert.strictEqual(attackerCargo.confidence, optimizer.DEFAULT_CLEAR_CONFIDENCE,
+  'the default fleet target should be 99.9% clear confidence');
+assert(attackerCargo.recommendations.every(item => item.cargo[0].additional === 0),
+  'surviving attacking ships should cover a plunder pool that fits their own cargo holds');
+assert(attackerCargo.recommendations.every(item => item.cargo[0].capacity === combat.cargoCapacity('Artemis')),
+  'cargo availability should include surviving attacking ships');
 
 const ineffective = optimizer.analyze({
   ratios:{Artemis:1},

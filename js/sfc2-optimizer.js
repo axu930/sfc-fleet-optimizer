@@ -9,6 +9,7 @@
   const ROUND_LIMITS = Object.freeze([4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
   const DEFAULT_TRANSPORT = 'Carmanor';
+  const DEFAULT_CLEAR_CONFIDENCE = 0.999;
   const PLUNDER_SHARE = 0.5;
   // Far beyond plausible in-game counts, while keeping expected-value
   // arithmetic and the derived combat/cost values finite in JavaScript.
@@ -255,7 +256,7 @@
 
   function analyze(input={}) {
     const ratios = normalizeRatios(input.ratios);
-    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || 0.95));
+    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || DEFAULT_CLEAR_CONFIDENCE));
     const transportType = TRANSPORTS.includes(input.transportType) ? input.transportType : DEFAULT_TRANSPORT;
     const cache = new Map();
     const ineffectiveTargets = combat.ineffectiveDefenderTargets(
@@ -283,7 +284,7 @@
   }
 
   return {
-    ROUND_LIMITS, TRANSPORTS, PLUNDER_SHARE, normalizeRatios, scaledFleet, costOfFleet,
+    ROUND_LIMITS, TRANSPORTS, DEFAULT_CLEAR_CONFIDENCE, PLUNDER_SHARE, normalizeRatios, scaledFleet, costOfFleet,
     plunderPool, allocatePlunder, analyze
   };
 });

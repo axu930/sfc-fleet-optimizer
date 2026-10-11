@@ -382,6 +382,9 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-mix-head { display: flex; align-items: end; gap: 8px; margin-bottom: 9px; }
 .sfc2-mix-head label { display: grid; flex: 1 1 auto; gap: 4px; min-width: 0; color: var(--muted); font-size: .72rem; }
 .sfc2-mix-head input { width: 100%; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); }
+.sfc2-mix-collapse summary { margin-bottom: 7px; color: var(--muted); cursor: pointer; font-size: .73rem; font-weight: 700; }
+.sfc2-mix-collapse summary::marker { color: var(--accent); }
+.sfc2-mix-collapse:not([open]) summary { margin-bottom: 0; }
 .sfc2-mix-ship-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .sfc2-unit-row { display: grid; grid-template-columns: minmax(0, 1fr) 74px; align-items: center; gap: 8px; min-width: 0; padding: 8px 9px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-card); }
 .sfc2-unit-name { min-width: 0; font-size: .78rem; font-weight: 700; line-height: 1.25; }
@@ -413,7 +416,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-results > .results-head { align-items: end; margin-bottom: 12px; }
 .sfc2-results .results-head h2 { margin: 0; font-size: 1.35rem; }
 .sfc2-results .results-head .hint { margin: 0; text-align: right; }
-.sfc2-output-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 4px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
+.sfc2-output-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0 4px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
 .sfc2-output-filters label { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: .76rem; }
 .sfc2-output-filters select { width: 100%; }
 .sfc2-filter-status { min-height: 1.1em; margin: 4px 0 0; font-size: .72rem; }
@@ -425,6 +428,10 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-results-table tbody th { min-width: 155px; color: var(--text); font-weight: 750; }
 .sfc2-results-table tbody th small, .sfc2-results-table td small { display: block; max-width: 310px; margin-top: 4px; color: var(--muted); font-size: .68rem; font-weight: 400; line-height: 1.4; }
 .sfc2-results-table tbody td { font-variant-numeric: tabular-nums; }
+.sfc2-attack-fleet { display: grid; gap: 3px; min-width: 180px; text-align: left; }
+.sfc2-attack-fleet > strong { margin-bottom: 2px; }
+.sfc2-attack-fleet-line { display: flex; align-items: center; justify-content: space-between; gap: 7px; white-space: nowrap; }
+.sfc2-attack-fleet-line .copy-count-button { width: 24px; min-width: 24px; height: 24px; padding: 0; border-radius: 6px; font-size: .68rem; }
 .sfc2-result-unavailable td, .sfc2-result-unavailable th { color: var(--muted); }
 .sfc2-result-ineffective td:nth-child(3) { color: var(--bad); font-weight: 750; }
 .sfc2-cargo-options { display: grid; gap: 7px; min-width: 275px; }

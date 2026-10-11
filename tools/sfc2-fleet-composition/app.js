@@ -44,7 +44,8 @@
       return {
         id,
         name:card.querySelector('[data-mix-name]').value.trim() || `Mix ${index + 1}`,
-        ratios
+        ratios,
+        collapsed:!card.querySelector('[data-mix-collapse]').open
       };
     });
   }
@@ -55,10 +56,12 @@
         <label>Mix name <input type="text" maxlength="40" data-mix-name value="${escapeHtml(mix.name)}"></label>
         <button class="ghost compact-button" type="button" data-remove-mix="${mix.id}" aria-label="Remove ${escapeHtml(mix.name)}" ${mixes.length === 1 ? 'disabled' : ''}>Remove</button>
       </div>
-      <div class="sfc2-mix-ship-grid" id="mix-ratios-${mix.id}"></div>
+      <details class="sfc2-mix-collapse" data-mix-collapse ${mix.collapsed ? '' : 'open'}>
+        <summary>Fleet composition</summary>
+        <div class="sfc2-mix-ship-grid" id="mix-ratios-${mix.id}"></div>
+      </details>
     </section>`).join('');
     mixes.forEach(mix => renderUnitInputs($(`#mix-ratios-${mix.id}`), combat.ATTACKER_SHIPS, 'ratio', mix.ratios, mix.id));
-    $('#addMixBtn').disabled = mixes.length >= 3;
   }
 
   renderMixes();
@@ -126,9 +129,60 @@
     return rows.length ? rows.join(' · ') : 'None';
   }
 
-  function formatWin(round, probability) {
-    if (round === 0) return 'No blocking defenders';
-    return `${(probability * 100).toFixed(probability >= 0.999 ? 2 : 1)}% estimated clear by round ${round}`;
+  function plainCount(value) {
+    return Math.ceil(Math.max(0, Number(value) || 0)).toLocaleString('en-US', {
+      useGrouping:false,
+      maximumFractionDigits:0
+    });
+  }
+
+  async function copyFleetCount(button) {
+    const value = button.dataset.copyCount;
+    let copied = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        copied = true;
+      }
+    } catch (error) { /* Fall through to the legacy copy path. */ }
+    if (!copied) {
+      try {
+        const fallback = document.createElement('textarea');
+        fallback.value = value;
+        fallback.setAttribute('readonly', '');
+        fallback.style.position = 'fixed';
+        fallback.style.opacity = '0';
+        document.body.appendChild(fallback);
+        fallback.select();
+        copied = document.execCommand('copy');
+        fallback.remove();
+      } catch (error) {
+        copied = false;
+      }
+    }
+    const icon = button.querySelector('[aria-hidden="true"]');
+    if (icon) icon.textContent = copied ? '✓' : '!';
+    button.classList.toggle('copied', copied);
+    button.title = copied ? 'Copied' : 'Copy exact ship count';
+    if (copied) window.setTimeout(() => {
+      if (!button.isConnected) return;
+      const currentIcon = button.querySelector('[aria-hidden="true"]');
+      if (currentIcon) currentIcon.textContent = '⧉';
+      button.classList.remove('copied');
+      button.title = 'Copy exact ship count';
+    }, 1100);
+  }
+
+  function renderAttackingFleetCell(recommendation) {
+    const ships = Object.entries(recommendation.fleet || {}).filter(([, count]) => count > 1e-8);
+    const breakdown = ships.map(([name, count]) => {
+      const exact = plainCount(count);
+      return `<span class="sfc2-attack-fleet-line">
+        <span>${escapeHtml(name)} ${formatCount(count)}</span>
+        <button class="copy-count-button" type="button" data-copy-count="${exact}" aria-label="Copy exact ${escapeHtml(name)} count" title="Copy exact ship count"><span aria-hidden="true">⧉</span></button>
+      </span>`;
+    }).join('');
+    return `<div class="sfc2-attack-fleet"><strong>${formatCount(recommendation.totalShips)} total</strong>${breakdown}</div>`;
   }
 
   function renderCargoCell(recommendation) {
@@ -137,9 +191,10 @@
       const addedCost = optimizer.costOfFleet(added > 0 ? {[option.type]:added} : {});
       const combinedLosses = Object.values(option.snapshot.attackerLosses || option.simulation.attackerLosses)
         .reduce((sum, count) => sum + count, 0);
-      const capacityStatus = option.fullyLoaded
-        ? `${formatResource(option.capacity)} / ${formatResource(recommendation.cargoRequired)} capacity`
-        : `${formatResource(option.capacity)} / ${formatResource(recommendation.cargoRequired)} capacity · short`;
+      const attackShips = Object.fromEntries(Object.entries(option.snapshot.attackers || {})
+        .filter(([name]) => combat.ATTACKER_SHIPS.includes(name)));
+      const attackShipCapacity = combat.cargoCapacityForSurvivors(attackShips);
+      const capacityStatus = `${formatResource(attackShipCapacity)} attacking-ship cargo · ${formatResource(option.capacity)} total / ${formatResource(recommendation.cargoRequired)} required${option.fullyLoaded ? '' : ' · short'}`;
       const battleStatus = option.win ? `clear by round ${option.win.round}` : 'does not meet round limit';
       return `<span><strong>${escapeHtml(option.type)} × ${formatCount(added)}</strong><small>${escapeHtml(capacityStatus)} · ${formatCost(addedCost)} · ${formatCount(combinedLosses)} combined losses · ${escapeHtml(battleStatus)}</small></span>`;
     }).join('')}</div>`;
@@ -148,16 +203,10 @@
   function renderResultRow(mix, recommendation) {
     const mixDescription = formatComposition(recommendation.fleet || mix.ratios);
     const ineffective = recommendation.reason === 'ineffective';
-    const resultLabel = recommendation.unavailable
-      ? ineffective
-        ? `Ineffective vs ${recommendation.ineffectiveTargets.join(', ')} under the 1% shield rule`
-        : 'No modeled solution found in the numeric search range'
-      : formatWin(recommendation.winRound, recommendation.estimatedWinProbability);
     if (recommendation.unavailable) {
       return `<tr class="${ineffective ? 'sfc2-result-ineffective' : 'sfc2-result-unavailable'}">
         <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
         <td>${recommendation.roundLimit} rounds</td>
-        <td>${escapeHtml(resultLabel)}</td>
         <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
       </tr>`;
     }
@@ -165,8 +214,7 @@
     return `<tr>
       <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
       <td>${recommendation.roundLimit} rounds</td>
-      <td>${escapeHtml(resultLabel)}</td>
-      <td>${formatCount(recommendation.totalShips)}</td>
+      <td>${renderAttackingFleetCell(recommendation)}</td>
       <td>${formatCost(recommendation.buildCost, true)}</td>
       <td>${formatCount(losses)}<small>${formatComposition(recommendation.estimatedLosses)}</small></td>
       <td>${formatCost(recommendation.rebuildCost, true)}</td>
@@ -181,7 +229,7 @@
         .map(recommendation => renderResultRow(comparison.mix, recommendation))
     ).join('');
     return `<table class="sfc2-results-table">
-      <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Estimated result</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Selected transport after losses</th></tr></thead>
+      <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Transports</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
@@ -201,10 +249,9 @@
       return !recommendation || recommendation.unavailable;
     });
     if (noSolution.length === comparisons.length) {
-      return `No modeled solution found for any fleet mix within ${roundLimit} rounds. Try different ratios or a lower clear-confidence threshold.`;
+      return `No modeled solution found for any fleet mix within ${roundLimit} rounds at the 99.9% clear target. Try different ratios.`;
     }
-    const confidence = comparisons[0].result.confidence;
-    return `Clear threshold ${(confidence * 100).toFixed(1)}% · cargo uses ${Math.round(optimizer.PLUNDER_SHARE * 100)}% of visible resources · transport estimate includes expected battle losses`;
+    return `Fleet sizes target ${Math.round(optimizer.DEFAULT_CLEAR_CONFIDENCE * 1000) / 10}% clear confidence · cargo uses ${Math.round(optimizer.PLUNDER_SHARE * 100)}% of visible resources`;
   }
 
   function renderSelectedResults(comparisons) {
@@ -226,7 +273,7 @@
       defenders,
       attackerTech:readTech('attacker'),
       defenderTech:readTech('defender'),
-      confidence:Number($('#winConfidence').value),
+      confidence:optimizer.DEFAULT_CLEAR_CONFIDENCE,
       transportType:$('#transportType').value,
       resources
     };
@@ -306,7 +353,6 @@
     if (!lastCalculation) return;
     const input = {
       ...lastCalculation.input,
-      confidence:Number($('#winConfidence').value),
       transportType:$('#transportType').value
     };
     runAnalysis(input, lastCalculation.scenarios, {filterUpdate:true});
@@ -367,11 +413,9 @@
       $('#resultFilterStatus').textContent = `Showing victories within ${$('#roundFilter').value} rounds.`;
     }
   });
-  $('#winConfidence').addEventListener('change', updateCalculationFilters);
   $('#transportType').addEventListener('change', updateCalculationFilters);
   $('#addMixBtn').addEventListener('click', () => {
     mixes = snapshotMixes();
-    if (mixes.length >= 3) return;
     const id = mixSequence++;
     mixes.push({id, name:`Mix ${id}`, ratios:{}});
     renderMixes();
@@ -381,6 +425,10 @@
     if (!button || mixes.length <= 1) return;
     mixes = snapshotMixes().filter(mix => mix.id !== Number(button.dataset.removeMix));
     renderMixes();
+  });
+  recommendations.addEventListener('click', event => {
+    const button = event.target.closest('[data-copy-count]');
+    if (button) copyFleetCount(button);
   });
   $('#parseDefenderBtn').addEventListener('click', () => {
     $('#defenderPasteStatus').textContent = '';
