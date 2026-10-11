@@ -176,7 +176,7 @@
       comparison.result.recommendations.map(recommendation => renderResultRow(comparison.mix, recommendation))
     ).join('');
     return `<table class="sfc2-results-table">
-      <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Estimated result</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Transports added after losses</th></tr></thead>
+      <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Estimated result</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Selected transport after losses</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
@@ -197,7 +197,7 @@
     }
     const confidence = comparisons[0].result.confidence;
     const share = `${Math.round(comparisons[0].result.plunderShare * 100)}%`;
-    return `Clear threshold ${(confidence * 100).toFixed(1)}% · eligible plunder ${share} · cargo sweeps include expected battle losses`;
+    return `Clear threshold ${(confidence * 100).toFixed(1)}% · eligible plunder ${share} · selected transport estimate includes expected battle losses`;
   }
 
   function readInput() {
@@ -216,6 +216,7 @@
       attackerTech:readTech('attacker'),
       defenderTech:readTech('defender'),
       confidence:Number($('#winConfidence').value),
+      transportType:$('#transportType').value,
       resources,
       valuesArePlunderable:$('#valuesArePlunderable').checked,
       resourceDenLevel,
@@ -253,7 +254,7 @@
       const input = readInput();
       const scenarios = readMixScenarios();
       $('#calculateBtn').disabled = true;
-      inputStatus.textContent = 'Calculating expected battles and cargo sweeps…';
+      inputStatus.textContent = 'Calculating expected battles and selected transport cargo…';
       window.setTimeout(() => {
         try {
           const comparisons = scenarios.map(mix => ({mix, result:optimizer.analyze({...input, ratios:mix.ratios})}));

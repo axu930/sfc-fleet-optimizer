@@ -45,9 +45,8 @@ for (const recommendation of result.recommendations) {
   assert(recommendation.estimatedWinProbability >= 0.95);
   near(recommendation.estimatedLosses.Athena, 0);
   const options = Object.fromEntries(recommendation.cargo.map(item => [item.type, item]));
-  assert.strictEqual(options.Atlas.additional, 45);
-  assert.strictEqual(options.Hercules.additional, 9);
   assert.strictEqual(options.Carmanor.additional, 2);
+  assert.strictEqual(recommendation.cargo.length, 1, 'default output should size only Carmanor transports');
   for (const option of Object.values(options)) {
     assert(option.fullyLoaded, `${option.type} should provide full expected cargo capacity`);
     assert(option.win, `${option.type} should preserve the selected round-limit result`);
@@ -55,6 +54,22 @@ for (const recommendation of result.recommendations) {
     assert.strictEqual(option.fleet.Athena, 1, 'cargo sizing keeps the original attacking fleet fixed');
   }
 }
+
+const atlasSelection = optimizer.analyze({
+  ratios:{Athena:1},
+  defenders:{'Laser Cannon':1},
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  confidence:0.95,
+  transportType:'Atlas',
+  resources:{ore:150_000, crystal:150_000, hydrogen:150_000},
+  valuesArePlunderable:true
+});
+assert.strictEqual(atlasSelection.transportType, 'Atlas');
+assert(atlasSelection.recommendations.every(item => item.cargo.length === 1 && item.cargo[0].type === 'Atlas'),
+  'the selected transport type should be the only cargo option in the results');
+assert(atlasSelection.recommendations.every(item => item.cargo[0].additional === 45),
+  'transport cargo requirements should use the selected Atlas capacity');
 
 const ineffective = optimizer.analyze({
   ratios:{Artemis:1},

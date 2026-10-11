@@ -26,7 +26,7 @@
         <p class="eyebrow">SFC2 combat planner</p>
         <h1>Fleet Composition Analyzer</h1>
         <p class="lede">Find the smallest fleet in your chosen ratios that is estimated to clear a target within 4, 5, or 6 rounds. Compare up to three fleet mixes, expected losses, rebuild costs, and the transports needed to bring home the plunder.</p>
-        <p class="intro-guide"><strong>How to use:</strong> Set combat tech, enter or paste the defender's ships and defenses, and add one to three attacking fleet mixes. Each cargo estimate keeps its attack fleet fixed and simulates one transport type at a time.</p>
+        <p class="intro-guide"><strong>How to use:</strong> Set combat tech, choose a cargo transport, enter or paste the defender's ships and defenses, and add one to three attacking fleet mixes.</p>
       </div>
       <div class="sfc2-badge">Deterministic expected-value model</div>
     </header>
@@ -51,6 +51,12 @@
           <option value="0.95" selected>95%</option>
           <option value="0.99">99%</option>
           <option value="0.999">99.9%</option>
+        </select>
+        <label class="sfc2-select-label" for="transportType">Cargo transport</label>
+        <select id="transportType">
+          <option value="Atlas">Atlas (5,000 cargo)</option>
+          <option value="Hercules">Hercules (25,000 cargo)</option>
+          <option value="Carmanor" selected>Carmanor (125,000 cargo)</option>
         </select>
         <div class="panel-head">
           <div>
@@ -131,7 +137,7 @@
       <article class="panel sfc2-model-notes">
         <h2>Model notes</h2>
         <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. The clear-confidence estimate treats survival as independent per ship within each class, using each class's expected remaining fraction; actual battles can vary.</p>
-        <p>Transport counts are added after the round-limit fleet is selected. Each transport option is simulated with that fixed attack fleet, so the cargo estimate includes expected losses without changing the chosen combat ratio. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
+        <p>Cargo estimates keep the selected round-limit attack fleet fixed and add only the selected transport type, including expected battle losses. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
         <p>The 1% shield ineffectiveness rule is enforced. If an attacking mix cannot damage a defender class at the entered Weapons Tech, adding more ships in that same mix cannot clear the full roster.</p>
       </article>
     </section>
@@ -141,7 +147,7 @@
   <script src="../../js/units.js?v=count-suffixes-1"></script>
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-3"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-4"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-4"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-5"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@
 
   const ROUND_LIMITS = Object.freeze([4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
+  const DEFAULT_TRANSPORT = 'Carmanor';
   // Far beyond plausible in-game counts, while keeping expected-value
   // arithmetic and the derived combat/cost values finite in JavaScript.
   const MAX_SCALE = 1e100;
@@ -277,6 +278,7 @@
   function analyze(input={}) {
     const ratios = normalizeRatios(input.ratios);
     const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || 0.95));
+    const transportType = TRANSPORTS.includes(input.transportType) ? input.transportType : DEFAULT_TRANSPORT;
     const cache = new Map();
     const ineffectiveTargets = combat.ineffectiveDefenderTargets(
       scaledFleet(ratios, 1), input.defenders, input.attackerTech, input.defenderTech
@@ -292,14 +294,14 @@
         ineffectiveTargets
       };
       const pool = plunderPool(input);
-      const cargo = TRANSPORTS.map(type => ({
-        type,
-        cargoPerShip:combat.cargoCapacity(type),
-        ...findTransportCount(input, recommendation, recommendation.fleet, type, pool, confidence)
-      }));
+      const cargo = [{
+        type:transportType,
+        cargoPerShip:combat.cargoCapacity(transportType),
+        ...findTransportCount(input, recommendation, recommendation.fleet, transportType, pool, confidence)
+      }];
       return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
     });
-    return {ratios, confidence, recommendations, ineffectiveTargets, plunderShare:input.atWar ? 0.55 : 0.5};
+    return {ratios, confidence, transportType, recommendations, ineffectiveTargets, plunderShare:input.atWar ? 0.55 : 0.5};
   }
 
   return {
