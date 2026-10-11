@@ -109,14 +109,14 @@
     return formatCount(value);
   }
 
-  function formatCost(cost) {
+  function formatCost(cost, separateLines=false) {
     const pieces = [
       `${formatResource(cost.ore)} Ore`,
       `${formatResource(cost.crystal)} Crystal`,
       `${formatResource(cost.hydrogen)} Hydrogen`
     ];
     if (cost.credits > 0) pieces.push(`${formatResource(cost.credits)} Credits`);
-    return pieces.join(' · ');
+    return pieces.map(escapeHtml).join(separateLines ? '<br>' : ' · ');
   }
 
   function formatComposition(composition, includeZeros=false) {
@@ -141,7 +141,7 @@
         ? `${formatResource(option.capacity)} / ${formatResource(recommendation.cargoRequired)} capacity`
         : `${formatResource(option.capacity)} / ${formatResource(recommendation.cargoRequired)} capacity · short`;
       const battleStatus = option.win ? `clear by round ${option.win.round}` : 'does not meet round limit';
-      return `<span><strong>${escapeHtml(option.type)} × ${formatCount(added)}</strong><small>${escapeHtml(capacityStatus)} · ${escapeHtml(formatCost(addedCost))} · ${formatCount(combinedLosses)} combined losses · ${escapeHtml(battleStatus)}</small></span>`;
+      return `<span><strong>${escapeHtml(option.type)} × ${formatCount(added)}</strong><small>${escapeHtml(capacityStatus)} · ${formatCost(addedCost)} · ${formatCount(combinedLosses)} combined losses · ${escapeHtml(battleStatus)}</small></span>`;
     }).join('')}</div>`;
   }
 
@@ -167,9 +167,9 @@
       <td>${recommendation.roundLimit} rounds</td>
       <td>${escapeHtml(resultLabel)}</td>
       <td>${formatCount(recommendation.totalShips)}</td>
-      <td>${escapeHtml(formatCost(recommendation.buildCost))}</td>
+      <td>${formatCost(recommendation.buildCost, true)}</td>
       <td>${formatCount(losses)}<small>${formatComposition(recommendation.estimatedLosses)}</small></td>
-      <td>${escapeHtml(formatCost(recommendation.rebuildCost))}</td>
+      <td>${formatCost(recommendation.rebuildCost, true)}</td>
       <td>${renderCargoCell(recommendation)}</td>
     </tr>`;
   }
