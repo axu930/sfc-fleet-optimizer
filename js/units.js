@@ -114,13 +114,22 @@
       : null;
   }
 
-  function decimal(value, useGrouping) {
+  function roundUpSignificant(value, digits) {
+    if (value <= 0) return value;
+    const rounded = Number(value.toPrecision(digits));
+    if (rounded >= value) return rounded;
+    const step = 10 ** (Math.floor(Math.log10(value)) - digits + 1);
+    return Math.ceil(value / step) * step;
+  }
+
+  function decimal(value, useGrouping, maximumSignificantDigits=2, roundUp=false) {
     // Preserve already-integral raw/count values; round displayed decimals to
-    // two significant figures so large abbreviated values stay readable.
+    // the requested significant figures so abbreviated values stay readable.
     if (Number.isInteger(value) && Math.abs(value) >= 1) {
       return value.toLocaleString('en-US', {useGrouping});
     }
-    return value.toLocaleString('en-US', {useGrouping, maximumSignificantDigits:2});
+    const displayValue = roundUp ? roundUpSignificant(value, maximumSignificantDigits) : value;
+    return displayValue.toLocaleString('en-US', {useGrouping, maximumSignificantDigits});
   }
 
   function scientific(value) {
@@ -132,13 +141,15 @@
     if (format === 'raw') return decimal(value, false);
     if (format === 'commas') return decimal(value, true);
     if (format === 'scientific') return scientific(value);
+    const roundUp = format === 'abbrev-up';
+    const maximumSignificantDigits = roundUp ? 3 : 2;
     const units = format === 'words' ? WORD_UNITS : ABBREVIATED_UNITS;
     const suffix = format === 'words' ? ' ' : '';
     const abs = Math.abs(value);
     for (const [label, magnitude] of units) {
-      if (abs >= magnitude) return decimal(value / magnitude, false) + suffix + label;
+      if (abs >= magnitude) return decimal(value / magnitude, false, maximumSignificantDigits, roundUp) + suffix + label;
     }
-    return decimal(value, format === 'commas');
+    return decimal(value, format === 'commas', maximumSignificantDigits, roundUp);
   }
 
   return {UNITS, ALIASES, ZEUS_COST, normalize, scaled, rfContinue, formatCount, countSuffixPower};

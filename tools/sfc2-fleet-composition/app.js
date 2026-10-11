@@ -102,7 +102,7 @@
   }
 
   function formatCount(value) {
-    return units.formatCount(Number(value) || 0, 'abbrev');
+    return units.formatCount(Number(value) || 0, 'abbrev-up');
   }
 
   function formatResource(value) {
