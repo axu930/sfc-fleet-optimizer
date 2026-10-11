@@ -11,6 +11,7 @@ function near(actual, expected, epsilon=1e-12) {
 assert.deepStrictEqual(analyzer.ATTACKERS, [
   'Artemis', 'Apollo', 'Poseidon', 'Athena', 'Ares', 'Hades', 'Prometheus', 'Zeus'
 ]);
+assert(!analyzer.TARGETS.includes('Hephaestus'), 'Hephaestus is not a supported composition target');
 assert.strictEqual(analyzer.rating('Hades', 'Athena'), 7);
 assert.strictEqual(analyzer.rating('Poseidon', 'Artemis'), 6);
 assert.strictEqual(analyzer.rating('Ares', 'Laser Cannon'), 20);
@@ -34,19 +35,7 @@ assert.throws(() => analyzer.normalizeRatio({}), /positive ratio/);
 assert.throws(() => analyzer.normalizeRatio({'Laser Cannon':0}), /positive ratio/);
 assert.throws(() => analyzer.normalizeRatio({'Laser Cannon':-1}), /nonnegative/);
 assert.throws(() => analyzer.normalizeRatio({NotAUnit:1}), /Unknown target/);
-
-const scaledStats = analyzer.matchupStats('Ares', 'Laser Cannon', {weapons:20, shield:10, armor:5});
-near(scaledStats.weaponDamage, units.UNITS.Ares.weapon * 3);
-near(scaledStats.targetShield, units.UNITS['Laser Cannon'].shield * 2);
-near(scaledStats.targetHull, units.UNITS['Laser Cannon'].hull * 1.5);
-assert.strictEqual(scaledStats.rapidFire, 20);
-assert.strictEqual(scaledStats.passesShieldRule, true);
-near(scaledStats.effectiveDamage, scaledStats.weaponDamage);
-
-const bounced = analyzer.matchupStats('Artemis', 'Zeus', {weapons:0, shield:0, armor:0});
-assert.strictEqual(bounced.passesShieldRule, false);
-assert.strictEqual(bounced.effectiveDamage, 0);
-assert.throws(() => analyzer.matchupStats('Ares', 'Athena', {weapons:-1}), /nonnegative whole number/);
+assert.throws(() => analyzer.normalizeRatio({Hephaestus:1}), /Unknown target/);
 
 const memoryStorage = {
   value:null,
@@ -59,6 +48,18 @@ const savedScenarios = [
 ];
 analyzer.saveScenarios(savedScenarios, memoryStorage);
 assert.deepStrictEqual(analyzer.loadScenarios(memoryStorage), savedScenarios);
+memoryStorage.value = JSON.stringify([
+  {id:'legacy-mixed', name:'Old mixed ratio', ratio:{'Laser Cannon':3, 'Plasma Cannon':1, Hephaestus:4}},
+  {id:'legacy-heph-only', name:'Old Hephaestus ratio', ratio:{Hephaestus:1}}
+]);
+const migratedScenarios = analyzer.loadScenarios(memoryStorage);
+assert.deepStrictEqual(migratedScenarios[0].ratio, {'Laser Cannon':0.75, 'Plasma Cannon':0.25});
+assert.deepStrictEqual(migratedScenarios[1].ratio, {});
+assert.throws(() => analyzer.expectedShots('Ares', migratedScenarios[1].ratio), /positive ratio/);
+analyzer.saveScenarios(migratedScenarios, memoryStorage);
+assert(JSON.parse(memoryStorage.value).every(scenario => !Object.hasOwn(scenario.ratio, 'Hephaestus')),
+  'migrated composition ratios persist without Hephaestus');
+assert.deepStrictEqual(analyzer.loadScenarios(memoryStorage), migratedScenarios);
 memoryStorage.value = '{invalid json';
 assert.deepStrictEqual(analyzer.loadScenarios(memoryStorage), []);
 memoryStorage.value = JSON.stringify([{id:'same', name:'A', ratio:{'Laser Cannon':1}}, {id:'same', name:'B', ratio:{Unknown:2, Artemis:-1}}]);

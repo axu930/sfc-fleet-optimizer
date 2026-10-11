@@ -6,10 +6,12 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (units) {
   'use strict';
 
-  const {UNITS, scaled, rfContinue} = units;
+  const {UNITS, rfContinue} = units;
   const ATTACKERS = Object.freeze([
     'Artemis', 'Apollo', 'Poseidon', 'Athena', 'Ares', 'Hades', 'Prometheus', 'Zeus'
   ]);
+  const TARGETS = Object.freeze(Object.keys(UNITS).filter(name => name !== 'Hephaestus'));
+  const TARGET_SET = new Set(TARGETS);
   const STORAGE_KEY = 'sfc-rapid-fire-analyzer-scenarios-v1';
 
   // Non-Zeus matchups from the SFC2 Wiki Rapid Fire page. A rating of 1 is
@@ -33,18 +35,18 @@
 
   function normalizeRatio(ratio) {
     if (!ratio || typeof ratio !== 'object' || Array.isArray(ratio)) {
-      throw new Error('Enter a defending ratio bag.');
+      throw new Error('Enter your fleet composition.');
     }
     const weights = {};
     let largest = 0;
     for (const [name, rawWeight] of Object.entries(ratio)) {
-      if (!UNITS[name]) throw new Error(`Unknown target unit: ${name}.`);
+      if (!TARGET_SET.has(name)) throw new Error(`Unknown target unit: ${name}.`);
       const weight = Number(rawWeight);
       if (!Number.isFinite(weight) || weight < 0) throw new Error(`Enter a valid nonnegative ratio for ${name}.`);
       weights[name] = weight;
       largest = Math.max(largest, weight);
     }
-    if (!(largest > 0)) throw new Error('Enter a positive ratio for at least one defending unit.');
+    if (!(largest > 0)) throw new Error('Enter a positive ratio for at least one of your units.');
 
     // Divide before summing so large but finite ratio weights cannot overflow.
     const scaledWeights = {};
@@ -76,39 +78,6 @@
     };
   }
 
-  function techLevel(value, label) {
-    const level = Number(value == null || value === '' ? 0 : value);
-    if (!Number.isSafeInteger(level) || level < 0) throw new Error(`${label} must be a nonnegative whole number.`);
-    return level;
-  }
-
-  function matchupStats(attacker, target, tech={}) {
-    const attackerUnit = UNITS[attacker];
-    const targetUnit = UNITS[target];
-    if (!ATTACKERS.includes(attacker)) throw new Error(`Unsupported attacker: ${attacker}.`);
-    if (!targetUnit) throw new Error(`Unknown target unit: ${target}.`);
-
-    const weaponTech = techLevel(tech.weapons, 'Weapons Tech');
-    const shieldTech = techLevel(tech.shield, 'Shield Tech');
-    const armorTech = techLevel(tech.armor, 'Armor Tech');
-    const weaponDamage = scaled(attackerUnit.weapon, weaponTech);
-    const targetShield = scaled(targetUnit.shield, shieldTech);
-    const targetHull = scaled(targetUnit.hull, armorTech);
-    const passesShieldRule = weaponDamage > 0.01 * targetShield;
-    const rapidFire = rating(attacker, target);
-    return {
-      attacker,
-      target,
-      rapidFire,
-      continuationChance:rfContinue(rapidFire),
-      weaponDamage,
-      targetHull,
-      targetShield,
-      passesShieldRule,
-      effectiveDamage:passesShieldRule ? weaponDamage : 0
-    };
-  }
-
   function loadScenarios(storage) {
     try {
       const serialized = storage && storage.getItem(STORAGE_KEY);
@@ -118,12 +87,20 @@
       const ids = new Set();
       return parsed.flatMap((item, index) => {
         if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-        const ratio = {};
+        let ratio = {};
+        let hadHephaestus = false;
         if (item.ratio && typeof item.ratio === 'object' && !Array.isArray(item.ratio)) {
           for (const [name, rawWeight] of Object.entries(item.ratio)) {
             const weight = Number(rawWeight);
-            if (UNITS[name] && Number.isFinite(weight) && weight >= 0) ratio[name] = weight;
+            if (name === 'Hephaestus') {
+              hadHephaestus = true;
+              continue;
+            }
+            if (TARGET_SET.has(name) && Number.isFinite(weight) && weight >= 0) ratio[name] = weight;
           }
+        }
+        if (hadHephaestus) {
+          try { ratio = normalizeRatio(ratio); } catch (error) { ratio = {}; }
         }
         let id = typeof item.id === 'string' && item.id.trim() ? item.id : `saved-scenario-${index + 1}`;
         if (ids.has(id)) {
@@ -149,5 +126,5 @@
     storage.setItem(STORAGE_KEY, JSON.stringify(scenarios));
   }
 
-  return {ATTACKERS, MATCHUPS, STORAGE_KEY, rating, normalizeRatio, expectedShots, matchupStats, loadScenarios, saveScenarios};
+  return {ATTACKERS, TARGETS, MATCHUPS, STORAGE_KEY, rating, normalizeRatio, expectedShots, loadScenarios, saveScenarios};
 });

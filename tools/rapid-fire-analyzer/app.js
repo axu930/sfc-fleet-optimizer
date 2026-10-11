@@ -5,7 +5,6 @@
   const M = window.SFCRapidFireAnalyzer;
   const $ = id => document.getElementById(id);
   const numberFormat = new Intl.NumberFormat('en-US', {maximumFractionDigits:3});
-  const percentFormat = new Intl.NumberFormat('en-US', {style:'percent', maximumFractionDigits:2});
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, character => ({
@@ -51,11 +50,11 @@
 
   function renderScenarios() {
     $('scenarioList').innerHTML = scenarios.map((scenario, index) => {
-      const ships = Object.entries(U.UNITS).filter(([, unit]) => unit.kind === 'ship');
-      const defenses = Object.entries(U.UNITS).filter(([, unit]) => unit.kind === 'defense');
+      const ships = M.TARGETS.filter(name => U.UNITS[name].kind === 'ship').map(name => [name, U.UNITS[name]]);
+      const defenses = M.TARGETS.filter(name => U.UNITS[name].kind === 'defense').map(name => [name, U.UNITS[name]]);
       return `<article class="panel rf-scenario-card" data-scenario-id="${escapeHtml(scenario.id)}">
         <div class="rf-scenario-card-head">
-          <label class="rf-name-input" for="scenario-name-${escapeHtml(scenario.id)}">Ratio bag name
+          <label class="rf-name-input" for="scenario-name-${escapeHtml(scenario.id)}">Composition name
             <input id="scenario-name-${escapeHtml(scenario.id)}" type="text" maxlength="60" value="${escapeHtml(scenario.name)}" data-scenario-name="${escapeHtml(scenario.id)}">
           </label>
           <button class="ghost rf-remove-button" type="button" data-remove-scenario="${escapeHtml(scenario.id)}" aria-label="Remove ${escapeHtml(scenario.name)}">Remove</button>
@@ -74,14 +73,6 @@
       button.disabled = scenarios.length === 1;
       button.title = button.disabled ? 'At least one ratio bag is required' : 'Remove this ratio bag';
     });
-  }
-
-  function techValues() {
-    return {
-      weapons:$('weaponsTech').value,
-      shield:$('shieldTech').value,
-      armor:$('armorTech').value
-    };
   }
 
   function display(value) {
@@ -105,51 +96,18 @@
           <td>${escapeHtml(attacker)}</td>
           <td>${result ? display(result.totalShots) : '—'}</td>
           <td>${result ? display(result.bonusShots) : '—'}</td>
-          ${attacker === M.ATTACKERS[0] ? `<td class="rf-scenario-error" rowspan="${M.ATTACKERS.length}">${escapeHtml(error || 'Valid ratio')}</td>` : ''}
+          ${attacker === M.ATTACKERS[0] ? `<td class="rf-scenario-error" rowspan="${M.ATTACKERS.length}">${escapeHtml(error || 'Valid composition')}</td>` : ''}
         </tr>`);
       }
     });
     $('scenarioResults').innerHTML = `<table class="rf-table rf-scenario-results-table">
-      <thead><tr><th scope="col">Defending ratio</th><th scope="col">Attacker</th><th scope="col">Expected total shots</th><th scope="col">Bonus shots</th><th scope="col">Bag status</th></tr></thead>
+      <thead><tr><th scope="col">Your composition</th><th scope="col">Their ship</th><th scope="col">Expected total shots</th><th scope="col">Bonus shots</th><th scope="col">Composition status</th></tr></thead>
       <tbody>${rows.join('')}</tbody>
-    </table>`;
-  }
-
-  function renderMatchupGrid() {
-    const tech = techValues();
-    const rows = [];
-    let error = '';
-    try {
-      for (const attacker of M.ATTACKERS) {
-        for (const target of Object.keys(U.UNITS)) {
-          const matchup = M.matchupStats(attacker, target, tech);
-          rows.push(`<tr>
-            <th scope="row">${escapeHtml(attacker)}</th>
-            <td>${escapeHtml(target)}</td>
-            <td>${matchup.rapidFire > 1 ? `×${display(matchup.rapidFire)}` : '—'}</td>
-            <td>${percentFormat.format(matchup.continuationChance)}</td>
-            <td>${display(matchup.weaponDamage)}</td>
-            <td>${display(matchup.targetHull)}</td>
-            <td>${display(matchup.targetShield)}</td>
-            <td class="${matchup.passesShieldRule ? 'rf-pass' : 'rf-bounce'}">${matchup.passesShieldRule ? 'Effective' : 'Ineffective'}</td>
-            <td>${display(matchup.effectiveDamage)}</td>
-          </tr>`);
-        }
-      }
-    } catch (caught) {
-      error = caught.message;
-    }
-    $('techStatus').textContent = error;
-    $('techStatus').className = error ? 'status error' : 'status';
-    $('matchupGrid').innerHTML = `<table class="rf-table rf-matchup-table">
-      <thead><tr><th scope="col">Attacker</th><th scope="col">Target</th><th scope="col">RF rating</th><th scope="col">Continue chance</th><th scope="col">Damage / shot</th><th scope="col">Target hull</th><th scope="col">Target shield</th><th scope="col">1% rule</th><th scope="col">Effective damage / shot</th></tr></thead>
-      <tbody>${error ? `<tr><td colspan="9" class="rf-grid-error">${escapeHtml(error)}</td></tr>` : rows.join('')}</tbody>
     </table>`;
   }
 
   function updateResults() {
     renderScenarioResults();
-    renderMatchupGrid();
   }
 
   function addScenario() {
@@ -184,8 +142,6 @@
   });
 
   $('addScenario').addEventListener('click', addScenario);
-  ['weaponsTech', 'shieldTech', 'armorTech'].forEach(id => $(id).addEventListener('input', updateResults));
-
   renderScenarios();
   updateResults();
   saveScenarios();

@@ -534,11 +534,7 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .rapid-fire-page h1 { margin: .15rem 0 .7rem; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.02; letter-spacing: -.045em; }
 .rapid-fire-page h2 { margin: 0 0 .4rem; font-size: 1.05rem; }
 .rapid-fire-page .eyebrow { margin: 0 0 5px; color: var(--accent); font-size: .73rem; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
-.rapid-fire-page .rf-tech-panel { margin-bottom: 18px; }
-.rapid-fire-page .rf-tech-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.rapid-fire-page .rf-tech-grid label,
 .rapid-fire-page .rf-name-input { display: grid; gap: 5px; min-width: 0; color: #c5d7e2; font-size: .83rem; font-weight: 650; }
-.rapid-fire-page .rf-tech-grid input,
 .rapid-fire-page .rf-name-input input,
 .rapid-fire-page .rf-ratio-input input { width: 100%; min-width: 0; min-height: 40px; padding: 8px 10px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .rapid-fire-page .rf-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
@@ -567,9 +563,6 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .rapid-fire-page .rf-scenario-results-table tbody tr:nth-child(8n + 1) > * { border-top: 1px solid var(--border-point); }
 .rapid-fire-page .rf-scenario-results-table tbody tr:first-child > * { border-top: 0; }
 .rapid-fire-page .rf-scenario-error { max-width: 230px; color: var(--muted); text-align: left !important; white-space: normal; }
-.rapid-fire-page .rf-pass { color: var(--expected); }
-.rapid-fire-page .rf-bounce { color: var(--bad); }
-.rapid-fire-page .rf-grid-error { color: var(--bad); text-align: left !important; }
 .rapid-fire-page .rf-notes { margin-top: 14px; }
 .rapid-fire-page .rf-notes p { margin: .45rem 0 0; color: var(--muted); font-size: .82rem; }
 .rapid-fire-page .rf-notes a { color: var(--accent); }
@@ -580,7 +573,6 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 }
 
 @media (max-width: 650px) {
-  .rapid-fire-page .rf-tech-grid { grid-template-columns: 1fr; }
   .rapid-fire-page .rf-section-head { display: block; }
   .rapid-fire-page .rf-section-head .ghost { margin-top: 10px; }
   .rapid-fire-page .rf-ratio-grid { grid-template-columns: 1fr; }
