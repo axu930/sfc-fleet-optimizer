@@ -71,7 +71,7 @@
     }).join('');
     $('scenarioList').querySelectorAll('[data-remove-scenario]').forEach(button => {
       button.disabled = scenarios.length === 1;
-      button.title = button.disabled ? 'At least one ratio bag is required' : 'Remove this ratio bag';
+      button.title = button.disabled ? 'At least one composition is required' : 'Remove this composition';
     });
   }
 
@@ -80,8 +80,7 @@
   }
 
   function renderScenarioResults() {
-    const rows = [];
-    scenarios.forEach((scenario, index) => {
+    const rows = scenarios.map((scenario, index) => {
       let error = '';
       const values = {};
       try {
@@ -89,19 +88,21 @@
       } catch (caught) {
         error = caught.message;
       }
-      for (const attacker of M.ATTACKERS) {
+      const cells = M.ATTACKERS.map(attacker => {
         const result = values[attacker];
-        rows.push(`<tr>
-          <th scope="row">${escapeHtml(scenarioName(scenario, index))}</th>
-          <td>${escapeHtml(attacker)}</td>
-          <td>${result ? display(result.totalShots) : '—'}</td>
-          <td>${result ? display(result.bonusShots) : '—'}</td>
-          ${attacker === M.ATTACKERS[0] ? `<td class="rf-scenario-error" rowspan="${M.ATTACKERS.length}">${escapeHtml(error || 'Valid composition')}</td>` : ''}
-        </tr>`);
-      }
+        if (!result) return '<td class="rf-shot-cell" aria-label="Unavailable">—</td>';
+        return `<td class="rf-shot-cell" aria-label="${display(result.totalShots)} total shots; ${display(result.bonusShots)} bonus shots">
+          <span class="rf-shot-total">${display(result.totalShots)}</span>
+          <span class="rf-shot-bonus">+${display(result.bonusShots)} bonus</span>
+        </td>`;
+      }).join('');
+      return `<tr>
+        <th scope="row"><span class="rf-composition-name">${escapeHtml(scenarioName(scenario, index))}</span>${error ? `<span class="rf-scenario-error">${escapeHtml(error)}</span>` : ''}</th>
+        ${cells}
+      </tr>`;
     });
     $('scenarioResults').innerHTML = `<table class="rf-table rf-scenario-results-table">
-      <thead><tr><th scope="col">Your composition</th><th scope="col">Their ship</th><th scope="col">Expected total shots</th><th scope="col">Bonus shots</th><th scope="col">Composition status</th></tr></thead>
+      <thead><tr><th scope="col">Your composition</th>${M.ATTACKERS.map(attacker => `<th scope="col">${escapeHtml(attacker)}</th>`).join('')}</tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table>`;
   }

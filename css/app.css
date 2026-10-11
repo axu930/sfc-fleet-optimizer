@@ -566,9 +566,17 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .rapid-fire-page .rf-table thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-control); color: #c9d7df; font-size: .72rem; font-weight: 700; }
 .rapid-fire-page .rf-table tbody th { color: var(--text); font-weight: 700; text-align: left; }
 .rapid-fire-page .rf-table td:nth-child(2) { text-align: left; }
-.rapid-fire-page .rf-scenario-results-table tbody tr:nth-child(8n + 1) > * { border-top: 1px solid var(--border-point); }
+.rapid-fire-page .rf-scenario-results-table { min-width: 1120px; }
+.rapid-fire-page .rf-scenario-results-table thead th:not(:first-child) { text-align: center; }
+.rapid-fire-page .rf-scenario-results-table tbody tr + tr > * { border-top: 1px solid var(--border-point); }
 .rapid-fire-page .rf-scenario-results-table tbody tr:first-child > * { border-top: 0; }
-.rapid-fire-page .rf-scenario-error { max-width: 230px; color: var(--muted); text-align: left !important; white-space: normal; }
+.rapid-fire-page .rf-scenario-results-table tbody th { min-width: 175px; }
+.rapid-fire-page .rf-shot-cell { min-width: 95px; text-align: center !important; }
+.rapid-fire-page .rf-shot-total,
+.rapid-fire-page .rf-shot-bonus { display: block; }
+.rapid-fire-page .rf-shot-total { color: var(--text); font-weight: 750; }
+.rapid-fire-page .rf-shot-bonus { margin-top: 2px; color: var(--muted); font-size: .68rem; }
+.rapid-fire-page .rf-scenario-error { display: block; max-width: 230px; margin-top: 4px; color: var(--bad); font-size: .7rem; font-weight: 500; white-space: normal; }
 .rapid-fire-page .rf-notes { margin-top: 14px; }
 .rapid-fire-page .rf-notes p { margin: .45rem 0 0; color: var(--muted); font-size: .82rem; }
 .rapid-fire-page .rf-notes a { color: var(--accent); }
@@ -586,5 +594,5 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .rapid-fire-page .rf-remove-button { margin-top: 24px; }
   .rapid-fire-page .rf-table-wrap { max-height: 65vh; }
   .rapid-fire-page .rf-table { min-width: 850px; }
-  .rapid-fire-page .rf-scenario-results-table { min-width: 700px; }
+  .rapid-fire-page .rf-scenario-results-table { min-width: 1120px; }
 }
