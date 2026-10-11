@@ -200,21 +200,21 @@
     }).join('')}</div>`;
   }
 
-  function renderResultRow(mix, recommendation) {
+  function renderResultRow(mix, recommendation, includeRoundLimit) {
     const mixDescription = formatComposition(recommendation.fleet || mix.ratios);
     const ineffective = recommendation.reason === 'ineffective';
     if (recommendation.unavailable) {
       return `<tr class="${ineffective ? 'sfc2-result-ineffective' : 'sfc2-result-unavailable'}">
         <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
-        <td>${recommendation.roundLimit} rounds</td>
-        <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
+        <td class="sfc2-attack-ships-cell">—</td><td>—</td><td>—</td><td>—</td><td>—</td>
       </tr>`;
     }
     const losses = Object.values(recommendation.estimatedLosses).reduce((sum, count) => sum + count, 0);
     return `<tr>
       <th scope="row"><strong>${escapeHtml(mix.name)}</strong><small>${mixDescription}</small></th>
-      <td>${recommendation.roundLimit} rounds</td>
-      <td>${renderAttackingFleetCell(recommendation)}</td>
+      ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
+      <td class="sfc2-attack-ships-cell">${renderAttackingFleetCell(recommendation)}</td>
       <td>${formatCost(recommendation.buildCost, true)}</td>
       <td>${formatCount(losses)}<small>${formatComposition(recommendation.estimatedLosses)}</small></td>
       <td>${formatCost(recommendation.rebuildCost, true)}</td>
@@ -223,13 +223,14 @@
   }
 
   function renderComparisonTable(comparisons, roundLimit) {
+    const includeRoundLimit = comparisons.length === 1;
     const rows = comparisons.flatMap(comparison =>
       comparison.result.recommendations
         .filter(recommendation => recommendation.roundLimit === roundLimit)
-        .map(recommendation => renderResultRow(comparison.mix, recommendation))
+        .map(recommendation => renderResultRow(comparison.mix, recommendation, includeRoundLimit))
     ).join('');
-    return `<table class="sfc2-results-table">
-      <thead><tr><th scope="col">Fleet mix</th><th scope="col">Round limit</th><th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Transports</th></tr></thead>
+    return `<table class="sfc2-results-table${includeRoundLimit ? ' sfc2-single-mix' : ''}">
+      <thead><tr><th scope="col">Fleet mix</th>${includeRoundLimit ? '<th scope="col">Round limit</th>' : ''}<th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Transports</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
