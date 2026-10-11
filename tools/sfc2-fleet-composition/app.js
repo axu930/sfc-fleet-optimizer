@@ -191,28 +191,13 @@
     return `<div class="sfc2-attack-fleet"><strong>${formatCount(recommendation.totalShips + transportCount)} total</strong>${breakdown}${transportLine}</div>`;
   }
 
-  function renderCargoCell(recommendation) {
-    return `<div class="sfc2-cargo-options">${recommendation.cargo.map(option => {
-      const added = option.additional > 0 ? option.additional : 0;
-      const addedCost = optimizer.costOfFleet(added > 0 ? {[option.type]:added} : {});
-      const combinedLosses = Object.values(option.snapshot.attackerLosses || option.simulation.attackerLosses)
-        .reduce((sum, count) => sum + count, 0);
-      const attackShips = Object.fromEntries(Object.entries(option.snapshot.attackers || {})
-        .filter(([name]) => combat.ATTACKER_SHIPS.includes(name)));
-      const attackShipCapacity = combat.cargoCapacityForSurvivors(attackShips);
-      const capacityStatus = `${formatResource(attackShipCapacity)} attacking-ship cargo · ${formatResource(option.capacity)} total / ${formatResource(recommendation.cargoRequired)} required${option.fullyLoaded ? '' : ' · short'}`;
-      const battleStatus = option.win ? `clear by round ${option.win.round}` : 'does not meet round limit';
-      return `<span><strong>${escapeHtml(option.type)} × ${formatCount(added)}</strong><small>${escapeHtml(capacityStatus)} · ${formatCost(addedCost)} · ${formatCount(combinedLosses)} combined losses · ${escapeHtml(battleStatus)}</small></span>`;
-    }).join('')}</div>`;
-  }
-
   function renderResultRow(mix, recommendation, includeRoundLimit) {
     const ineffective = recommendation.reason === 'ineffective';
     if (recommendation.unavailable) {
       return `<tr class="${ineffective ? 'sfc2-result-ineffective' : 'sfc2-result-unavailable'}">
         <th scope="row"><strong>${escapeHtml(mix.name)}</strong></th>
         ${includeRoundLimit ? `<td>${recommendation.roundLimit} rounds</td>` : ''}
-        <td class="sfc2-attack-ships-cell">—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        <td class="sfc2-attack-ships-cell">—</td><td>—</td><td>—</td><td>—</td>
       </tr>`;
     }
     const transportInclusiveLosses = recommendation.cargo?.[0]?.snapshot?.attackerLosses || recommendation.estimatedLosses;
@@ -225,7 +210,6 @@
       <td>${formatCost(recommendation.buildCost, true)}</td>
       <td>${formatCount(losses)}<small>${formatComposition(transportInclusiveLosses)}</small></td>
       <td>${formatCost(rebuildCost, true)}</td>
-      <td>${renderCargoCell(recommendation)}</td>
     </tr>`;
   }
 
@@ -237,7 +221,7 @@
         .map(recommendation => renderResultRow(comparison.mix, recommendation, includeRoundLimit))
     ).join('');
     return `<table class="sfc2-results-table${includeRoundLimit ? ' sfc2-single-mix' : ''}">
-      <thead><tr><th scope="col">Fleet mix</th>${includeRoundLimit ? '<th scope="col">Round limit</th>' : ''}<th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th><th scope="col">Transports</th></tr></thead>
+      <thead><tr><th scope="col">Fleet mix</th>${includeRoundLimit ? '<th scope="col">Round limit</th>' : ''}<th scope="col">Attack ships</th><th scope="col">Fleet build cost</th><th scope="col">Expected losses</th><th scope="col">Rebuild cost</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
   }
