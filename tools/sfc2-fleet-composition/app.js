@@ -10,6 +10,8 @@
   const results = $('#results');
   const recommendations = $('#recommendations');
   let currentComparisons = null;
+  let lastCalculation = null;
+  let calculationSequence = 0;
   let mixSequence = 1;
   let mixes = [{id:mixSequence++, name:'Mix 1', ratios:{}}];
 
@@ -226,7 +228,7 @@
       defenderTech:readTech('defender'),
       confidence:Number($('#winConfidence').value),
       transportType:$('#transportType').value,
-      resources,
+      resources
     };
   }
 
@@ -254,30 +256,60 @@
     return scenarios;
   }
 
+  function runAnalysis(input, scenarios, {filterUpdate=false, scroll=false}={}) {
+    const sequence = ++calculationSequence;
+    if (filterUpdate) {
+      $('#resultFilterStatus').textContent = 'Updating recommendations…';
+    } else {
+      $('#calculateBtn').disabled = true;
+      inputStatus.textContent = 'Calculating expected battles and selected transport cargo…';
+    }
+    window.setTimeout(() => {
+      if (sequence !== calculationSequence) return;
+      try {
+        const comparisons = scenarios.map(mix => ({mix, result:optimizer.analyze({...input, ratios:mix.ratios})}));
+        currentComparisons = comparisons;
+        renderSelectedResults(comparisons);
+        results.classList.remove('hidden');
+        if (filterUpdate) {
+          $('#resultFilterStatus').textContent = 'Recommendations updated.';
+        } else {
+          inputStatus.textContent = 'Calculation complete.';
+          $('#resultFilterStatus').textContent = '';
+        }
+        if (scroll) results.scrollIntoView({behavior:'smooth', block:'start'});
+      } catch (error) {
+        if (filterUpdate) {
+          $('#resultFilterStatus').textContent = error.message || 'Could not update recommendations.';
+        } else {
+          inputStatus.textContent = error.message || 'Calculation failed.';
+        }
+      } finally {
+        if (sequence === calculationSequence && !filterUpdate) $('#calculateBtn').disabled = false;
+      }
+    }, 20);
+  }
+
   function calculate() {
     inputStatus.textContent = '';
     try {
       const input = readInput();
       const scenarios = readMixScenarios();
-      $('#calculateBtn').disabled = true;
-      inputStatus.textContent = 'Calculating expected battles and selected transport cargo…';
-      window.setTimeout(() => {
-        try {
-          const comparisons = scenarios.map(mix => ({mix, result:optimizer.analyze({...input, ratios:mix.ratios})}));
-          currentComparisons = comparisons;
-          renderSelectedResults(comparisons);
-          results.classList.remove('hidden');
-          inputStatus.textContent = 'Calculation complete.';
-          results.scrollIntoView({behavior:'smooth', block:'start'});
-        } catch (error) {
-          inputStatus.textContent = error.message || 'Calculation failed.';
-        } finally {
-          $('#calculateBtn').disabled = false;
-        }
-      }, 20);
+      lastCalculation = {input, scenarios};
+      runAnalysis(input, scenarios, {scroll:true});
     } catch (error) {
       inputStatus.textContent = error.message || 'Check the input values.';
     }
+  }
+
+  function updateCalculationFilters() {
+    if (!lastCalculation) return;
+    const input = {
+      ...lastCalculation.input,
+      confidence:Number($('#winConfidence').value),
+      transportType:$('#transportType').value
+    };
+    runAnalysis(input, lastCalculation.scenarios, {filterUpdate:true});
   }
 
   function setInput(role, name, value, mixId=null) {
@@ -330,8 +362,13 @@
 
   $('#calculateBtn').addEventListener('click', calculate);
   $('#roundFilter').addEventListener('change', () => {
-    if (currentComparisons) renderSelectedResults(currentComparisons);
+    if (currentComparisons) {
+      renderSelectedResults(currentComparisons);
+      $('#resultFilterStatus').textContent = `Showing victories within ${$('#roundFilter').value} rounds.`;
+    }
   });
+  $('#winConfidence').addEventListener('change', updateCalculationFilters);
+  $('#transportType').addEventListener('change', updateCalculationFilters);
   $('#addMixBtn').addEventListener('click', () => {
     mixes = snapshotMixes();
     if (mixes.length >= 3) return;
