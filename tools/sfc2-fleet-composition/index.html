@@ -74,7 +74,7 @@
           </fieldset>
         </div>
         <h3 class="sfc2-subhead">Resources to raid</h3>
-        <p class="hint">Enter available Ore, Crystal, and Hydrogen. Pasting a report fills these counts when present.</p>
+        <p class="hint">Enter visible stockpile amounts. Cargo sizing uses the 50% plunder cap. Pasting a report fills these counts when present.</p>
         <div class="sfc2-resource-grid">
           <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
           <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
@@ -144,7 +144,7 @@
       <article class="panel sfc2-model-notes">
         <h2>Model notes</h2>
         <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. The clear-confidence estimate treats survival as independent per ship within each class, using each class's expected remaining fraction; actual battles can vary.</p>
-        <p>Cargo estimates keep the selected round-limit attack fleet fixed and add only the selected transport type, including expected battle losses. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
+        <p>Cargo estimates use 50% of each visible resource amount, keep the selected round-limit attack fleet fixed, and add only the selected transport type, including expected battle losses. Build and rebuild costs are shown by resource; travel fuel is not included.</p>
         <p>The 1% shield ineffectiveness rule is enforced. If an attacking mix cannot damage a defender class at the entered Weapons Tech, adding more ships in that same mix cannot clear the full roster.</p>
       </article>
     </section>
@@ -154,7 +154,7 @@
   <script src="../../js/units.js?v=count-suffixes-1"></script>
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-5"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-9"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-6"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-10"></script>
 </body>
 </html>

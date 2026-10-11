@@ -204,7 +204,7 @@
       return `No modeled solution found for any fleet mix within ${roundLimit} rounds. Try different ratios or a lower clear-confidence threshold.`;
     }
     const confidence = comparisons[0].result.confidence;
-    return `Clear threshold ${(confidence * 100).toFixed(1)}% · selected transport estimate includes expected battle losses`;
+    return `Clear threshold ${(confidence * 100).toFixed(1)}% · cargo uses ${Math.round(optimizer.PLUNDER_SHARE * 100)}% of visible resources · transport estimate includes expected battle losses`;
   }
 
   function renderSelectedResults(comparisons) {

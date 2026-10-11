@@ -9,6 +9,7 @@
   const ROUND_LIMITS = Object.freeze([4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
   const DEFAULT_TRANSPORT = 'Carmanor';
+  const PLUNDER_SHARE = 0.5;
   // Far beyond plausible in-game counts, while keeping expected-value
   // arithmetic and the derived combat/cost values finite in JavaScript.
   const MAX_SCALE = 1e100;
@@ -178,9 +179,9 @@
   function plunderPool(input={}) {
     const resources = input.resources || {};
     return {
-      ore:Math.max(0, Number(resources.ore) || 0),
-      crystal:Math.max(0, Number(resources.crystal) || 0),
-      hydrogen:Math.max(0, Number(resources.hydrogen) || 0)
+      ore:Math.floor(Math.max(0, Number(resources.ore) || 0) * PLUNDER_SHARE),
+      crystal:Math.floor(Math.max(0, Number(resources.crystal) || 0) * PLUNDER_SHARE),
+      hydrogen:Math.floor(Math.max(0, Number(resources.hydrogen) || 0) * PLUNDER_SHARE)
     };
   }
 
@@ -282,7 +283,7 @@
   }
 
   return {
-    ROUND_LIMITS, TRANSPORTS, normalizeRatios, scaledFleet, costOfFleet,
+    ROUND_LIMITS, TRANSPORTS, PLUNDER_SHARE, normalizeRatios, scaledFleet, costOfFleet,
     plunderPool, allocatePlunder, analyze
   };
 });

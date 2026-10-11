@@ -10,16 +10,17 @@ function near(actual, expected, tolerance=1e-8) {
 assert.deepStrictEqual(optimizer.normalizeRatios({Athena:5, Hades:10}), {Athena:1, Hades:2});
 assert.throws(() => optimizer.normalizeRatios({Charon:1}), /positive ratio/);
 assert.deepStrictEqual(combat.ATTACKER_SHIPS, ['Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus']);
+assert.strictEqual(optimizer.PLUNDER_SHARE, 0.5);
 assert.deepStrictEqual(optimizer.normalizeRatios({Atlas:100, Artemis:2}), {Artemis:1},
   'transport ships cannot be included in attacking fleet ratios');
 
 assert.deepStrictEqual(
   optimizer.plunderPool({resources:{ore:400_000, crystal:140_000, hydrogen:100_000}}),
-  {ore:400_000, crystal:140_000, hydrogen:100_000}
+  {ore:200_000, crystal:70_000, hydrogen:50_000}
 );
-const fullResourcePool = optimizer.plunderPool({resources:{ore:100, crystal:50, hydrogen:25}});
-assert.deepStrictEqual(fullResourcePool, {ore:100, crystal:50, hydrogen:25},
-  'resource inputs are treated as the full loot pool');
+const plunderPool = optimizer.plunderPool({resources:{ore:101, crystal:50, hydrogen:25}});
+assert.deepStrictEqual(plunderPool, {ore:50, crystal:25, hydrogen:12},
+  'cargo pool is half of each visible resource amount, rounded down to whole resources');
 const balancedLoot = optimizer.allocatePlunder({ore:500, crystal:20, hydrogen:100}, 150);
 near(balancedLoot.ore, 65);
 near(balancedLoot.crystal, 20);
@@ -40,7 +41,8 @@ for (const recommendation of result.recommendations) {
   assert(recommendation.estimatedWinProbability >= 0.95);
   near(recommendation.estimatedLosses.Athena, 0);
   const options = Object.fromEntries(recommendation.cargo.map(item => [item.type, item]));
-  assert.strictEqual(options.Carmanor.additional, 4);
+  assert.strictEqual(options.Carmanor.additional, 2);
+  assert.strictEqual(recommendation.cargoRequired, 225_000);
   assert.strictEqual(recommendation.cargo.length, 1, 'default output should size only Carmanor transports');
   for (const option of Object.values(options)) {
     assert(option.fullyLoaded, `${option.type} should provide full expected cargo capacity`);
@@ -62,7 +64,7 @@ const atlasSelection = optimizer.analyze({
 assert.strictEqual(atlasSelection.transportType, 'Atlas');
 assert(atlasSelection.recommendations.every(item => item.cargo.length === 1 && item.cargo[0].type === 'Atlas'),
   'the selected transport type should be the only cargo option in the results');
-assert(atlasSelection.recommendations.every(item => item.cargo[0].additional === 90),
+assert(atlasSelection.recommendations.every(item => item.cargo[0].additional === 45),
   'transport cargo requirements should use the selected Atlas capacity');
 
 const ineffective = optimizer.analyze({
