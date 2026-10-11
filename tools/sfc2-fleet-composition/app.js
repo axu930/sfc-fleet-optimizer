@@ -443,22 +443,4 @@
     document.querySelectorAll('[data-role="defender"]').forEach(input => { input.value = '0'; });
     inputStatus.textContent = 'Defender counts cleared.';
   });
-  $('#sampleBtn').addEventListener('click', () => {
-    const sampleRatios = {Artemis:4, Athena:1, Hades:1};
-    const sampleDefenders = {Hades:20, Artemis:120, 'Laser Cannon':300, 'Gauss Cannon':25};
-    mixes = [{id:mixSequence++, name:'Mix 1', ratios:sampleRatios}];
-    renderMixes();
-    document.querySelectorAll('[data-role="defender"]').forEach(input => { input.value = '0'; });
-    for (const [name, value] of Object.entries(sampleDefenders)) setInput('defender', name, value);
-    $('#attackerWeapons').value = '10';
-    $('#attackerShield').value = '10';
-    $('#attackerArmor').value = '10';
-    $('#defenderWeapons').value = '10';
-    $('#defenderShield').value = '10';
-    $('#defenderArmor').value = '10';
-    $('#resourceOre').value = '500k';
-    $('#resourceCrystal').value = '350k';
-    $('#resourceHydrogen').value = '250k';
-    inputStatus.textContent = 'Sample roster loaded. Press Calculate fleet sizes.';
-  });
 })();
