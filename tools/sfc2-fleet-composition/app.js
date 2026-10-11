@@ -115,8 +115,8 @@
   function formatCost(cost, separateLines=false) {
     const pieces = [
       `${formatResource(cost.ore)} Ore`,
-      `${formatResource(cost.crystal)} Crystal`,
-      `${formatResource(cost.hydrogen)} Hydrogen`
+      `${formatResource(cost.crystal)} Cry`,
+      `${formatResource(cost.hydrogen)} Hyd`
     ];
     if (cost.credits > 0) pieces.push(`${formatResource(cost.credits)} Credits`);
     return pieces.map(escapeHtml).join(separateLines ? '<br>' : ' · ');
