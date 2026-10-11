@@ -339,8 +339,8 @@
     $('#resourceDenLevel').disabled = event.target.checked;
   });
   $('#clearBtn').addEventListener('click', () => {
-    document.querySelectorAll('[data-role]').forEach(input => { input.value = '0'; });
-    inputStatus.textContent = 'Fleet counts cleared.';
+    document.querySelectorAll('[data-role="defender"]').forEach(input => { input.value = '0'; });
+    inputStatus.textContent = 'Defender counts cleared.';
   });
   $('#sampleBtn').addEventListener('click', () => {
     const sampleRatios = {Artemis:4, Athena:1, Hades:1};

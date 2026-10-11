@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>SFC2 Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-results-table-1">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-two-pane-layout-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -33,7 +33,7 @@
 
     <section class="sfc2-input-grid" aria-label="Fleet and target inputs">
       <article class="panel sfc2-panel">
-        <h2>Combat tech</h2>
+        <h2>Attacker</h2>
         <p class="hint">Tech adds 10% of each base rating per level. These values apply to every fleet mix.</p>
         <div class="sfc2-tech-grid">
           <fieldset>
@@ -41,12 +41,6 @@
             <label>Weapons <input id="attackerWeapons" type="number" min="0" step="1" value="0"></label>
             <label>Shield <input id="attackerShield" type="number" min="0" step="1" value="0"></label>
             <label>Armor <input id="attackerArmor" type="number" min="0" step="1" value="0"></label>
-          </fieldset>
-          <fieldset>
-            <legend>Defender</legend>
-            <label>Weapons <input id="defenderWeapons" type="number" min="0" step="1" value="0"></label>
-            <label>Shield <input id="defenderShield" type="number" min="0" step="1" value="0"></label>
-            <label>Armor <input id="defenderArmor" type="number" min="0" step="1" value="0"></label>
           </fieldset>
         </div>
         <label class="sfc2-select-label" for="winConfidence">Estimated clear confidence</label>
@@ -56,9 +50,6 @@
           <option value="0.99">99%</option>
           <option value="0.999">99.9%</option>
         </select>
-      </article>
-
-      <article class="panel sfc2-panel">
         <div class="panel-head">
           <div>
             <h2>Attacking fleet mixes</h2>
@@ -73,21 +64,31 @@
       </article>
 
       <article class="panel sfc2-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Defending roster</h2>
-            <p class="hint">Ships and defenses are all targets in the same pool. Hephaestus is outside this model.</p>
-          </div>
-          <button id="clearBtn" class="ghost" type="button">Clear counts</button>
+        <h2>Defender</h2>
+        <p class="hint">Tech adds 10% of each base rating per level. Ships and defenses are targets in the same pool. Hephaestus is outside this model.</p>
+        <div class="sfc2-tech-grid">
+          <fieldset>
+            <legend>Defender combat tech</legend>
+            <label>Weapons <input id="defenderWeapons" type="number" min="0" step="1" value="0"></label>
+            <label>Shield <input id="defenderShield" type="number" min="0" step="1" value="0"></label>
+            <label>Armor <input id="defenderArmor" type="number" min="0" step="1" value="0"></label>
+          </fieldset>
         </div>
-        <div class="sfc2-paste-box">
-          <label for="defenderPaste">Paste a defender roster, espionage report, or battle report</label>
-          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
-          <div class="sfc2-paste-actions">
-            <button id="parseDefenderBtn" class="ghost" type="button">Import defender fleet</button>
-            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
-          </div>
-          <p class="hint">Import replaces defender counts and updates defender tech when present. Enter resources separately below.</p>
+        <h3 class="sfc2-subhead">Resources to raid</h3>
+        <p class="hint">Enter visible plunderable amounts from an espionage report, or raw stockpile values and a Resource Den level.</p>
+        <div class="sfc2-resource-grid">
+          <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
+          <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
+          <label>Hydrogen <input id="resourceHydrogen" type="text" inputmode="decimal" value="0"></label>
+        </div>
+        <label class="sfc2-check"><input id="valuesArePlunderable" type="checkbox" checked> Values are already plunderable (espionage report)</label>
+        <div class="sfc2-resource-options">
+          <label>Resource Den level <input id="resourceDenLevel" type="number" min="0" step="1" value="0" disabled></label>
+          <label class="sfc2-check"><input id="atWar" type="checkbox"> Qualifying declared war (55% share)</label>
+        </div>
+        <div class="panel-head sfc2-roster-head">
+          <div><h3>Defending roster</h3></div>
+          <button id="clearBtn" class="ghost" type="button">Clear defender counts</button>
         </div>
         <details class="sfc2-input-group" open>
           <summary>Ships</summary>
@@ -98,20 +99,14 @@
           <div id="defenderDefenseInputs" class="sfc2-unit-grid compact"></div>
         </details>
         <p class="hint">Missile-silo ABMs and Interplanetary Ballistic Missiles are not listed because they do not take part in fleet battles.</p>
-      </article>
-
-      <article class="panel sfc2-panel">
-        <h2>Resources to raid</h2>
-        <p class="hint">Enter the visible plunderable amounts from an espionage report, or enter raw stockpile values and apply a Resource Den level.</p>
-        <div class="sfc2-resource-grid">
-          <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
-          <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
-          <label>Hydrogen <input id="resourceHydrogen" type="text" inputmode="decimal" value="0"></label>
-        </div>
-        <label class="sfc2-check"><input id="valuesArePlunderable" type="checkbox" checked> Values are already plunderable (espionage report)</label>
-        <div class="sfc2-resource-options">
-          <label>Resource Den level <input id="resourceDenLevel" type="number" min="0" step="1" value="0" disabled></label>
-          <label class="sfc2-check"><input id="atWar" type="checkbox"> Qualifying declared war (55% share)</label>
+        <div class="sfc2-paste-box">
+          <label for="defenderPaste">Paste a defender roster, espionage report, or battle report</label>
+          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
+          <div class="sfc2-paste-actions">
+            <button id="parseDefenderBtn" class="ghost" type="button">Import defender fleet</button>
+            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">Import replaces defender counts and updates defender tech when present. Enter resources separately above.</p>
         </div>
       </article>
     </section>
@@ -141,6 +136,6 @@
   <script src="../../js/battle-report-parser.js?v=parser-defense-paste-1"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
   <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-2"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-2"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-3"></script>
 </body>
 </html>

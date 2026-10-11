@@ -384,7 +384,9 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-input-group { margin-top: 13px; }
 .sfc2-input-group summary { padding: 8px 10px; border: 1px solid var(--border-summary); border-radius: var(--radius-md); background: var(--surface-summary); color: var(--text); cursor: pointer; font-size: .84rem; font-weight: 750; }
 .sfc2-input-group[open] summary { margin-bottom: 8px; }
-.sfc2-tech-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.sfc2-tech-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; }
+.sfc2-subhead { margin: 16px 0 3px !important; }
+.sfc2-roster-head { margin-top: 18px; }
 .sfc2-tech-grid fieldset { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; min-width: 0; padding: 9px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
 .sfc2-tech-grid legend { padding: 0 5px; color: var(--muted); font-size: .72rem; font-weight: 700; }
 .sfc2-tech-grid label, .sfc2-resource-grid label, .sfc2-resource-options > label:first-child { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: .7rem; }
