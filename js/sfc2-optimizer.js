@@ -283,21 +283,10 @@
     return {ratios, confidence, transportType, recommendations, ineffectiveTargets};
   }
 
-  function simulateWaveTwo(input={}, recommendation={}) {
-    const roundLimit = Number(recommendation.roundLimit) || 5;
-    if (recommendation.unavailable) {
-      return {
-        roundLimit,
-        unavailable:true,
-        reason:recommendation.reason || 'first-wave-unavailable',
-        ineffectiveTargets:recommendation.ineffectiveTargets || []
-      };
-    }
-
-    const firstWaveCargo = recommendation.cargo && recommendation.cargo[0];
-    const fleet = firstWaveCargo && firstWaveCargo.fleet
-      ? firstWaveCargo.fleet
-      : {...recommendation.fleet};
+  function analyzeWaveTwo(input={}, waveOneResult={}) {
+    const ratios = normalizeRatios(input.ratios);
+    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || DEFAULT_CLEAR_CONFIDENCE));
+    const transportType = TRANSPORTS.includes(input.transportType) ? input.transportType : DEFAULT_TRANSPORT;
     const residualDefenders = {};
     for (const [name, count] of Object.entries(input.defenders || {})) {
       const unit = combat.UNITS[name];
@@ -305,58 +294,47 @@
       const remaining = Math.ceil(Number(count) * 0.7);
       if (remaining > 0) residualDefenders[name] = remaining;
     }
+    const waveTwoInput = {...input, defenders:residualDefenders};
+    const cache = new Map();
+    const ineffectiveTargets = combat.ineffectiveDefenderTargets(
+      scaledFleet(ratios, 1), residualDefenders, input.attackerTech, input.defenderTech
+    );
+    const recommendations = ROUND_LIMITS.map(roundLimit => {
+      const firstWave = (waveOneResult.recommendations || []).find(item => item.roundLimit === roundLimit);
+      if (!firstWave || firstWave.unavailable) {
+        return {
+          roundLimit,
+          unavailable:true,
+          reason:firstWave ? firstWave.reason : 'first-wave-unavailable',
+          ineffectiveTargets:firstWave && firstWave.ineffectiveTargets || []
+        };
+      }
+      if (ineffectiveTargets.length) {
+        return {roundLimit, unavailable:true, reason:'ineffective', ineffectiveTargets};
+      }
 
-    const firstWaveLoot = firstWaveCargo && firstWaveCargo.cargoTaken || {};
-    const remainingResources = Object.fromEntries(['ore', 'crystal', 'hydrogen'].map(name => [
-      name,
-      Math.max(0, (Number(input.resources && input.resources[name]) || 0) - (Number(firstWaveLoot[name]) || 0))
-    ]));
-    const pool = plunderPool({resources:remainingResources});
-    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || DEFAULT_CLEAR_CONFIDENCE));
-    const simulation = combat.simulate({
-      attackers:fleet,
-      defenders:residualDefenders,
-      attackerTech:input.attackerTech,
-      defenderTech:input.defenderTech
+      const firstWaveLoot = firstWave.cargo && firstWave.cargo[0] && firstWave.cargo[0].cargoTaken || {};
+      const remainingResources = Object.fromEntries(['ore', 'crystal', 'hydrogen'].map(name => [
+        name,
+        Math.max(0, (Number(input.resources && input.resources[name]) || 0) - (Number(firstWaveLoot[name]) || 0))
+      ]));
+      const pool = plunderPool({resources:remainingResources});
+      const recommendation = findFleetForRound(waveTwoInput, ratios, roundLimit, confidence, cache);
+      if (!recommendation) {
+        return {roundLimit, unavailable:true, reason:'search-limit', ineffectiveTargets:[]};
+      }
+      const cargo = [{
+        type:transportType,
+        cargoPerShip:combat.cargoCapacity(transportType),
+        ...findTransportCount({...waveTwoInput, resources:remainingResources}, recommendation, recommendation.fleet, transportType, pool, confidence)
+      }];
+      return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
     });
-    const state = winningSnapshot(simulation, roundLimit, confidence);
-    const snapshot = state.snapshot;
-    const capacity = combat.cargoCapacityForSurvivors(snapshot.attackers);
-    const cargoTaken = state.win ? allocatePlunder(pool, capacity) : {ore:0, crystal:0, hydrogen:0};
-    const transport = firstWaveCargo || {};
-    const cargo = [{
-      type:transport.type || input.transportType || DEFAULT_TRANSPORT,
-      cargoPerShip:transport.cargoPerShip || combat.cargoCapacity(transport.type || input.transportType || DEFAULT_TRANSPORT),
-      additional:Number(transport.additional) || 0,
-      fleet,
-      simulation,
-      capacity,
-      snapshot,
-      win:state.win,
-      round:state.round,
-      cargoTaken,
-      fullyLoaded:state.win && capacity >= sumResources(pool) - 1e-7
-    }];
-
-    return {
-      ...recommendation,
-      roundLimit,
-      fleet:recommendation.fleet || fleet,
-      totalShips:recommendation.totalShips == null ? sumCounts(recommendation.fleet || fleet) : recommendation.totalShips,
-      simulation,
-      winRound:state.win ? state.win.round : null,
-      estimatedWinProbability:state.win ? state.win.probability : 0,
-      remainingAttackers:snapshot.attackers,
-      estimatedLosses:snapshot.attackerLosses,
-      rebuildCost:costOfFleet(snapshot.attackerLosses),
-      cargoPool:pool,
-      cargoRequired:sumResources(pool),
-      cargo
-    };
+    return {ratios, confidence, transportType, recommendations, ineffectiveTargets, residualDefenders};
   }
 
   return {
     ROUND_LIMITS, TRANSPORTS, DEFAULT_CLEAR_CONFIDENCE, PLUNDER_SHARE, normalizeRatios, scaledFleet, costOfFleet,
-    plunderPool, allocatePlunder, analyze, simulateWaveTwo
+    plunderPool, allocatePlunder, analyze, analyzeWaveTwo
   };
 });

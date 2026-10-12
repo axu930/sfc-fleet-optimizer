@@ -253,9 +253,9 @@
     $('#resultSummary').classList.toggle('sfc2-ineffectiveness-summary', hasIneffectiveMix);
     $('#resultSummary').textContent = renderSummary(comparisons, roundLimit);
     recommendations.innerHTML = renderComparisonTable(comparisons, roundLimit);
-    const waveTwoComparisons = comparisons.map(({mix, result}) => {
-      const firstWave = result.recommendations.find(item => item.roundLimit === roundLimit);
-      return {mix, result:{recommendations:[optimizer.simulateWaveTwo(lastCalculation.input, firstWave || {roundLimit, unavailable:true})]}};
+    const waveTwoComparisons = comparisons.map(({mix, waveTwoResult}) => {
+      const recommendation = waveTwoResult.recommendations.find(item => item.roundLimit === roundLimit);
+      return {mix, result:{recommendations:[recommendation || {roundLimit, unavailable:true}]}};
     });
     waveTwoRecommendations.innerHTML = renderComparisonTable(waveTwoComparisons, roundLimit);
   }
@@ -307,12 +307,17 @@
       $('#resultFilterStatus').textContent = 'Updating recommendations…';
     } else {
       $('#calculateBtn').disabled = true;
-      inputStatus.textContent = 'Calculating expected battles and selected transport cargo…';
+      inputStatus.textContent = 'Calculating Wave 1 and Wave 2 fleets and cargo…';
     }
     window.setTimeout(() => {
       if (sequence !== calculationSequence) return;
       try {
-        const comparisons = scenarios.map(mix => ({mix, result:optimizer.analyze({...input, ratios:mix.ratios})}));
+        const comparisons = scenarios.map(mix => {
+          const mixInput = {...input, ratios:mix.ratios};
+          const result = optimizer.analyze(mixInput);
+          const waveTwoResult = optimizer.analyzeWaveTwo(mixInput, result);
+          return {mix, result, waveTwoResult};
+        });
         currentComparisons = comparisons;
         renderSelectedResults(comparisons);
         results.classList.remove('hidden');
