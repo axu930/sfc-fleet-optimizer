@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-fleet-output-3">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-wave-two-1">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -130,6 +130,13 @@
       </div>
       <p id="resultFilterStatus" class="sfc2-filter-status status" aria-live="polite"></p>
       <div id="recommendations" class="sfc2-table-wrap"></div>
+      <section class="sfc2-wave-two" aria-labelledby="waveTwoHeading">
+        <div class="sfc2-wave-two-head">
+          <div><p class="eyebrow">Follow-up attack</p><h2 id="waveTwoHeading">Wave 2</h2></div>
+          <p class="hint">Reuses the Wave 1 fleet. Defender ships are cleared and each defense is reduced to 70% (rounded up).</p>
+        </div>
+        <div id="waveTwoRecommendations" class="sfc2-table-wrap"></div>
+      </section>
       <article class="panel sfc2-model-notes">
         <h2>Model notes</h2>
         <p>Each shot selects a random target from the full opposing roster. The model estimates rapid-fire chains from the current target mix, resolves simultaneous round fire, resets shields, carries hull damage forward, and estimates hull explosions. Fleet sizing targets 99.9% clear confidence; actual battles can vary.</p>
@@ -143,7 +150,7 @@
   <script src="../../js/units.js?v=count-suffixes-2"></script>
   <script src="../../js/battle-report-parser.js?v=parser-abm-collision-2"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-9"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-21"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-10"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-22"></script>
 </body>
 </html>

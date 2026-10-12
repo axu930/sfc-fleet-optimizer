@@ -9,6 +9,7 @@
   const inputStatus = $('#inputStatus');
   const results = $('#results');
   const recommendations = $('#recommendations');
+  const waveTwoRecommendations = $('#waveTwoRecommendations');
   let currentComparisons = null;
   let lastCalculation = null;
   let calculationSequence = 0;
@@ -252,6 +253,11 @@
     $('#resultSummary').classList.toggle('sfc2-ineffectiveness-summary', hasIneffectiveMix);
     $('#resultSummary').textContent = renderSummary(comparisons, roundLimit);
     recommendations.innerHTML = renderComparisonTable(comparisons, roundLimit);
+    const waveTwoComparisons = comparisons.map(({mix, result}) => {
+      const firstWave = result.recommendations.find(item => item.roundLimit === roundLimit);
+      return {mix, result:{recommendations:[optimizer.simulateWaveTwo(lastCalculation.input, firstWave || {roundLimit, unavailable:true})]}};
+    });
+    waveTwoRecommendations.innerHTML = renderComparisonTable(waveTwoComparisons, roundLimit);
   }
 
   function readInput() {

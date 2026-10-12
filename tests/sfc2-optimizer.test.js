@@ -82,6 +82,32 @@ assert(attackerCargo.recommendations.every(item => item.cargo[0].additional === 
 assert(attackerCargo.recommendations.every(item => item.cargo[0].capacity === combat.cargoCapacity('Artemis')),
   'cargo availability should include surviving attacking ships');
 
+const waveTwo = optimizer.simulateWaveTwo({
+  defenders:{Artemis:8, 'Laser Cannon':4, 'Pulse Cannon':2},
+  attackerTech:{weapons:18, shield:18, armor:18},
+  defenderTech:{weapons:18, shield:18, armor:18},
+  confidence:0.95,
+  resources:{ore:1_000, crystal:800, hydrogen:400}
+}, {
+  roundLimit:5,
+  fleet:{Athena:4},
+  totalShips:4,
+  buildCost:optimizer.costOfFleet({Athena:4}),
+  cargo:[{
+    type:'Atlas', additional:3, cargoPerShip:combat.cargoCapacity('Atlas'),
+    fleet:{Athena:4, Atlas:3}, cargoTaken:{ore:200, crystal:100, hydrogen:100}
+  }]
+});
+assert.deepStrictEqual(waveTwo.simulation.initialDefenders, {'Laser Cannon':3, 'Pulse Cannon':2},
+  'Wave 2 clears defender ships and rounds each remaining defense up from its 70% value');
+assert.deepStrictEqual(waveTwo.simulation.initialAttackers, {Athena:4, Atlas:3},
+  'Wave 2 reuses the complete first-wave fleet, including the selected transports');
+assert.deepStrictEqual(waveTwo.cargoPool, {ore:400, crystal:350, hydrogen:150},
+  'Wave 2 plunder is half of each resource amount remaining after Wave 1 loot');
+assert.strictEqual(waveTwo.cargo[0].additional, 3);
+assert(waveTwo.estimatedLosses && Object.keys(waveTwo.estimatedLosses).length,
+  'Wave 2 reports losses from its own battle simulation');
+
 const ineffective = optimizer.analyze({
   ratios:{Artemis:1},
   defenders:{'Large Decoy':1},
