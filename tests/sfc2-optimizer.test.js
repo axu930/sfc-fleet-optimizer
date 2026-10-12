@@ -35,7 +35,7 @@ const result = optimizer.analyze({
   confidence:0.95,
   resources:{ore:150_000, crystal:150_000, hydrogen:150_000},
 });
-assert.deepStrictEqual(result.recommendations.map(item => item.roundLimit), [4, 5, 6]);
+assert.deepStrictEqual(result.recommendations.map(item => item.roundLimit), [3, 4, 5, 6]);
 for (const recommendation of result.recommendations) {
   assert.strictEqual(recommendation.scale, 1);
   assert.strictEqual(recommendation.winRound, 1);

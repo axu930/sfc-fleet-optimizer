@@ -25,7 +25,7 @@
       <div>
         <p class="eyebrow">SFC2 combat planner</p>
         <h1>Fleet Composition Analyzer</h1>
-        <p class="lede">Find the smallest fleet in your chosen ratios that targets a 99.9% probability of clearing within 4, 5, or 6 rounds. Compare attacking fleet mixes, expected losses, rebuild costs, and transports needed to bring home the plunder.</p>
+        <p class="lede">Find the smallest fleet in your chosen ratios that targets a 99.9% probability of clearing within 3, 4, 5, or 6 rounds. Compare attacking fleet mixes, expected losses, rebuild costs, and transports needed to bring home the plunder.</p>
         <p class="intro-guide"><strong>How to use:</strong> Set combat tech, choose a cargo transport, enter or paste the defender's ships and defenses, and add attacking fleet mixes as needed.</p>
       </div>
       <div class="sfc2-badge">Deterministic expected-value model</div>
@@ -115,6 +115,7 @@
       <div class="sfc2-output-filters" aria-label="Recommendation filters">
         <label for="roundFilter">Look at victories within
           <select id="roundFilter">
+            <option value="3">3 rounds</option>
             <option value="4">4 rounds</option>
             <option value="5" selected>5 rounds</option>
             <option value="6">6 rounds</option>
@@ -150,7 +151,7 @@
   <script src="../../js/units.js?v=count-suffixes-2"></script>
   <script src="../../js/battle-report-parser.js?v=parser-abm-collision-2"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
-  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-10"></script>
+  <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-11"></script>
   <script src="./app.js?v=sfc2-fleet-composition-22"></script>
 </body>
 </html>

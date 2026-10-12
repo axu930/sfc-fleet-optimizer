@@ -6,7 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (combat) {
   'use strict';
 
-  const ROUND_LIMITS = Object.freeze([4, 5, 6]);
+  const ROUND_LIMITS = Object.freeze([3, 4, 5, 6]);
   const TRANSPORTS = Object.freeze(['Atlas', 'Hercules', 'Carmanor']);
   const DEFAULT_TRANSPORT = 'Carmanor';
   const DEFAULT_CLEAR_CONFIDENCE = 0.999;
