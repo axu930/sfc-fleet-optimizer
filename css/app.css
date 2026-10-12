@@ -402,9 +402,13 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-tech-grid input { min-height: 34px; }
 .sfc2-paste-box { margin-top: 4px; padding: 11px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
 .sfc2-paste-box > label { display: block; color: var(--text); font-size: .76rem; font-weight: 700; }
+.sfc2-paste-box > summary { color: var(--text); cursor: pointer; font-size: .76rem; font-weight: 700; }
+.sfc2-paste-box[open] > summary { margin-bottom: 6px; }
 .sfc2-paste-box textarea { display: block; width: 100%; min-height: 100px; margin-top: 6px; padding: 8px 9px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font: .78rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
 .sfc2-paste-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 7px; }
 .sfc2-paste-actions .status { flex: 1 1 180px; margin: 0; font-size: .73rem; }
+.sfc2-paste-status { margin: 4px 0; font-size: .73rem; }
+.sfc2-paste-status:empty { display: none; }
 .sfc2-paste-box > .hint { margin: 7px 0 0; font-size: .72rem; }
 .sfc2-page select { min-height: 38px; padding: 6px 10px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-control); color: var(--text); font: inherit; }
 .sfc2-resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }

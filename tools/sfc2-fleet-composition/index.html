@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Compare SFC2 combat fleet mixes for three, four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>Fleet Composition | Starfleet Commander Tools</title>
-  <link rel="stylesheet" href="../../css/app.css?v=sfc2-wave-two-1">
+  <link rel="stylesheet" href="../../css/app.css?v=sfc2-wave-two-2">
 </head>
 <body class="sfc2-page">
   <main class="wrap">
@@ -62,15 +62,15 @@
           <button class="sfc2-help-trigger" type="button" aria-label="Defender roster details" aria-describedby="defender-roster-help">i</button>
           <span id="defender-roster-help" class="sfc2-help-popover" role="tooltip">Ships and defenses are targets in the same pool. Hephaestus is outside this model.</span>
         </span></h2>
-        <div class="sfc2-paste-box">
-          <label for="defenderPaste">Paste an espionage report, defender roster, or battle report</label>
-          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
+        <details id="defenderPasteBox" class="sfc2-paste-box" open>
+          <summary>Paste an espionage report, defender roster, or battle report</summary>
+          <textarea id="defenderPaste" rows="5" spellcheck="false" aria-label="Paste an espionage report, defender roster, or battle report" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
           <div class="sfc2-paste-actions">
             <button id="parseDefenderBtn" class="ghost" type="button">Parse report</button>
-            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
           </div>
           <p class="hint">Parsing replaces defender counts, fills resource counts when present, and updates defender tech.</p>
-        </div>
+        </details>
+        <p id="defenderPasteStatus" class="status sfc2-paste-status" aria-live="polite"></p>
         <div class="sfc2-tech-grid">
           <fieldset>
             <legend>Defender combat tech</legend>
@@ -149,6 +149,6 @@
   <script src="../../js/battle-report-parser.js?v=parser-abm-collision-2"></script>
   <script src="../../js/sfc2-combat.js?v=sfc2-fleet-composition-2"></script>
   <script src="../../js/sfc2-optimizer.js?v=sfc2-fleet-composition-11"></script>
-  <script src="./app.js?v=sfc2-fleet-composition-22"></script>
+  <script src="./app.js?v=sfc2-fleet-composition-23"></script>
 </body>
 </html>

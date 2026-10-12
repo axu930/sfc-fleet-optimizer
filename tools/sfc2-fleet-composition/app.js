@@ -432,6 +432,7 @@
     $('#defenderPasteStatus').textContent = '';
     try {
       importDefenderFleet();
+      $('#defenderPasteBox').open = false;
     } catch (error) {
       $('#defenderPasteStatus').textContent = error.message || 'Could not import the pasted defender roster.';
     }
