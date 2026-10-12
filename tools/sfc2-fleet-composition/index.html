@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Compare SFC2 combat fleet mixes for four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
+  <meta name="description" content="Compare SFC2 combat fleet mixes for three, four, five, and six round victories, expected losses, rebuild costs, and surviving cargo capacity.">
   <title>Fleet Composition | Starfleet Commander Tools</title>
   <link rel="stylesheet" href="../../css/app.css?v=sfc2-wave-two-1">
 </head>
@@ -62,6 +62,15 @@
           <button class="sfc2-help-trigger" type="button" aria-label="Defender roster details" aria-describedby="defender-roster-help">i</button>
           <span id="defender-roster-help" class="sfc2-help-popover" role="tooltip">Ships and defenses are targets in the same pool. Hephaestus is outside this model.</span>
         </span></h2>
+        <div class="sfc2-paste-box">
+          <label for="defenderPaste">Paste an espionage report, defender roster, or battle report</label>
+          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
+          <div class="sfc2-paste-actions">
+            <button id="parseDefenderBtn" class="ghost" type="button">Parse report</button>
+            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
+          </div>
+          <p class="hint">Parsing replaces defender counts, fills resource counts when present, and updates defender tech.</p>
+        </div>
         <div class="sfc2-tech-grid">
           <fieldset>
             <legend>Defender combat tech</legend>
@@ -70,15 +79,12 @@
             <label>Armor <input id="defenderArmor" type="number" min="0" step="1" value="0"></label>
           </fieldset>
         </div>
-        <h3 class="sfc2-subhead">Resources to raid</h3>
-        <p class="hint">Enter visible stockpile amounts. Cargo sizing uses the 50% plunder cap. Pasting a report fills these counts when present.</p>
         <div class="sfc2-resource-grid">
           <label>Ore <input id="resourceOre" type="text" inputmode="decimal" value="0"></label>
           <label>Crystal <input id="resourceCrystal" type="text" inputmode="decimal" value="0"></label>
           <label>Hydrogen <input id="resourceHydrogen" type="text" inputmode="decimal" value="0"></label>
         </div>
         <div class="panel-head sfc2-roster-head">
-          <div><h3>Defending roster</h3></div>
           <button id="clearBtn" class="ghost" type="button">Clear defender counts</button>
         </div>
         <details class="sfc2-input-group" open>
@@ -90,15 +96,6 @@
           <div id="defenderDefenseInputs" class="sfc2-unit-grid compact"></div>
         </details>
         <p class="hint">Missile-silo ABMs and Interplanetary Ballistic Missiles are not listed because they do not take part in fleet battles.</p>
-        <div class="sfc2-paste-box">
-          <label for="defenderPaste">Paste a defender roster, espionage report, or battle report</label>
-          <textarea id="defenderPaste" rows="5" spellcheck="false" placeholder="Paste the defender's ships, defenses, and optional combat tech…"></textarea>
-          <div class="sfc2-paste-actions">
-            <button id="parseDefenderBtn" class="ghost" type="button">Import defender fleet</button>
-            <span id="defenderPasteStatus" class="status" aria-live="polite"></span>
-          </div>
-          <p class="hint">Import replaces defender counts, fills resource counts when present, and updates defender tech.</p>
-        </div>
       </article>
     </section>
 
