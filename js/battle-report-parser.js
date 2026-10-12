@@ -71,6 +71,7 @@
   const REPORT_UNIT_TERMS = (() => {
     const preferred = {
       'Hermes Probe':['hermes probe','hermes'],
+      'Anti-Ballistic Missile':['anti-ballistic missile','anti ballistic missile'],
       'Missile Battery':['missile battery','missile turret','missile'],
       'Laser Cannon':['laser cannon','laser turret','laser'],
       'Pulse Cannon':['pulse cannon','pulse'],
@@ -99,6 +100,13 @@
         const expression = new RegExp('\\b' + pattern + '\\b', 'ig');
         let match;
         while ((match = expression.exec(source))) {
+          // Anti-Ballistic Missiles are inventory, not Missile Batteries.
+          // Do not let the shorthand "missile" term steal that row before
+          // the actual Missile Battery count appears later in the report.
+          if (entry.key === 'Missile Battery' && term === 'missile'
+            && /\banti[\s-]*ballistic\s*$/i.test(source.slice(0, match.index))) {
+            continue;
+          }
           found.push({key:entry.key, index:match.index, end:match.index + match[0].length, length:match[0].length});
           if (!match[0].length) expression.lastIndex++;
         }

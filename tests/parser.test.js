@@ -162,6 +162,17 @@ assert.deepStrictEqual(allocationReport.resources, {ore:1.2e6, crystal:2.5e6, hy
 assert.deepStrictEqual(allocationReport.rawResources, {ore:'1,200,000', crystal:'2.5M', hydrogen:'9Qi'});
 assert.strictEqual(allocationReport.hasResources, true);
 assert.deepStrictEqual(allocationReport.unknown, []);
+const missileDefenseCollision = parser.parseEspionageReport(`Seeker Infinity VIII has:
+DEFENSES:
+- Anti-Ballistic Missile: 300
+- Missile Battery: 4,508,471,202,970,086,996,077`);
+assert.strictEqual(missileDefenseCollision.composition['Missile Battery'], 4.508471202970087e21,
+  'an Anti-Ballistic Missile row must not shadow the actual Missile Battery count');
+assert.strictEqual(missileDefenseCollision.composition['Anti-Ballistic Missile'], 300,
+  'Anti-Ballistic Missiles should be identified separately from combat defenses');
+assert.strictEqual(missileDefenseCollision.rawCounts['Missile Battery'], '4,508,471,202,970,086,996,077');
+assert(!missileDefenseCollision.unknown.some(line => /Anti-Ballistic Missile/.test(line)),
+  'recognized but unsupported Anti-Ballistic Missile inventory should not be treated as an unknown line');
 const hugeResourceReport = parser.parseEspionageReport(`Seeker Infinity XII Armada (Seekers 073c) [1:1:14] has:
 RESOURCES:
  * ore: 10,947,448,941,116,385,438,157,766,656
