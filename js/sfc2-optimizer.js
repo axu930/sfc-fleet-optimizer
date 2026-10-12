@@ -319,7 +319,22 @@
         Math.max(0, (Number(input.resources && input.resources[name]) || 0) - (Number(firstWaveLoot[name]) || 0))
       ]));
       const pool = plunderPool({resources:remainingResources});
-      const recommendation = findFleetForRound(waveTwoInput, ratios, roundLimit, confidence, cache);
+      const cargoOnly = Object.keys(residualDefenders).length === 0;
+      const recommendation = cargoOnly
+        ? {
+          roundLimit,
+          scale:0,
+          fleet:{},
+          totalShips:0,
+          buildCost:costOfFleet({}),
+          estimatedLosses:{},
+          rebuildCost:costOfFleet({}),
+          winRound:0,
+          estimatedWinProbability:1,
+          remainingAttackers:{},
+          simulation:combat.simulate({attackers:{}, defenders:{}})
+        }
+        : findFleetForRound(waveTwoInput, ratios, roundLimit, confidence, cache);
       if (!recommendation) {
         return {roundLimit, unavailable:true, reason:'search-limit', ineffectiveTargets:[]};
       }
@@ -328,6 +343,19 @@
         cargoPerShip:combat.cargoCapacity(transportType),
         ...findTransportCount({...waveTwoInput, resources:remainingResources}, recommendation, recommendation.fleet, transportType, pool, confidence)
       }];
+      if (cargoOnly) {
+        const snapshot = cargo[0].snapshot;
+        return {
+          ...recommendation,
+          simulation:cargo[0].simulation,
+          remainingAttackers:snapshot.attackers,
+          estimatedLosses:snapshot.attackerLosses,
+          rebuildCost:costOfFleet(snapshot.attackerLosses),
+          cargoPool:pool,
+          cargoRequired:sumResources(pool),
+          cargo
+        };
+      }
       return {...recommendation, cargoPool:pool, cargoRequired:sumResources(pool), cargo};
     });
     return {ratios, confidence, transportType, recommendations, ineffectiveTargets, residualDefenders};

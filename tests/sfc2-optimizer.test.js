@@ -115,6 +115,26 @@ assert.deepStrictEqual(waveTwoFive.cargoPool, optimizer.plunderPool({resources:{
 assert(waveTwoFive.cargo[0].additional >= 0 && waveTwoFive.estimatedLosses,
   'Wave 2 recalculates transport needs and expected losses for its new fleet');
 
+const shipOnlyWaveInput = {
+  ratios:{Artemis:1},
+  defenders:{Artemis:25},
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  confidence:0.95,
+  resources:{ore:500_000, crystal:500_000, hydrogen:500_000}
+};
+const shipOnlyWaveOne = optimizer.analyze(shipOnlyWaveInput);
+const shipOnlyWaveTwo = optimizer.analyzeWaveTwo(shipOnlyWaveInput, shipOnlyWaveOne);
+const shipOnlyWaveTwoFive = shipOnlyWaveTwo.recommendations.find(item => item.roundLimit === 5);
+assert.deepStrictEqual(shipOnlyWaveTwo.residualDefenders, {},
+  'a ships-only defender roster leaves no Wave 2 combat targets');
+assert.deepStrictEqual(shipOnlyWaveTwoFive.fleet, {},
+  'Wave 2 recommends no combat ships after defender ships are cleared');
+assert(shipOnlyWaveTwoFive.cargo[0].additional > 0,
+  'Wave 2 recommends only the transports needed for the remaining plunder');
+assert.deepStrictEqual(Object.keys(shipOnlyWaveTwoFive.cargo[0].fleet), ['Carmanor'],
+  'a ships-only target produces a cargo-only Wave 2 fleet');
+
 const ineffective = optimizer.analyze({
   ratios:{Artemis:1},
   defenders:{'Large Decoy':1},
