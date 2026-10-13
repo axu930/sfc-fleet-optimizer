@@ -151,9 +151,14 @@
       return cache.get(scale);
     }
 
+    // Start the bracket near the defender fleet size. This is only a search
+    // hint: findMinimumCount still verifies the result and expands the bracket
+    // until it finds a qualifying fleet before bisecting to the minimum.
+    const initialScale = sumCounts(input.defenders) / Math.max(1, sumCounts(ratios));
     const scale = findMinimumCount(
       evaluate,
-      simulation => qualifies(simulation, roundLimit, confidence)
+      simulation => qualifies(simulation, roundLimit, confidence),
+      initialScale
     );
     if (scale == null) return null;
 
