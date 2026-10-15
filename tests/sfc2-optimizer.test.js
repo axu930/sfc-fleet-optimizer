@@ -12,6 +12,16 @@ assert.throws(() => optimizer.normalizeRatios({Charon:1}), /positive ratio/);
 assert.deepStrictEqual(combat.ATTACKER_SHIPS, ['Artemis', 'Apollo', 'Poseidon', 'Athena', 'Hades', 'Ares', 'Prometheus', 'Zeus']);
 assert.strictEqual(optimizer.DEFAULT_CLEAR_CONFIDENCE, 0.999);
 assert.strictEqual(optimizer.PLUNDER_SHARE, 0.5);
+assert.deepStrictEqual(optimizer.intermediateScales(1, 100, 2), [5, 22],
+  'intermediate fleet sizes should be spaced geometrically and rounded up');
+assert.deepStrictEqual(optimizer.intermediateScales(100, 100, 2), [],
+  'duplicate endpoint scales should not produce intermediate samples');
+assert.strictEqual(optimizer.oreEquivalent({ore:10, crystal:4, hydrogen:2}), 22,
+  'default value weights should be 1 Ore, 1.5 Crystal, and 3 Hydrogen');
+assert.strictEqual(optimizer.oreEquivalent({ore:10, crystal:4, hydrogen:2}, {ore:2, crystal:0, hydrogen:1}), 22,
+  'custom value weights should change the Ore-equivalent total');
+assert.throws(() => optimizer.oreEquivalent({ore:1}, {ore:-1, crystal:1, hydrogen:1}), /zero or greater/,
+  'negative value weights should be rejected');
 assert.deepStrictEqual(optimizer.normalizeRatios({Atlas:100, Artemis:2}), {Artemis:1},
   'transport ships cannot be included in attacking fleet ratios');
 
@@ -81,6 +91,26 @@ assert(attackerCargo.recommendations.every(item => item.cargo[0].additional === 
   'surviving attacking ships should cover a plunder pool that fits their own cargo holds');
 assert(attackerCargo.recommendations.every(item => item.cargo[0].capacity === combat.cargoCapacity('Artemis')),
   'cargo availability should include surviving attacking ships');
+
+const tradeoffPoint = optimizer.analyzeAtScale({
+  ratios:{Artemis:1},
+  defenders:{Artemis:25, 'Laser Cannon':10},
+  attackerTech:{weapons:0, shield:0, armor:0},
+  defenderTech:{weapons:0, shield:0, armor:0},
+  confidence:0.95,
+  transportType:'Atlas',
+  resources:{ore:800_000, crystal:400_000, hydrogen:200_000}
+}, {Artemis:1}, 100);
+assert.deepStrictEqual(tradeoffPoint.combatFleet, {Artemis:100},
+  'a sampled point should use the supplied fleet scale and preserve its mix');
+assert(tradeoffPoint.cargo[0].fullyLoaded && tradeoffPoint.fleet.Atlas === tradeoffPoint.cargo[0].additional,
+  'a sampled point should include enough selected transports for the 50% plunder pool');
+assert(tradeoffPoint.estimatedLosses.Atlas > 0,
+  'sample losses should include expected transport casualties');
+near(tradeoffPoint.buildCost.ore, optimizer.costOfFleet(tradeoffPoint.fleet).ore);
+near(tradeoffPoint.rebuildCost.ore, optimizer.costOfFleet(tradeoffPoint.estimatedLosses).ore);
+assert(tradeoffPoint.winRound === 3,
+  'sample point round results should come from the final transport-inclusive simulation');
 
 const waveOneInput = {
   ratios:{Artemis:1},

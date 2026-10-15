@@ -424,6 +424,40 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
 .sfc2-wave-two-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
 .sfc2-wave-two-head h2 { margin: 0; font-size: 1.15rem; }
 .sfc2-wave-two-head .hint { max-width: 620px; margin: 0; text-align: right; }
+.sfc2-cost-tradeoff { display: grid; gap: 12px; margin-top: 18px; }
+.sfc2-cost-tradeoff-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.sfc2-cost-tradeoff-head h2 { margin: 0; font-size: 1.15rem; }
+.sfc2-cost-tradeoff-head .hint { max-width: 620px; margin: 0; text-align: right; }
+.sfc2-cost-weights { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; min-width: 0; margin: 0; padding: 10px 12px 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
+.sfc2-cost-weights legend { padding: 0 5px; color: var(--muted); font-size: .74rem; font-weight: 700; }
+.sfc2-cost-weights label { display: grid; grid-template-columns: auto minmax(74px, 110px); align-items: center; gap: 8px; color: var(--muted); font-size: .76rem; }
+.sfc2-cost-weights input { width: 100%; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text); font-variant-numeric: tabular-nums; }
+.sfc2-cost-tradeoff-status { min-height: 1.1em; margin: 0; font-size: .74rem; }
+.sfc2-cost-tradeoff-chart { min-height: 260px; }
+.sfc2-cost-tradeoff-chart svg { min-width: 760px; }
+.sfc2-cost-tradeoff-chart .sfc2-cost-line { stroke: hsl(var(--sfc2-series-hue), 75%, 66%); }
+.sfc2-cost-tradeoff-chart .sfc2-cost-point { cursor: pointer; outline: none; }
+.sfc2-cost-tradeoff-chart .sfc2-cost-dot { fill: hsl(var(--sfc2-series-hue), 75%, 66%); }
+.sfc2-cost-tradeoff-chart .sfc2-cost-point:hover .sfc2-cost-dot,
+.sfc2-cost-tradeoff-chart .sfc2-cost-point:focus .sfc2-cost-dot,
+.sfc2-cost-tradeoff-chart .sfc2-cost-point.is-selected .sfc2-cost-dot { r: 7px; stroke: #fff; stroke-width: 2; }
+.sfc2-cost-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; color: var(--muted); font-size: .76rem; }
+.sfc2-cost-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.sfc2-cost-legend-swatch { width: 18px; height: 3px; border-radius: 3px; background: hsl(var(--sfc2-series-hue), 75%, 66%); }
+.sfc2-cost-tradeoff-details { min-width: 0; padding: 13px; border: 1px solid var(--border-point); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
+.sfc2-cost-tradeoff-details > .hint { margin: 0; }
+.sfc2-cost-detail-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; margin-bottom: 10px; }
+.sfc2-cost-detail-heading h3 { color: var(--text); font-size: .9rem; text-transform: none; letter-spacing: 0; }
+.sfc2-cost-detail-heading span { color: var(--muted); font-size: .76rem; }
+.sfc2-cost-detail-grid { display: grid; grid-template-columns: minmax(220px, 1.25fr) repeat(2, minmax(170px, 1fr)); gap: 10px; }
+.sfc2-cost-detail-card { min-width: 0; padding: 10px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-card); }
+.sfc2-cost-detail-card h4 { margin: 0 0 7px; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; }
+.sfc2-cost-fleet-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.sfc2-cost-fleet-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 6px; min-width: 0; font-size: .76rem; }
+.sfc2-cost-fleet-row code { overflow-wrap: anywhere; color: var(--text); font: 650 .72rem ui-monospace, SFMono-Regular, Menlo, monospace; text-align: right; }
+.sfc2-cost-copy-all { min-height: 32px; margin-top: 8px; padding: 0 9px; font-size: .72rem; }
+.sfc2-cost-resource-breakdown { display: grid; gap: 4px; color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; }
+.sfc2-cost-resource-breakdown strong { margin-top: 5px; color: var(--text); }
 .sfc2-output-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 14px 0 4px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-subpanel); }
 .sfc2-output-filters label { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: .76rem; }
 .sfc2-output-filters select { width: 100%; }
@@ -518,6 +552,9 @@ legend { padding: 0 6px; color: #c9d7df; font-size: .82rem; }
   .sfc2-results .results-head .hint { margin-top: 6px; text-align: left; }
   .sfc2-wave-two-head { display: block; }
   .sfc2-wave-two-head .hint { margin-top: 6px; text-align: left; }
+  .sfc2-cost-tradeoff-head { display: block; }
+  .sfc2-cost-tradeoff-head .hint { margin-top: 6px; text-align: left; }
+  .sfc2-cost-detail-grid { grid-template-columns: 1fr; }
   .sfc2-output-filters { grid-template-columns: 1fr; }
   .sfc2-panel-actions { justify-content: flex-start; margin-top: 9px; }
   .sfc2-mix-ship-grid { grid-template-columns: 1fr; }

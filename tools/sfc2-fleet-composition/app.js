@@ -5,13 +5,21 @@
   const optimizer = window.SFC2Optimizer;
   const units = window.SFCUnits;
   const reportParser = window.SFCBattleReportParser;
+  const charts = window.SFCSvgCharts;
   const $ = selector => document.querySelector(selector);
   const inputStatus = $('#inputStatus');
   const results = $('#results');
   const recommendations = $('#recommendations');
   const waveTwoRecommendations = $('#waveTwoRecommendations');
+  const costTradeoffChart = $('#costTradeoffChart');
+  const costTradeoffDetails = $('#costTradeoffDetails');
+  const costTradeoffStatus = $('#costTradeoffStatus');
   let currentComparisons = null;
   let lastCalculation = null;
+  let tradeoffPointByKey = new Map();
+  let selectedTradeoffKey = null;
+  let displayedTradeoffPoint = null;
+  let tradeoffWeights = {ore:1, crystal:1.5, hydrogen:3};
   let calculationSequence = 0;
   let mixSequence = 1;
   let mixes = [{id:mixSequence++, name:'Mix 1', ratios:{}}];
@@ -137,8 +145,7 @@
     });
   }
 
-  async function copyFleetCount(button) {
-    const value = button.dataset.copyCount;
+  async function copyText(button, value, defaultTitle='Copy exact ship count') {
     let copied = false;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
@@ -162,16 +169,133 @@
       }
     }
     const icon = button.querySelector('[aria-hidden="true"]');
+    const originalText = button.dataset.originalText || button.textContent;
+    if (!button.dataset.originalText) button.dataset.originalText = originalText;
     if (icon) icon.textContent = copied ? '✓' : '!';
+    else button.textContent = copied ? 'Copied' : originalText;
     button.classList.toggle('copied', copied);
-    button.title = copied ? 'Copied' : 'Copy exact ship count';
+    button.title = copied ? 'Copied' : defaultTitle;
     if (copied) window.setTimeout(() => {
       if (!button.isConnected) return;
       const currentIcon = button.querySelector('[aria-hidden="true"]');
       if (currentIcon) currentIcon.textContent = '⧉';
+      else button.textContent = button.dataset.originalText || originalText;
       button.classList.remove('copied');
-      button.title = 'Copy exact ship count';
+      button.title = defaultTitle;
     }, 1100);
+  }
+
+  function copyFleetCount(button) {
+    return copyText(button, button.dataset.copyCount);
+  }
+
+  function fleetSignature(fleet) {
+    return Object.entries(fleet || {})
+      .filter(([, count]) => Number(count) > 0)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, count]) => name + ':' + Math.ceil(Number(count)).toString())
+      .join('|');
+  }
+
+  function simulationWinRound(simulation, confidence) {
+    const defenderCount = Object.values(simulation?.initialDefenders || {}).reduce((sum, count) => sum + (Number(count) || 0), 0);
+    const attackerCount = Object.values(simulation?.initialAttackers || {}).reduce((sum, count) => sum + (Number(count) || 0), 0);
+    if (!(defenderCount > 0)) return attackerCount > 0 ? 0 : null;
+    const clear = (simulation?.roundDetails || []).find(detail => detail.estimatedWinProbability >= confidence);
+    return clear ? clear.round : null;
+  }
+
+  function tradeoffPointFromModel(mix, mixIndex, model, roundLimit=null) {
+    const cargo = model.cargo?.[0];
+    const fleet = cargo?.fleet || model.fleet || {};
+    const simulation = cargo?.simulation || model.simulation;
+    const losses = cargo?.snapshot?.attackerLosses || model.estimatedLosses || simulation?.attackerLosses || {};
+    return {
+      key:mixIndex + ':' + fleetSignature(fleet),
+      mix,
+      mixIndex,
+      scale:Number(model.scale) || 1,
+      combatFleet:model.combatFleet || model.fleet || {},
+      fleet,
+      losses,
+      simulation,
+      winRound:simulationWinRound(simulation, model.confidence || optimizer.DEFAULT_CLEAR_CONFIDENCE),
+      buildCost:optimizer.costOfFleet(fleet),
+      rebuildCost:optimizer.costOfFleet(losses),
+      roundLimits:roundLimit == null ? [] : [roundLimit],
+      sampledIntervals:[]
+    };
+  }
+
+  function buildTradeoffData(mixInput, mix, result, mixIndex) {
+    const pointsByFleet = new Map();
+    const anchors = new Map();
+    const cacheByCombatFleet = new Map();
+    const missing = [];
+
+    function register(point, roundLimit=null, interval=null) {
+      let stored = pointsByFleet.get(point.key);
+      if (!stored) {
+        stored = point;
+        pointsByFleet.set(point.key, stored);
+      }
+      if (roundLimit != null && !stored.roundLimits.includes(roundLimit)) stored.roundLimits.push(roundLimit);
+      if (interval && !stored.sampledIntervals.includes(interval)) stored.sampledIntervals.push(interval);
+      return stored;
+    }
+
+    for (const roundLimit of [6, 5, 4, 3]) {
+      const recommendation = result.recommendations.find(item => item.roundLimit === roundLimit);
+      if (!recommendation || recommendation.unavailable || !recommendation.cargo?.[0]) {
+        missing.push({roundLimit, reason:recommendation?.reason || 'unavailable'});
+        continue;
+      }
+      const point = register(tradeoffPointFromModel(mix, mixIndex, recommendation, roundLimit), roundLimit);
+      anchors.set(roundLimit, {recommendation, point});
+      cacheByCombatFleet.set(fleetSignature(recommendation.fleet), {point});
+    }
+
+    const segments = [];
+    const orderedLimits = [6, 5, 4, 3];
+    for (let index = 0; index < orderedLimits.length - 1; index++) {
+      const upperLimit = orderedLimits[index];
+      const lowerLimit = orderedLimits[index + 1];
+      const upperAnchor = anchors.get(upperLimit);
+      const lowerAnchor = anchors.get(lowerLimit);
+      if (!upperAnchor || !lowerAnchor) continue;
+      const lowerScale = Math.min(upperAnchor.recommendation.scale, lowerAnchor.recommendation.scale);
+      const upperScale = Math.max(upperAnchor.recommendation.scale, lowerAnchor.recommendation.scale);
+      const interval = upperLimit + '–' + lowerLimit + ' round thresholds';
+      const segment = [upperAnchor.point];
+      for (const scale of optimizer.intermediateScales(lowerScale, upperScale, 2)) {
+        const sampledCombatFleet = Object.fromEntries(Object.entries(result.ratios).map(([name, ratio]) => [name, ratio * scale]));
+        const combatKey = fleetSignature(sampledCombatFleet);
+        let cached = cacheByCombatFleet.get(combatKey);
+        if (!cached) {
+          const model = optimizer.analyzeAtScale(mixInput, result.ratios, scale);
+          const point = tradeoffPointFromModel(mix, mixIndex, model);
+          cached = {model, point:register(point, null, interval)};
+          cacheByCombatFleet.set(combatKey, cached);
+        } else if (cached.point) {
+          register(cached.point, null, interval);
+        } else {
+          cached.point = register(tradeoffPointFromModel(mix, mixIndex, cached.model), null, interval);
+        }
+        segment.push(cached.point);
+      }
+      segment.push(lowerAnchor.point);
+      const uniqueSegment = [...new Map(segment.map(point => [point.key, point])).values()]
+        .sort((left, right) => left.scale - right.scale);
+      segments.push(uniqueSegment);
+    }
+
+    return {
+      mix,
+      mixIndex,
+      points:[...pointsByFleet.values()],
+      segments,
+      missing
+    };
   }
 
   function renderAttackingFleetCell(recommendation) {
@@ -258,6 +382,260 @@
       return {mix, result:{recommendations:[recommendation || {roundLimit, unavailable:true}]}};
     });
     waveTwoRecommendations.innerHTML = renderComparisonTable(waveTwoComparisons, roundLimit);
+    renderCostTradeoff(comparisons);
+  }
+
+  function readCostWeights() {
+    const weights = {};
+    for (const [name, id] of [['ore', 'costWeightOre'], ['crystal', 'costWeightCrystal'], ['hydrogen', 'costWeightHydrogen']]) {
+      const raw = document.getElementById(id).value.trim();
+      const value = Number(raw);
+      if (!raw || !Number.isFinite(value) || value < 0) throw new Error(name[0].toUpperCase() + name.slice(1) + ' weight must be a number that is zero or greater.');
+      weights[name] = value;
+    }
+    if (!(weights.ore > 0 || weights.crystal > 0 || weights.hydrogen > 0)) {
+      throw new Error('At least one Ore-equivalent weight must be greater than zero.');
+    }
+    return weights;
+  }
+
+  function tradeoffRoundLabel(point) {
+    if (point.winRound === 0) return 'No defender targets';
+    if (point.winRound == null) return 'No 99.9% clear within 6 rounds';
+    return 'Clears in ' + point.winRound + ' rounds';
+  }
+
+  function costResourceBreakdown(cost, oreEquivalent) {
+    return '<div class="sfc2-cost-resource-breakdown">' +
+      '<span>' + formatResource(cost.ore) + ' Ore</span>' +
+      '<span>' + formatResource(cost.crystal) + ' Cry</span>' +
+      '<span>' + formatResource(cost.hydrogen) + ' Hyd</span>' +
+      '<strong>' + formatResource(oreEquivalent) + ' Ore-equivalent</strong>' +
+    '</div>';
+  }
+
+  function renderTradeoffPointDetails(point, weights) {
+    if (!point) {
+      return '<p class="hint">Hover or focus a chart point to see exact fleet counts and expected costs. Select a point to keep its details open.</p>';
+    }
+    const initialOreEq = optimizer.oreEquivalent(point.buildCost, weights);
+    const replacementOreEq = optimizer.oreEquivalent(point.rebuildCost, weights);
+    const fleetEntries = Object.entries(point.fleet || {}).filter(([, count]) => Number(count) > 0);
+    const orderedFleet = fleetEntries.sort(([left], [right]) => {
+      const leftIndex = combat.ATTACKER_SHIPS.indexOf(left);
+      const rightIndex = combat.ATTACKER_SHIPS.indexOf(right);
+      return (leftIndex < 0 ? 100 : leftIndex) - (rightIndex < 0 ? 100 : rightIndex);
+    });
+    const fleetRows = orderedFleet.map(([name, count]) => {
+      const label = optimizer.TRANSPORTS.includes(name) ? name + ' transport' : name;
+      const exact = plainCount(count);
+      return '<li class="sfc2-cost-fleet-row"><span>' + escapeHtml(label) + '</span><code>' + exact +
+        '</code><button class="copy-count-button" type="button" data-copy-count="' + exact +
+        '" aria-label="Copy exact ' + escapeHtml(label) + ' count" title="Copy exact ship count"><span aria-hidden="true">⧉</span></button></li>';
+    }).join('');
+    const thresholds = point.roundLimits.length
+      ? 'Minimum-threshold point: ' + point.roundLimits.sort((left, right) => right - left).map(value => value + ' rounds').join(', ')
+      : 'Intermediate sample' + (point.sampledIntervals.length ? ' between ' + point.sampledIntervals.join(', ') : '');
+    return '<div class="sfc2-cost-detail-heading"><h3>' + escapeHtml(point.mix.name) + '</h3><span>' +
+      escapeHtml(tradeoffRoundLabel(point)) + ' · ' + escapeHtml(thresholds) + '</span></div>' +
+      '<div class="sfc2-cost-detail-grid">' +
+        '<section class="sfc2-cost-detail-card"><h4>Attacking fleet</h4>' +
+          (fleetRows ? '<ul class="sfc2-cost-fleet-list">' + fleetRows + '</ul>' : '<p class="hint">No attacking ships.</p>') +
+          '<button class="ghost sfc2-cost-copy-all" type="button" data-copy-all-fleet>Copy full fleet</button>' +
+        '</section>' +
+        '<section class="sfc2-cost-detail-card"><h4>Initial fleet cost</h4>' +
+          costResourceBreakdown(point.buildCost, initialOreEq) +
+        '</section>' +
+        '<section class="sfc2-cost-detail-card"><h4>Expected replacement cost</h4>' +
+          costResourceBreakdown(point.rebuildCost, replacementOreEq) +
+        '</section>' +
+      '</div>';
+  }
+
+  function costDomain(values) {
+    let low = Math.min(...values);
+    let high = Math.max(...values);
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return [0, 1];
+    const padding = low === high ? Math.max(Math.abs(high) * 0.05, 1) : (high - low) * 0.08;
+    low = Math.max(0, low - padding);
+    high += padding;
+    if (!(high > low)) high = low + 1;
+    return [low, high];
+  }
+
+  function pointAccessibilityLabel(point, weights) {
+    const initial = formatCount(optimizer.oreEquivalent(point.buildCost, weights)) + ' Ore-equivalent initial cost';
+    const replacement = formatCount(optimizer.oreEquivalent(point.rebuildCost, weights)) + ' Ore-equivalent replacement cost';
+    return point.mix.name + ', ' + tradeoffRoundLabel(point) + ', ' + initial + ', ' + replacement;
+  }
+
+  function hideTradeoffTooltip() {
+    const tooltip = costTradeoffChart.querySelector('.chart-tooltip');
+    if (tooltip) tooltip.classList.add('hidden');
+  }
+
+  function showTradeoffTooltip(element, event, interaction, point, weights) {
+    const tooltip = costTradeoffChart.querySelector('.chart-tooltip');
+    if (!tooltip) return;
+    const initial = formatCount(optimizer.oreEquivalent(point.buildCost, weights));
+    const replacement = formatCount(optimizer.oreEquivalent(point.rebuildCost, weights));
+    tooltip.innerHTML = '<strong>' + escapeHtml(point.mix.name) + '</strong>' +
+      '<span>' + escapeHtml(tradeoffRoundLabel(point)) + '</span>' +
+      '<span>Initial fleet: ' + initial + ' Ore-equivalent</span>' +
+      '<span>Expected replacement: ' + replacement + ' Ore-equivalent</span>';
+    tooltip.classList.remove('hidden');
+    tooltip.setAttribute('aria-hidden', 'true');
+    const chartRect = costTradeoffChart.getBoundingClientRect();
+    const pointRect = element.getBoundingClientRect();
+    const usePointer = interaction === 'hover' || interaction === 'click';
+    const clientX = usePointer && Number.isFinite(event?.clientX) && event.clientX
+      ? event.clientX
+      : pointRect.left + pointRect.width / 2;
+    const clientY = usePointer && Number.isFinite(event?.clientY) && event.clientY
+      ? event.clientY
+      : pointRect.top + pointRect.height / 2;
+    const scrollLeft = costTradeoffChart.scrollLeft;
+    const leftMin = scrollLeft + 8;
+    const leftMax = scrollLeft + costTradeoffChart.clientWidth - tooltip.offsetWidth - 8;
+    const left = Math.max(leftMin, Math.min(leftMax, clientX - chartRect.left + scrollLeft + 12));
+    const top = Math.max(8, Math.min(costTradeoffChart.clientHeight - tooltip.offsetHeight - 8,
+      clientY - chartRect.top + costTradeoffChart.scrollTop + 12));
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }
+
+  function renderCostTradeoff(comparisons) {
+    if (!charts || !costTradeoffChart) return;
+    try {
+      tradeoffWeights = readCostWeights();
+      costTradeoffStatus.textContent = '';
+    } catch (error) {
+      costTradeoffStatus.textContent = error.message;
+      return;
+    }
+
+    const series = comparisons.map(item => item.tradeoff).filter(Boolean);
+    const allPoints = series.flatMap(item => item.points);
+    const missing = series.flatMap(item => item.missing.map(entry =>
+      item.mix.name + ', ' + entry.roundLimit + ' rounds (' + entry.reason + ')'
+    ));
+    tradeoffPointByKey = new Map(allPoints.map(point => [point.key, point]));
+    if (!tradeoffPointByKey.has(selectedTradeoffKey)) selectedTradeoffKey = null;
+
+    if (!allPoints.length) {
+      costTradeoffChart.innerHTML = '<p class="hint">No available Wave 1 round recommendations can be plotted for these fleet mixes.</p>' +
+        '<div class="chart-tooltip hidden" aria-hidden="true"></div>';
+      costTradeoffStatus.textContent = missing.length
+        ? 'Unavailable thresholds omitted: ' + missing.join('; ') + '.'
+        : 'No chartable recommendations are available.';
+      displayedTradeoffPoint = null;
+      costTradeoffDetails.innerHTML = renderTradeoffPointDetails(null, tradeoffWeights);
+      charts.bindPointInteractions(costTradeoffChart, {
+        selector:'[data-cost-point]',
+        onPoint:() => {},
+        onLeave:() => {}
+      });
+      return;
+    }
+
+    const width = 960;
+    const height = 520;
+    const margin = {left:88, right:24, top:26, bottom:74};
+    const xValues = allPoints.map(point => optimizer.oreEquivalent(point.buildCost, tradeoffWeights));
+    const yValues = allPoints.map(point => optimizer.oreEquivalent(point.rebuildCost, tradeoffWeights));
+    const xScale = charts.createScale(costDomain(xValues), [margin.left, width - margin.right]);
+    const yScale = charts.createScale(costDomain(yValues), [height - margin.bottom, margin.top]);
+    let grid = '';
+    for (const tick of yScale.ticks(5)) {
+      const y = yScale(tick);
+      grid += charts.line({x1:margin.left, y1:y, x2:width - margin.right, y2:y, className:'gridline'});
+      grid += charts.text({x:margin.left - 10, y:y + 4, value:formatCount(tick), anchor:'end', className:'axis'});
+    }
+    for (const tick of xScale.ticks(5)) {
+      const x = xScale(tick);
+      grid += charts.line({x1:x, y1:margin.top, x2:x, y2:height - margin.bottom, className:'gridline'});
+      grid += charts.text({x, y:height - margin.bottom + 20, value:formatCount(tick), className:'axis'});
+    }
+
+    const pointIndex = new Map(allPoints.map((point, index) => [point.key, index]));
+    const paths = series.map(item => {
+      const hue = Math.round((189 + item.mixIndex * 137.508) % 360);
+      return item.segments.map(segment => {
+        if (segment.length < 2) return '';
+        const path = charts.linePath(
+          segment,
+          point => optimizer.oreEquivalent(point.buildCost, tradeoffWeights),
+          point => optimizer.oreEquivalent(point.rebuildCost, tradeoffWeights),
+          xScale,
+          yScale
+        );
+        return charts.path(path, 'curve sfc2-cost-line', {'style':'--sfc2-series-hue:' + hue});
+      }).join('');
+    }).join('');
+    const dots = series.map(item => {
+      const hue = Math.round((189 + item.mixIndex * 137.508) % 360);
+      return item.points.map(point => {
+        const index = pointIndex.get(point.key);
+        const x = optimizer.oreEquivalent(point.buildCost, tradeoffWeights);
+        const y = optimizer.oreEquivalent(point.rebuildCost, tradeoffWeights);
+        const selected = selectedTradeoffKey === point.key;
+        const label = pointAccessibilityLabel(point, tradeoffWeights);
+        const circle = charts.circle({
+          cx:xScale(x),
+          cy:yScale(y),
+          r:5.5,
+          className:'chart-dot sfc2-cost-dot',
+          attributes:{'style':'--sfc2-series-hue:' + hue},
+          title:''
+        });
+        return '<g class="sfc2-cost-point' + (selected ? ' is-selected' : '') + '" data-cost-point="' + index +
+          '" tabindex="0" role="button" aria-label="' + charts.escapeXml(label) + '" aria-pressed="' +
+          (selected ? 'true' : 'false') + '">' + circle + '</g>';
+      }).join('');
+    }).join('');
+    const svg = '<svg viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg" role="group" ' +
+      'aria-label="Wave 1 initial fleet Ore-equivalent cost versus expected replacement Ore-equivalent cost">' +
+      grid + paths + dots +
+      charts.text({x:(margin.left + width - margin.right) / 2, y:height - 12, value:'Initial fleet cost (Ore-equivalent)', className:'label'}) +
+      charts.text({x:18, y:(margin.top + height - margin.bottom) / 2, value:'Expected replacement cost (Ore-equivalent)', className:'label', transform:'rotate(-90 18 ' + ((margin.top + height - margin.bottom) / 2) + ')'}) +
+      '</svg>';
+    const legend = '<div class="sfc2-cost-legend" aria-label="Fleet mix legend">' + series.map(item => {
+      const hue = Math.round((189 + item.mixIndex * 137.508) % 360);
+      return '<span class="sfc2-cost-legend-item"><span class="sfc2-cost-legend-swatch" style="--sfc2-series-hue:' + hue +
+        '" aria-hidden="true"></span>' + escapeHtml(item.mix.name) + '</span>';
+    }).join('') + '</div>';
+    costTradeoffChart.innerHTML = svg + legend + '<div class="chart-tooltip hidden" aria-hidden="true"></div>';
+    costTradeoffStatus.textContent = (missing.length
+      ? 'Unavailable thresholds omitted: ' + missing.join('; ') + '. '
+      : '') + 'Two log-spaced intermediate fleet sizes are simulated between each adjacent available threshold pair. Costs include selected transports and expected losses.';
+
+    charts.bindPointInteractions(costTradeoffChart, {
+      selector:'[data-cost-point]',
+      onPoint:(element, event, interaction) => {
+        const point = allPoints[Number(element.dataset.costPoint)];
+        if (!point) return;
+        if (interaction === 'click' || interaction === 'keyboard') selectedTradeoffKey = point.key;
+        displayedTradeoffPoint = point;
+        costTradeoffDetails.innerHTML = renderTradeoffPointDetails(point, tradeoffWeights);
+        showTradeoffTooltip(element, event, interaction, point, tradeoffWeights);
+        costTradeoffChart.querySelectorAll('[data-cost-point]').forEach(candidate => {
+          const isSelected = allPoints[Number(candidate.dataset.costPoint)]?.key === selectedTradeoffKey;
+          candidate.classList.toggle('is-selected', isSelected);
+          candidate.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        });
+      },
+      onLeave:() => {
+        hideTradeoffTooltip();
+        const selected = tradeoffPointByKey.get(selectedTradeoffKey);
+        if (selected) {
+          displayedTradeoffPoint = selected;
+          costTradeoffDetails.innerHTML = renderTradeoffPointDetails(displayedTradeoffPoint, tradeoffWeights);
+        }
+      }
+    });
+    const selected = tradeoffPointByKey.get(selectedTradeoffKey);
+    displayedTradeoffPoint = selected || null;
+    costTradeoffDetails.innerHTML = renderTradeoffPointDetails(displayedTradeoffPoint, tradeoffWeights);
   }
 
   function readInput() {
@@ -307,16 +685,17 @@
       $('#resultFilterStatus').textContent = 'Updating recommendations…';
     } else {
       $('#calculateBtn').disabled = true;
-      inputStatus.textContent = 'Calculating Wave 1 and Wave 2 fleets and cargo…';
+      inputStatus.textContent = 'Calculating fleets, cargo, and Wave 1 cost tradeoffs…';
     }
     window.setTimeout(() => {
       if (sequence !== calculationSequence) return;
       try {
-        const comparisons = scenarios.map(mix => {
+        const comparisons = scenarios.map((mix, index) => {
           const mixInput = {...input, ratios:mix.ratios};
           const result = optimizer.analyze(mixInput);
           const waveTwoResult = optimizer.analyzeWaveTwo(mixInput, result);
-          return {mix, result, waveTwoResult};
+          const tradeoff = buildTradeoffData(mixInput, mix, result, index);
+          return {mix, result, waveTwoResult, tradeoff};
         });
         currentComparisons = comparisons;
         renderSelectedResults(comparisons);
@@ -417,6 +796,11 @@
     }
   });
   $('#transportType').addEventListener('change', updateCalculationFilters);
+  ['costWeightOre', 'costWeightCrystal', 'costWeightHydrogen'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      if (currentComparisons) renderCostTradeoff(currentComparisons);
+    });
+  });
   $('#addMixBtn').addEventListener('click', () => {
     mixes = snapshotMixes();
     const id = mixSequence++;
@@ -432,6 +816,22 @@
   recommendations.addEventListener('click', event => {
     const button = event.target.closest('[data-copy-count]');
     if (button) copyFleetCount(button);
+  });
+  costTradeoffDetails.addEventListener('click', event => {
+    const countButton = event.target.closest('[data-copy-count]');
+    if (countButton) {
+      copyFleetCount(countButton);
+      return;
+    }
+    const fullFleetButton = event.target.closest('[data-copy-all-fleet]');
+    if (fullFleetButton && displayedTradeoffPoint) {
+      const rows = Object.entries(displayedTradeoffPoint.fleet || {}).filter(([, count]) => Number(count) > 0);
+      const fleetText = rows.map(([name, count]) => {
+        const label = optimizer.TRANSPORTS.includes(name) ? name + ' transport' : name;
+        return label + ': ' + plainCount(count);
+      }).join('\n');
+      copyText(fullFleetButton, fleetText, 'Copy full fleet');
+    }
   });
   $('#parseDefenderBtn').addEventListener('click', () => {
     $('#defenderPasteStatus').textContent = '';

@@ -259,6 +259,65 @@
     };
   }
 
+  function intermediateScales(start, end, count=2) {
+    const low = Number(start);
+    const high = Number(end);
+    const steps = Math.floor(Number(count));
+    if (!Number.isFinite(low) || !Number.isFinite(high) || low <= 0 || high <= low || !Number.isFinite(steps) || steps < 1) return [];
+    const logLow = Math.log(low);
+    const logSpan = Math.log(high) - logLow;
+    const values = [];
+    for (let index = 1; index <= steps; index++) {
+      const scale = Math.ceil(Math.exp(logLow + logSpan * index / (steps + 1)));
+      if (scale > low && scale < high && values[values.length - 1] !== scale) values.push(scale);
+    }
+    return values;
+  }
+
+  function oreEquivalent(cost={}, weights={ore:1, crystal:1.5, hydrogen:3}) {
+    const multiplier = {};
+    for (const name of ['ore', 'crystal', 'hydrogen']) {
+      const value = Number(weights[name]);
+      if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} Ore-equivalent weight must be zero or greater.`);
+      multiplier[name] = value;
+    }
+    return ['ore', 'crystal', 'hydrogen'].reduce((total, name) =>
+      total + (Number(cost[name]) || 0) * multiplier[name], 0);
+  }
+
+  function analyzeAtScale(input={}, ratiosInput=null, requestedScale=1) {
+    const scale = Math.ceil(Number(requestedScale));
+    if (!Number.isFinite(scale) || scale < 1 || scale > MAX_SCALE) throw new RangeError('Fleet scale must be a finite positive value within the supported range.');
+    const ratios = normalizeRatios(ratiosInput || input.ratios);
+    const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || DEFAULT_CLEAR_CONFIDENCE));
+    const transportType = TRANSPORTS.includes(input.transportType) ? input.transportType : DEFAULT_TRANSPORT;
+    const combatFleet = scaledFleet(ratios, scale);
+    const pool = plunderPool(input);
+    const cargo = [{
+      type:transportType,
+      cargoPerShip:combat.cargoCapacity(transportType),
+      ...findTransportCount(input, {roundLimit:combat.MAX_ROUNDS}, combatFleet, transportType, pool, confidence)
+    }];
+    const option = cargo[0];
+    const snapshot = option.snapshot;
+    const win = firstWinRound(option.simulation, combat.MAX_ROUNDS, confidence);
+    return {
+      scale,
+      combatFleet,
+      fleet:option.fleet,
+      totalShips:sumCounts(option.fleet),
+      buildCost:costOfFleet(option.fleet),
+      estimatedLosses:snapshot.attackerLosses,
+      rebuildCost:costOfFleet(snapshot.attackerLosses),
+      winRound:win ? win.round : null,
+      estimatedWinProbability:option.simulation.estimatedWinProbability,
+      simulation:option.simulation,
+      cargoPool:pool,
+      cargoRequired:sumResources(pool),
+      cargo
+    };
+  }
+
   function analyze(input={}) {
     const ratios = normalizeRatios(input.ratios);
     const confidence = Math.max(0.5, Math.min(0.9999, Number(input.confidence) || DEFAULT_CLEAR_CONFIDENCE));
@@ -368,6 +427,6 @@
 
   return {
     ROUND_LIMITS, TRANSPORTS, DEFAULT_CLEAR_CONFIDENCE, PLUNDER_SHARE, normalizeRatios, scaledFleet, costOfFleet,
-    plunderPool, allocatePlunder, analyze, analyzeWaveTwo
+    plunderPool, allocatePlunder, intermediateScales, oreEquivalent, analyzeAtScale, analyze, analyzeWaveTwo
   };
 });
